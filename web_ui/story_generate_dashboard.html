@@ -858,7 +858,9 @@
 
     .asset-board {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+      justify-content: start;
+      align-items: start;
       gap: 14px;
       min-height: 0;
     }
@@ -1056,6 +1058,8 @@
     }
 
     .asset-card {
+      width: 100%;
+      max-width: 360px;
       min-width: 0;
       border: 1px solid #2b3338;
       border-radius: 8px;
@@ -1195,20 +1199,23 @@
 
     .asset-card-body {
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      min-height: 260px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      height: 190px;
+      min-height: 0;
       cursor: pointer;
     }
 
     .asset-card-body.has-refined {
-      grid-template-columns: minmax(0, 1fr);
-      min-height: 260px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      height: 190px;
+      min-height: 0;
     }
 
     .asset-media {
       position: relative;
       min-width: 0;
-      min-height: 220px;
+      min-height: 0;
+      height: 100%;
       background: #07090a;
       display: grid;
       place-items: center;
@@ -1216,7 +1223,7 @@
     }
 
     .asset-card-body.has-refined .asset-media {
-      min-height: 260px;
+      min-height: 0;
     }
 
     .asset-media + .asset-media {
@@ -1787,7 +1794,7 @@
     }
 
     .asset-media-primary {
-      min-height: 260px;
+      min-height: 0;
     }
 
     .asset-display-warning {
