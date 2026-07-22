@@ -1,0 +1,94 @@
+# Python/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local runtime logs
+*.log
+.web_*.err.log
+.web_*.out.log
+.codex_web_*.log
+
+# Local/generated workspaces
+.codex/
+.codex_*
+.codex*.json
+.agents/
+.asset_cutout_verify/
+.tmp*/
+tmp_*
+_tmp*/
+debug_*/
+test_output/
+test_final/
+test_gpu/
+test_mask_preview/
+test_sam3_end_to_end/
+test_sam3_finalize_live/
+test_bg_default_off/
+test_skip_layers_fix/
+test_two_pass/
+test_two_pass_full/
+test_omni*/
+test_omnishotcut*/
+segment_analysis_test/
+dynamic_ref_test_inspect/
+reference_bg_test/
+
+# Generated assets and intermediate media
+.global_assets/
+.server_inventory/
+.storyboard_asset_frames/
+.storyboard_mode2_jobs/
+.storyboard_mode2_projects/
+.sam*/
+04_AI*/
+mulu*/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.webm
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# Model weights / large binary artifacts
+*.pt
+*.pth
+*.onnx
+*.ckpt
+*.safetensors
+*.bin
+
+# Backups and scratch files
+*.bak
+*.bak_*
+*.backup
+*.recovered_test
+*.sanitized_test
+*.mojibake_backup
+*.broken_*
+.tmp_*
+rh_*.html
+rhdoc.html
+nul
+
+# Web UI scratch/debug copies
+web_ui/_check*
+web_ui/_codex*
+web_ui/.tmp*
+web_ui/*.bak*
+web_ui/*.backup
+web_ui/*.recovered_test
+web_ui/*.sanitized_test
+web_ui/*.mojibake_backup
+web_ui/*.broken_*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
