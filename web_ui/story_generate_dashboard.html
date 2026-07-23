@@ -2473,18 +2473,6 @@
       cursor: crosshair;
     }
 
-    .role-anchor-marker {
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      margin: -9px 0 0 -9px;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      background: rgba(239, 111, 108, .75);
-      box-shadow: 0 0 0 2px rgba(0,0,0,.58);
-      pointer-events: none;
-    }
-
     .role-anchor-shape-layer {
       position: absolute;
       inset: 0;
@@ -2538,45 +2526,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    .role-anchor-saved-marker {
-      position: absolute;
-      min-width: 18px;
-      height: 18px;
-      transform: translate(-50%, -50%);
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 0 5px;
-      border: 2px solid #7ee0a3;
-      border-radius: 999px;
-      background: rgba(17, 88, 49, .76);
-      color: #e5fff0;
-      font-size: 11px;
-      font-weight: 900;
-      line-height: 1;
-      white-space: nowrap;
-      box-shadow: 0 0 0 2px rgba(0,0,0,.58);
-      pointer-events: auto;
-      cursor: grab;
-      z-index: 3;
-    }
-
-    .role-anchor-saved-marker:active {
-      cursor: grabbing;
-    }
-
-    .role-anchor-saved-marker.is-current {
-      width: 22px;
-      min-width: 22px;
-      height: 22px;
-      padding: 0;
-      justify-content: center;
-      border-color: #fff;
-      background: rgba(239, 111, 108, .82);
-      color: #fff;
-      font-size: 10px;
     }
 
     .role-anchor-toolbar {
@@ -8244,26 +8193,6 @@
       return [Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, y))];
     }
 
-    function updateRoleAnchorMarkerIn(markerSelector, imgSelector, boxSelector, point) {
-      const marker = $(markerSelector);
-      const img = $(imgSelector);
-      const box = $(boxSelector);
-      if (!marker || !img || !box || !Array.isArray(point) || point.length !== 2) return;
-      const viewport = roleAnchorImageViewport(img);
-      const boxRect = box.getBoundingClientRect();
-      marker.style.left = `${viewport.left - boxRect.left + point[0] * viewport.width}px`;
-      marker.style.top = `${viewport.top - boxRect.top + point[1] * viewport.height}px`;
-      marker.hidden = false;
-    }
-
-    function updateRoleAnchorMarker(point) {
-      updateRoleAnchorMarkerIn("#roleAnchorMarker", "#roleAnchorFrameImg", "#roleAnchorFrameBox", point);
-    }
-
-    function updateRoleAnchorMaskMarker(point) {
-      updateRoleAnchorMarkerIn("#roleAnchorMaskMarker", "#roleAnchorMaskImg", "#roleAnchorMaskBox", point);
-    }
-
     function openRoleAnchorEditor(assetId) {
       if (typeof window.__closeMode2RoleAnchorEditor === "function") {
         try {
@@ -8288,11 +8217,10 @@
         if (found >= 0) selectedIndex = found;
       }
       let activeOriginalFramePath = String(frames[selectedIndex]?.path || "");
-      let selectedPoint = initialAnchor?.point?.length === 2
-        ? [Number(initialAnchor.point[0]), Number(initialAnchor.point[1])]
-        : null;
+      let selectedPoint = null;
       let selectedMaskObject = null;
       let selectedShape = sanitizeSubclipShape(initialAnchor?.source_shape || initialAnchor?.shape);
+      selectedPoint = selectedShape ? shapeCenterPoint(selectedShape) : null;
       let shapeDrawing = null;
       let drawShapeMode = false;
       let pendingFrameBindings = new Map();
@@ -8317,7 +8245,7 @@
       }).join("");
       box.innerHTML = `
         <h4><span id="roleAnchorTitleName">${escapeHtml(asset.name)}</span> <span class="mode-pill">角色锚点标注</span></h4>
-        <p>在左侧原图圈住当前角色，线条可以稍微贴着人物外轮廓画。右侧机器分割只用来检查，粘人、串人时不要点它。</p>
+        <p>在左侧原图圈住当前角色，线条可以稍微贴着人物外轮廓画。这里只认画圈；右侧机器分割只用来检查。</p>
         <div class="role-anchor-toolbar">
           <div class="field">
             <div class="label"><span>当前角色</span><span>已锁定卡片角色</span></div>
@@ -8336,12 +8264,11 @@
             <div class="role-anchor-mini-controls is-primary">
               <button class="tiny-btn good" id="roleAnchorDrawShapeBtn" type="button">圈选人物</button>
               <button class="tiny-btn" id="roleAnchorClearShapeBtn" type="button">清除重画</button>
-              <span>也可以直接点脸/身体</span>
+              <span>只画圈，不用点</span>
             </div>
             <div class="role-anchor-frame" id="roleAnchorFrameBox">
               <img id="roleAnchorFrameImg" src="${escapeHtml(mediaSrc(activeOriginalFramePath, frames[selectedIndex].time || 0.1))}" alt="" draggable="false">
               <div id="roleAnchorSavedMarkers"></div>
-              <div class="role-anchor-marker" id="roleAnchorMarker" hidden></div>
               <svg id="roleAnchorFrameDrawLayer" class="role-anchor-shape-layer" hidden>
                 <path id="roleAnchorFrameDrawPreview" class="role-anchor-shape-preview" d=""></path>
                 <path id="roleAnchorFrameDrawCurrent" class="role-anchor-shape-current" d=""></path>
@@ -8354,7 +8281,6 @@
               <img id="roleAnchorMaskImg" alt="" draggable="false" hidden>
               <div class="role-anchor-mask-empty" id="roleAnchorMaskEmpty">正在生成彩色人物蒙版...</div>
               <div id="roleAnchorMaskSavedMarkers"></div>
-              <div class="role-anchor-marker" id="roleAnchorMaskMarker" hidden></div>
               <svg id="roleAnchorMaskDrawLayer" class="role-anchor-shape-layer" hidden>
                 <path id="roleAnchorMaskDrawPreview" class="role-anchor-shape-preview" d=""></path>
                 <path id="roleAnchorMaskDrawCurrent" class="role-anchor-shape-current" d=""></path>
@@ -8367,7 +8293,7 @@
         </div>
         <div class="role-anchor-note-row">
           <div class="asset-editor-prompt">
-            <div class="label"><span>备注</span><span id="roleAnchorPointText">${selectedPoint ? `x=${selectedPoint[0].toFixed(3)} y=${selectedPoint[1].toFixed(3)}` : "未选择点"}</span></div>
+            <div class="label"><span>备注</span><span id="roleAnchorPointText">${selectedShape ? "已有圈选轮廓" : "未圈选"}</span></div>
             <textarea class="textarea" id="roleAnchorNoteInput">${escapeHtml(initialAnchor?.note || "")}</textarea>
           </div>
           <div class="asset-editor-actions" style="align-items:end;">
@@ -8441,7 +8367,7 @@
       }
 
       function bindingObjectLabel(binding) {
-        return binding?.mask_object ? roleMaskObjectLabel(binding.mask_object) : "左图手绘/点位";
+        return binding?.mask_object ? roleMaskObjectLabel(binding.mask_object) : "左图圈选";
       }
 
       function roleMaskObjectAreaRatio(object) {
@@ -8690,7 +8616,7 @@
         shapeDrawing = { type: "freehand", points: [] };
         activeDrawPointerId = event?.pointerId ?? null;
         addRoleAnchorDrawEndListeners();
-        selectedPoint = Array.isArray(point) ? [Number(point[0]) || 0, Number(point[1]) || 0] : selectedPoint;
+        selectedPoint = null;
         selectedMaskObject = null;
         selectedShape = null;
         appendRoleAnchorShapePoint(point);
@@ -8701,8 +8627,10 @@
         const clean = commit ? sanitizeSubclipShape(shapeDrawing) : null;
         if (clean) {
           selectedShape = clean;
-          selectedPoint = shapeCenterPoint(clean) || selectedPoint;
+          selectedPoint = shapeCenterPoint(clean);
           setStoryStatus(["> 已圈选当前角色", "> 检查左图蓝色轮廓，没问题就保存当前角色。"], "good");
+        } else if (commit) {
+          setStoryStatus(["x 圈选线太短，没有留下来", "> 请按住鼠标沿人物外轮廓画完整一圈。"], "bad");
         }
         setRoleAnchorDrawMode(false);
         updatePointText();
@@ -8749,148 +8677,41 @@
 
       function renderSavedMarkersFor(holderSelector, imgSelector, frameBoxSelector) {
         const holder = $(holderSelector);
-        const img = $(imgSelector);
-        const frameBox = $(frameBoxSelector);
-        if (!holder || !img || !frameBox || img.hidden || !img.complete) return;
-        const viewport = roleAnchorImageViewport(img);
-        const boxRect = frameBox.getBoundingClientRect();
-        const markers = [];
-        const role = selectedRoleAsset();
-        (Array.isArray(role?.identity_anchors) ? role.identity_anchors : []).forEach((anchor) => {
-          if (!anchorMatchesCurrentFrame(anchor)) return;
-          const point = Array.isArray(anchor.point) ? anchor.point : [];
-          if (point.length !== 2) return;
-          const left = viewport.left - boxRect.left + Number(point[0]) * viewport.width;
-          const top = viewport.top - boxRect.top + Number(point[1]) * viewport.height;
-          markers.push(`<div class="role-anchor-saved-marker is-current" data-drag-anchor-role="${escapeHtml(role.id || "")}" style="left:${left}px;top:${top}px;" title="${escapeHtml(role.name || role.id || "当前角色")}">拖</div>`);
-        });
-        holder.innerHTML = markers.join("");
+        if (holder) holder.innerHTML = "";
       }
 
       function renderRoleAnchorSavedMarkers() {
         renderSavedMarkersFor("#roleAnchorSavedMarkers", "#roleAnchorFrameImg", "#roleAnchorFrameBox");
         renderSavedMarkersFor("#roleAnchorMaskSavedMarkers", "#roleAnchorMaskImg", "#roleAnchorMaskBox");
-        bindRoleAnchorMarkerDrag();
-      }
-
-      function bindRoleAnchorMarkerDrag() {
-        const holder = $("#roleAnchorSavedMarkers");
-        const img = $("#roleAnchorFrameImg");
-        if (!holder || !img) return;
-        holder.querySelectorAll("[data-drag-anchor-role]").forEach((marker) => {
-          if (marker.dataset.dragBound === "1") return;
-          marker.dataset.dragBound = "1";
-          marker.addEventListener("pointerdown", (event) => {
-            if (String(marker.dataset.dragAnchorRole || "") !== String(selectedRoleId || "")) return;
-            event.preventDefault();
-            event.stopPropagation();
-            setRoleAnchorDrawMode(false);
-            try {
-              marker.setPointerCapture(event.pointerId);
-            } catch (_) {}
-            const move = (moveEvent) => {
-              moveEvent.preventDefault();
-              selectedPoint = pointFromImageClick(moveEvent, img);
-              selectedMaskObject = null;
-              const viewport = roleAnchorImageViewport(img);
-              const boxRect = $("#roleAnchorFrameBox")?.getBoundingClientRect();
-              if (boxRect) {
-                marker.style.left = `${viewport.left - boxRect.left + selectedPoint[0] * viewport.width}px`;
-                marker.style.top = `${viewport.top - boxRect.top + selectedPoint[1] * viewport.height}px`;
-              }
-              updateSelectionMarkers();
-              updatePointText();
-            };
-            const end = (endEvent) => {
-              endEvent?.preventDefault?.();
-              marker.removeEventListener("pointermove", move);
-              marker.removeEventListener("pointerup", end);
-              marker.removeEventListener("pointercancel", cancel);
-              try {
-                marker.releasePointerCapture(event.pointerId);
-              } catch (_) {}
-              renderRoleAnchorSavedMarkers();
-              setStoryStatus(["> 已移动当前角色锚点", "> 如需调整轮廓，请点“清除重画”后重新圈选。"], "good");
-            };
-            const cancel = (cancelEvent) => {
-              cancelEvent?.preventDefault?.();
-              marker.removeEventListener("pointermove", move);
-              marker.removeEventListener("pointerup", end);
-              marker.removeEventListener("pointercancel", cancel);
-            };
-            marker.addEventListener("pointermove", move);
-            marker.addEventListener("pointerup", end);
-            marker.addEventListener("pointercancel", cancel);
-          });
-        });
       }
 
       function hideSelectionMarkers() {
-        const marker = $("#roleAnchorMarker");
-        const maskMarker = $("#roleAnchorMaskMarker");
-        if (marker) marker.hidden = true;
-        if (maskMarker) maskMarker.hidden = true;
       }
 
       function updateSelectionMarkers() {
         hideSelectionMarkers();
-        if (!selectedPoint) return;
-        updateRoleAnchorMarker(selectedPoint);
-        const maskImg = $("#roleAnchorMaskImg");
-        if (maskImg && !maskImg.hidden) updateRoleAnchorMaskMarker(selectedPoint);
       }
 
       function updatePointText() {
         const pointText = $("#roleAnchorPointText");
         if (!pointText) return;
         const currentShape = selectedRoleShape();
-        const resolvedPoint = selectedPoint || shapeCenterPoint(currentShape);
-        if (!resolvedPoint) {
-          pointText.textContent = "未选择点";
+        if (!currentShape) {
+          pointText.textContent = "未圈选";
           return;
         }
-        const prefix = selectedMaskObject
-          ? `${selectedRoleDisplayName()} · ${roleMaskObjectLabel(selectedMaskObject)}：`
-          : `${selectedRoleDisplayName()} · 左图手绘/点位：`;
-        pointText.textContent = `${prefix}x=${resolvedPoint[0].toFixed(3)} y=${resolvedPoint[1].toFixed(3)}`;
-      }
-
-      function setSelectedPoint(point, object = null) {
-        const normalized = normalizePointValue(point, $("#roleAnchorFrameImg"));
-        selectedPoint = normalized;
-        selectedMaskObject = normalized ? object : null;
-        if (object) {
-          const reason = roleMaskObjectBlockReason(object);
-          if (reason) {
-            selectedPoint = null;
-            selectedMaskObject = null;
-            warnManualLeftAnchor(reason);
-            updateSelectionMarkers();
-            updatePointText();
-            renderRoleMaskObjects();
-            updateRoleAnchorShapePreview();
-            return;
-          }
-          const shape = objectShape(object);
-          if (shape) selectedShape = shape;
-        } else if (normalized) {
-          selectedShape = null;
-        }
-        updateSelectionMarkers();
-        updatePointText();
-        renderRoleMaskObjects();
-        updateRoleAnchorShapePreview();
+        pointText.textContent = `${selectedRoleDisplayName()} · 已圈选轮廓`;
       }
 
       function stageCurrentRoleBinding(options = {}) {
-        if (!selectedPoint && !selectedRoleShape()) {
-          if (!options.silent) setStoryStatus(["x 请先在左侧原图圈选或点击这个角色"], "bad");
+        const currentShape = selectedRoleShape();
+        if (!currentShape) {
+          if (!options.silent) setStoryStatus(["x 请先在左侧原图圈选这个角色"], "bad");
           return false;
         }
-        const currentShape = selectedRoleShape();
-        const resolvedPoint = selectedPoint || shapeCenterPoint(currentShape);
+        const resolvedPoint = shapeCenterPoint(currentShape);
         if (!resolvedPoint) {
-          if (!options.silent) setStoryStatus(["x 没有拿到有效锚点", "> 请在左侧原图重新圈选人物。"], "bad");
+          if (!options.silent) setStoryStatus(["x 没有拿到有效轮廓", "> 请在左侧原图重新圈选人物。"], "bad");
           return false;
         }
         if (selectedMaskObject) {
@@ -8962,11 +8783,11 @@
           return;
         }
         if (maskErrorText) {
-          list.innerHTML = `${stagedHtml}<div class="role-anchor-object-empty">候选状态：读取失败 ${escapeHtml(maskErrorText)}。仍可在左侧原图手动点位保存。</div>`;
+          list.innerHTML = `${stagedHtml}<div class="role-anchor-object-empty">候选状态：读取失败 ${escapeHtml(maskErrorText)}。仍可在左侧原图手动画圈保存。</div>`;
           return;
         }
         if (maskCandidates) {
-          list.innerHTML = `${stagedHtml}<div class="role-anchor-object-empty">候选状态：没有识别到可绑定的人物区域，可在左侧原图手动点位保存。</div>`;
+          list.innerHTML = `${stagedHtml}<div class="role-anchor-object-empty">候选状态：没有识别到可绑定的人物区域，可在左侧原图手动画圈保存。</div>`;
           return;
         }
         list.innerHTML = `${stagedHtml}<div class="role-anchor-object-empty">候选状态：正在读取颜色区域...</div>`;
@@ -8975,8 +8796,8 @@
       function resetSelectionFromAnchor() {
         const anchor = selectedRoleAnchor();
         selectedMaskObject = null;
-        selectedPoint = anchor?.point?.length === 2 ? [Number(anchor.point[0]), Number(anchor.point[1])] : null;
         selectedShape = sanitizeSubclipShape(anchor?.source_shape || anchor?.shape);
+        selectedPoint = selectedShape ? shapeCenterPoint(selectedShape) : null;
         const noteInput = $("#roleAnchorNoteInput");
         if (noteInput) noteInput.value = anchor?.note || "";
         setRoleAnchorDrawMode(false);
@@ -9044,7 +8865,7 @@
           } else {
             if (empty) {
               empty.hidden = false;
-              empty.textContent = "没有返回彩色蒙版图，可以在左侧原图手动点位。";
+              empty.textContent = "没有返回彩色蒙版图，可以在左侧原图手动画圈。";
             }
             if (status) status.textContent = "无蒙版";
           }
@@ -9077,7 +8898,7 @@
       }
       window.__closeMode2RoleAnchorEditor = closeRoleAnchorEditorModal;
 
-      if (selectedPoint) {
+      if (selectedShape) {
         requestAnimationFrame(updateSelectionMarkers);
       }
       $("#roleAnchorFrameImg").addEventListener("load", () => {
@@ -9105,9 +8926,8 @@
       });
       $("#roleAnchorFrameBox").addEventListener("click", (event) => {
         if (drawShapeMode) return;
-        const img = $("#roleAnchorFrameImg");
-        if (!img) return;
-        setSelectedPoint(pointFromImageClick(event, img), null);
+        event.preventDefault();
+        setStoryStatus(["> 请点“圈选人物”", "> 然后在左侧原图按住拖动，沿人物外轮廓画一圈。"], "warn");
       });
       $("#roleAnchorMaskBox").addEventListener("click", (event) => {
         if (drawShapeMode) return;
@@ -9141,7 +8961,8 @@
         const projectDir = $("#projectDirInput")?.value.trim() || "";
         const object = binding?.mask_object || null;
         const shape = sanitizeSubclipShape(binding?.shape || selectedRoleShape());
-        const point = Array.isArray(binding?.point) ? binding.point : (selectedPoint || shapeCenterPoint(shape));
+        const point = shapeCenterPoint(shape);
+        if (!shape || !point) throw new Error("请先在左侧原图圈选人物");
         const roleId = String(binding?.role_id || selectedRoleId);
         const note = String(binding?.note ?? ($("#roleAnchorNoteInput")?.value.trim() || ""));
         const response = await fetch("/api/storyboard-role-anchors", {
@@ -9170,8 +8991,9 @@
       }
 
       $("#saveRoleAnchorBtn").addEventListener("click", async () => {
-        if (!selectedPoint && !selectedRoleShape()) {
-          return setStoryStatus(["x 请先在左侧原图圈选或点击这个角色"], "bad");
+        const shape = selectedRoleShape();
+        if (!shape) {
+          return setStoryStatus(["x 请先在左侧原图圈选这个角色"], "bad");
         }
         if (selectedMaskObject) {
           return warnManualLeftAnchor(roleMaskObjectBlockReason(selectedMaskObject) || "右侧机器分割现在只作检查，不作为正式锚点。");
@@ -9183,18 +9005,18 @@
         try {
           const data = await saveRoleAnchorPayload({
             role_id: selectedRoleId,
-            point: selectedPoint,
+            shape,
             mask_object: null,
             note: $("#roleAnchorNoteInput")?.value.trim() || "",
           });
           applyLoadedProject(data, { story: data.storyboard || {} });
           pendingFrameBindings.delete(selectedRoleId);
-          selectedPoint = null;
+          selectedShape = shape;
+          selectedPoint = shapeCenterPoint(shape);
           selectedMaskObject = null;
-          selectedShape = null;
           setRoleAnchorDrawMode(false);
-          hideSelectionMarkers();
           updatePointText();
+          updateRoleAnchorShapePreview();
           renderRoleMaskObjects();
           requestAnimationFrame(renderRoleAnchorSavedMarkers);
           setStoryStatus(["> 当前角色锚点已保存", `> ${targetRole.name || selectedRoleId} @ ${formatNum(frame.time)}s`, "> 可以切换角色，在左侧原图继续圈下一个人。"], "good");
@@ -9258,7 +9080,8 @@
         setRoleAnchorDrawMode(false);
         hideSelectionMarkers();
         updatePointText();
-        setStoryStatus(["> 已清除轮廓", "> 你可以在左侧原图重新圈选，或者直接点脸/身体。"], "warn");
+        updateRoleAnchorShapePreview();
+        setStoryStatus(["> 已清除轮廓", "> 请点“圈选人物”，在左侧原图重新画圈。"], "warn");
       });
       const frameDrawLayer = $("#roleAnchorFrameDrawLayer");
       if (frameDrawLayer) {
