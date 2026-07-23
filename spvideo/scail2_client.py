@@ -424,17 +424,12 @@ class Scail2Client:
             driving_object_indices=driving_object_indices,
             subject_appearance_hints=subject_appearance_hints,
         )
-        if seed_items:
-            if has_shape_seed:
-                self._add_sam3_mixed_initial_mask_seed(
-                    wf,
-                    seed_items,
-                    width=width,
-                    height=height,
-                    output_dir=output_dir,
-                )
-            elif seed_points:
-                self._add_sam3_initial_mask_seed(wf, seed_points, width=width, height=height)
+        if seed_items and has_shape_seed:
+            log("SAM3 身份选择: 手绘圈仅用于指定人物身份，正式生成不再把圈当 initial_mask")
+            if seed_points:
+                log("SAM3 身份选择: 保留身份点供服务器候选人物排序/检查")
+        elif seed_points:
+            self._add_sam3_initial_mask_seed(wf, seed_points, width=width, height=height)
         if not save_debug_masks:
             wf = self._without_debug_mask_outputs(wf)
         workflow_path = self._save_workflow_debug(
@@ -592,6 +587,8 @@ class Scail2Client:
         source_identity_shapes: list[dict | None] | None = None,
         output_dir: str | Path | None = None,
         repair_sparse_masks: bool = True,
+        shape_selection_mode: bool = False,
+        candidate_object_count: int = 4,
         on_progress: Optional[Callable[[str], None]] = None,
     ) -> dict:
         """Run only remote SAM3 + SCAIL2ColoredMaskV2 and download debug masks."""
@@ -663,8 +660,18 @@ class Scail2Client:
         )
         has_shape_seed = bool(seed_items and any(item.get("shape") for item in seed_items))
         driving_object_indices = list(range(len(subject_names)))
+        selector_candidate_count = (
+            max(len(subject_names), min(8, max(1, int(candidate_object_count or 4))))
+            if shape_selection_mode
+            else len(subject_names)
+        )
         if seed_items:
-            if has_shape_seed:
+            if shape_selection_mode:
+                log(
+                    "SAM3 身份选择: 用手绘圈/身份点选择服务器候选人物，不把手绘圈当最终 mask；"
+                    f"候选数={selector_candidate_count}"
+                )
+            elif has_shape_seed:
                 log("SAM3 首帧种子: 使用手绘范围/身份点顺序作为角色 track 顺序，跳过文本预检")
             else:
                 log("SAM3 首帧种子: 使用身份点顺序作为角色 track 顺序，跳过文本预检")
@@ -699,8 +706,15 @@ class Scail2Client:
             driving_object_indices=driving_object_indices,
             limit_frame_cap_by_sampler=False,
         )
+        if shape_selection_mode:
+            for node in wf.values():
+                if (
+                    node.get("class_type") == "SAM3_VideoTrack"
+                    and node.get("inputs", {}).get("images") == ["3", 0]
+                ):
+                    node["inputs"]["max_objects"] = selector_candidate_count
         independent_preview_saves: list[str] = []
-        if seed_items and has_shape_seed:
+        if seed_items and has_shape_seed and not shape_selection_mode:
             independent_preview_saves = self._add_sam3_independent_identity_tracks(
                 wf,
                 seed_items,
@@ -709,20 +723,22 @@ class Scail2Client:
                 output_dir=output_dir,
             )
             log("SAM3 首帧种子: 已启用手绘范围独立 track initial_mask")
-        elif seed_points:
+        elif seed_points and not shape_selection_mode:
             self._add_sam3_initial_mask_seed(wf, seed_points, width=width, height=height)
             log("SAM3 首帧种子: 已启用 SAM3_Detect + 身份点 initial_mask")
-        elif source_identity_points or source_identity_shapes:
+        elif (source_identity_points or source_identity_shapes) and not shape_selection_mode:
             warnings.append("source_identity_seed_invalid_or_incomplete; initial_mask_seed_disabled")
             log("SAM3 首帧种子: 人工提示不完整，已降级为文本检测跟踪")
         if not independent_preview_saves:
-            for raw_index in range(len(subject_names)):
+            preview_count = selector_candidate_count if shape_selection_mode else len(subject_names)
+            for raw_index in range(preview_count):
                 prefix = f"preview_track_{raw_index}"
+                object_index = raw_index if shape_selection_mode else driving_object_indices[raw_index]
                 wf[f"{prefix}_mask"] = {
                     "class_type": "SAM3_TrackToMask",
                     "inputs": {
                         "track_data": ["32", 0],
-                        "object_indices": str(driving_object_indices[raw_index]),
+                        "object_indices": str(object_index),
                     },
                 }
                 wf[f"{prefix}_image"] = {
@@ -754,8 +770,9 @@ class Scail2Client:
                 wf,
                 ["mask_pose_video", "mask_reference_save"],
             )
-            for subject_index in range(len(subject_names)):
-                raw_index = driving_object_indices[subject_index]
+            preview_count = selector_candidate_count if shape_selection_mode else len(subject_names)
+            for subject_index in range(preview_count):
+                raw_index = subject_index if shape_selection_mode else driving_object_indices[subject_index]
                 prefix = f"preview_track_{subject_index}"
                 wf[f"{prefix}_mask"] = {
                     "class_type": "SAM3_TrackToMask",
@@ -802,7 +819,8 @@ class Scail2Client:
 
         mask_output_paths: dict[str, list[str]] = {}
         role_track_paths: list[list[Path]] = []
-        for raw_index in range(len(subject_names)):
+        preview_count = selector_candidate_count if shape_selection_mode else len(subject_names)
+        for raw_index in range(preview_count):
             node_id = f"preview_track_{raw_index}_save"
             assets = self._output_assets(outputs.get(node_id) or {})
             local_paths: list[str] = []
@@ -816,6 +834,25 @@ class Scail2Client:
                 local_paths.append(str(target))
             if local_paths:
                 role_track_paths.append([Path(path) for path in local_paths])
+        selected_track_indices: list[int] = []
+        selection_scores: list[dict[str, Any]] = []
+        if shape_selection_mode and role_track_paths:
+            selected_track_indices, selection_scores = self._select_sam3_tracks_by_identity_shapes(
+                role_track_paths,
+                source_identity_shapes=source_identity_shapes,
+                source_identity_points=source_identity_points,
+            )
+            if selected_track_indices:
+                log(
+                    "SAM3 身份选择结果: "
+                    + " / ".join(
+                        f"角色{i + 1}->候选{track_index}"
+                        for i, track_index in enumerate(selected_track_indices)
+                    )
+                )
+                role_track_paths = [role_track_paths[index] for index in selected_track_indices]
+            else:
+                warnings.append("sam3_identity_selector_no_candidate")
         if role_track_paths:
             sparse_count = 0
             for paths in role_track_paths:
@@ -915,6 +952,10 @@ class Scail2Client:
             "source_identity_points": seed_points,
             "source_identity_shapes": source_identity_shapes or [],
             "repair_sparse_masks": repair_sparse_masks,
+            "shape_selection_mode": shape_selection_mode,
+            "candidate_object_count": selector_candidate_count,
+            "selected_track_indices": selected_track_indices,
+            "selection_scores": selection_scores,
             "warnings": warnings,
         }
 
@@ -2863,6 +2904,120 @@ class Scail2Client:
             preview_save_ids.append(save_id)
 
         return preview_save_ids
+
+    @staticmethod
+    def _select_sam3_tracks_by_identity_shapes(
+        role_track_paths: list[list[Path]],
+        *,
+        source_identity_shapes: list[dict | None] | None,
+        source_identity_points: list[list[float] | None] | None,
+    ) -> tuple[list[int], list[dict[str, Any]]]:
+        try:
+            import numpy as np
+            from PIL import Image, ImageDraw
+        except ImportError:
+            return [], []
+
+        def normalized_point(index: int) -> tuple[float, float] | None:
+            if not source_identity_points or index >= len(source_identity_points):
+                return None
+            point = source_identity_points[index]
+            if not isinstance(point, (list, tuple)) or len(point) != 2:
+                return None
+            try:
+                return (
+                    max(0.0, min(1.0, float(point[0]))),
+                    max(0.0, min(1.0, float(point[1]))),
+                )
+            except (TypeError, ValueError):
+                return None
+
+        def shape_mask(shape: dict | None, size: tuple[int, int]) -> np.ndarray | None:
+            clean = Scail2Client._coerce_source_identity_shape(shape)
+            if not clean:
+                return None
+            width, height = size
+            points = [
+                (
+                    max(0, min(width - 1, int(round(float(x) * (width - 1))))),
+                    max(0, min(height - 1, int(round(float(y) * (height - 1))))),
+                )
+                for x, y in clean["points"]
+            ]
+            if len(points) < 3:
+                return None
+            image = Image.new("L", (width, height), 0)
+            ImageDraw.Draw(image).polygon(points, fill=255)
+            return np.array(image) > 127
+
+        def track_mask(paths: list[Path]) -> np.ndarray | None:
+            for path in paths:
+                try:
+                    with Image.open(path) as raw:
+                        mask = np.array(raw.convert("L")) > 8
+                    if np.any(mask):
+                        return mask
+                except Exception:
+                    continue
+            return None
+
+        role_count = max(
+            len(source_identity_shapes or []),
+            len(source_identity_points or []),
+            1,
+        )
+        track_masks = [track_mask(paths) for paths in role_track_paths]
+        selected: list[int] = []
+        scores: list[dict[str, Any]] = []
+        used: set[int] = set()
+        for role_index in range(role_count):
+            shape = source_identity_shapes[role_index] if source_identity_shapes and role_index < len(source_identity_shapes) else None
+            point = normalized_point(role_index)
+            best: tuple[float, int, dict[str, Any]] | None = None
+            for track_index, mask in enumerate(track_masks):
+                if track_index in used or mask is None:
+                    continue
+                height, width = mask.shape[:2]
+                shape_selected = shape_mask(shape, (width, height))
+                mask_area = int(np.count_nonzero(mask))
+                if mask_area <= 0:
+                    continue
+                inside_ratio = 0.0
+                shape_hit_ratio = 0.0
+                if shape_selected is not None:
+                    intersection = int(np.count_nonzero(mask & shape_selected))
+                    inside_ratio = intersection / max(1, mask_area)
+                    shape_hit_ratio = intersection / max(1, int(np.count_nonzero(shape_selected)))
+                point_hit = False
+                if point is not None:
+                    px = max(0, min(width - 1, int(round(point[0] * (width - 1)))))
+                    py = max(0, min(height - 1, int(round(point[1] * (height - 1)))))
+                    radius = max(2, min(width, height) // 80)
+                    neighborhood = mask[
+                        max(0, py - radius): py + radius + 1,
+                        max(0, px - radius): px + radius + 1,
+                    ]
+                    point_hit = bool(neighborhood.size and np.any(neighborhood))
+                area_ratio = mask_area / max(1, width * height)
+                score = inside_ratio + 0.35 * shape_hit_ratio + (0.25 if point_hit else 0.0)
+                if area_ratio > 0.65:
+                    score -= 0.35
+                detail = {
+                    "role_index": role_index,
+                    "track_index": track_index,
+                    "score": round(float(score), 4),
+                    "inside_ratio": round(float(inside_ratio), 4),
+                    "shape_hit_ratio": round(float(shape_hit_ratio), 4),
+                    "point_hit": point_hit,
+                    "area_ratio": round(float(area_ratio), 4),
+                }
+                scores.append(detail)
+                if best is None or score > best[0]:
+                    best = (float(score), track_index, detail)
+            if best is not None and best[0] > 0:
+                selected.append(best[1])
+                used.add(best[1])
+        return selected, scores
 
     @staticmethod
     def _mask_nonzero_ratio(path: Path, *, threshold: int = 8) -> float:

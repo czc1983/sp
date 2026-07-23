@@ -15493,6 +15493,8 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         source_identity_shapes=[source_shape],
         output_dir=output_dir,
         repair_sparse_masks=False,
+        shape_selection_mode=True,
+        candidate_object_count=4,
         on_progress=add_log,
     )
     output_path = str(result.get("output_path") or "").strip()
@@ -15553,6 +15555,8 @@ def _storyboard_mode2_track_role_with_remote_sam3(
             "sparse_count": sparse_count,
             "sparse_ratio": round(sparse_ratio, 4),
             "clip_mode": clip_mode,
+            "selection_scores": result.get("selection_scores") or [],
+            "selected_track_indices": result.get("selected_track_indices") or [],
             "warnings": warnings,
         },
         "remote_result": result,
