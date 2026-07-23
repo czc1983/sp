@@ -3934,6 +3934,14 @@
       white-space: nowrap;
     }
 
+    .role-anchor-locked-role {
+      display: flex;
+      align-items: center;
+      color: #eef4f6;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
     .story-path-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 58px;
@@ -7031,6 +7039,7 @@
             setStoryStatus(["x 没有找到要标注的角色", "> 请刷新页面后重新点击角色卡片上的锚点。"], "bad");
             return;
           }
+          setStoryStatus(["> 打开角色锚点", `> ${role.name || role.id} (${role.id})`], "good");
           openRoleAnchorEditor(role.id);
         });
       });
@@ -8135,12 +8144,23 @@
     }
 
     function roleAnchorFrames(asset) {
+      const anchorFrames = Array.isArray(asset.identity_anchors)
+        ? asset.identity_anchors
+            .map((anchor) => ({
+              time: Number(anchor?.time || asset.source_time || 0.1),
+              path: String(anchor?.frame_path || ""),
+              reason: "已保存锚点帧",
+              priority: 0,
+            }))
+            .filter((frame) => frame.path)
+        : [];
       const candidateFrames = Array.isArray(asset.candidate_keyframes)
         ? asset.candidate_keyframes
             .map((frame) => ({
               time: Number(frame?.time || asset.source_time || 0.1),
               path: String(frame?.path || ""),
-            reason: String(frame?.reason || "候选身份帧"),
+              reason: String(frame?.reason || "候选身份帧"),
+              priority: 2,
             }))
             .filter((frame) => frame.path)
         : [];
@@ -8149,22 +8169,33 @@
             .map((frame) => ({
               time: Number(frame?.time || asset.source_time || 0.1),
               path: String(frame?.path || frame?.crop_path || ""),
+              crop_path: String(frame?.crop_path || ""),
               reason: String(frame?.reason || ""),
+              priority: String(frame?.crop_path || "").trim() ? 1 : 3,
             }))
             .filter((frame) => frame.path)
         : [];
+      const sourceFrames = [
+        asset.source_image ? {
+          time: Number(asset.source_time || 0.1),
+          path: String(asset.source_image || ""),
+          reason: "当前角色源图",
+          priority: 4,
+        } : null,
+      ].filter((frame) => frame?.path);
       const merged = [];
       const seen = new Set();
-      [...candidateFrames, ...frames].forEach((frame) => {
+      [...anchorFrames, ...frames, ...candidateFrames, ...sourceFrames].forEach((frame) => {
         const key = `${frame.path}|${Math.round(Number(frame.time || 0) * 20)}`;
         if (seen.has(key)) return;
         seen.add(key);
         merged.push(frame);
       });
-      if (!merged.length && asset.source_image) {
-        merged.push({ time: Number(asset.source_time || 0.1), path: asset.source_image, reason: "褰撳墠婧愬浘" });
-      }
-      return merged;
+      return merged.sort((left, right) => {
+        const priority = Number(left.priority || 9) - Number(right.priority || 9);
+        if (priority) return priority;
+        return Number(left.time || 0) - Number(right.time || 0);
+      });
     }
 
     function roleAnchorImageViewport(img) {
@@ -8263,12 +8294,9 @@
       overlay.className = "modal-overlay";
       const box = document.createElement("div");
       box.className = "modal-box asset-editor-modal role-anchor-modal";
-      const roleOptions = roleAssets().map((role) => {
-        const name = String(role.name || role.id || "角色");
-        const tag = String(role.tag || "").trim();
-        const label = tag && tag !== name ? `${name} / ${tag}` : name;
-        return `<option value="${escapeHtml(role.id)}"${role.id === selectedRoleId ? " selected" : ""}>${escapeHtml(label)}</option>`;
-      }).join("");
+      const roleName = String(asset.name || asset.id || "角色");
+      const roleTag = String(asset.tag || "").trim();
+      const roleLabel = roleTag && roleTag !== roleName ? `${roleName} / ${roleTag}` : roleName;
       const frameOptions = frames.map((frame, index) => (
         `<option value="${index}"${index === selectedIndex ? " selected" : ""}>${formatNum(frame.time)}s ${escapeHtml(frame.reason || "候选身份帧")}</option>`
       )).join("");
@@ -8277,10 +8305,8 @@
         <p>在左侧原图圈住当前角色，线条可以稍微贴着人物外轮廓画。右侧机器分割只用来检查，粘人、串人时不要点它。</p>
         <div class="role-anchor-toolbar">
           <div class="field">
-            <div class="label"><span>第 1 步：选择角色</span><span>先决定要标谁</span></div>
-            <select class="input" id="roleAnchorRoleSelect">
-              ${roleOptions}
-            </select>
+            <div class="label"><span>当前角色</span><span>已锁定卡片角色</span></div>
+            <div class="input role-anchor-locked-role" id="roleAnchorRoleLocked">${escapeHtml(roleLabel)}</div>
           </div>
           <div class="field">
             <div class="label"><span>关键帧</span><span>选一帧最清楚的人物画面</span></div>
@@ -8999,13 +9025,6 @@
       });
       $("#roleAnchorFrameImg").addEventListener("dragstart", (event) => event.preventDefault());
       $("#roleAnchorMaskImg").addEventListener("dragstart", (event) => event.preventDefault());
-      $("#roleAnchorRoleSelect").addEventListener("change", () => {
-        selectedRoleId = $("#roleAnchorRoleSelect").value || asset.id;
-        const role = selectedRoleAsset();
-        $("#roleAnchorTitleName").textContent = role.name || role.id || "角色";
-        resetSelectionFromAnchor();
-      });
-      $("#roleAnchorRoleSelect").value = selectedRoleId;
       $("#roleAnchorFrameSelect").addEventListener("change", () => {
         selectedIndex = Number($("#roleAnchorFrameSelect").value || 0);
         pendingFrameBindings = new Map();
