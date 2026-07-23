@@ -19,6 +19,8 @@
       --bad: #ff5f6d;
       --omni: #8b5cf6;
       --sam: #14b8a6;
+      --assistant-sidebar-width: 340px;
+      --assistant-font-size: 13px;
     }
 
     * { box-sizing: border-box; }
@@ -40,7 +42,7 @@
       height: 100vh;
       display: grid;
       grid-template-rows: 52px 1fr 36px;
-      grid-template-columns: 292px 1fr 340px;
+      grid-template-columns: 292px 1fr var(--assistant-sidebar-width);
     }
 
     .topbar {
@@ -202,8 +204,171 @@
     }
 
     .rightbar {
+      position: relative;
       border-left: 1px solid var(--line);
       padding: 14px;
+    }
+
+    .assistant-sidebar-resizer {
+      position: absolute;
+      left: -6px;
+      top: 0;
+      bottom: 0;
+      width: 10px;
+      cursor: col-resize;
+      z-index: 10;
+    }
+
+    .assistant-sidebar-resizer::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 12px;
+      bottom: 12px;
+      width: 1px;
+      background: transparent;
+    }
+
+    .assistant-sidebar-resizer:hover::after,
+    .rightbar.assistant-resizing .assistant-sidebar-resizer::after {
+      background: #4b5560;
+    }
+
+    .assistant-panel {
+      background: #0f1115;
+      border: 1px solid #2b3038;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+      font-size: var(--assistant-font-size);
+    }
+
+    .assistant-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .assistant-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: calc(var(--assistant-font-size) * 1);
+      font-weight: 800;
+      color: #edf1f7;
+    }
+
+    .assistant-pill {
+      border: 1px solid #3a414d;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: #171b21;
+      color: #c8d0dc;
+      font-size: calc(var(--assistant-font-size) * .85);
+      line-height: 1;
+    }
+
+    .assistant-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .assistant-log {
+      height: 220px;
+      overflow: auto;
+      border: 1px solid #252b33;
+      border-radius: 8px;
+      background: #0b0d10;
+      padding: 8px;
+    }
+
+    .assistant-msg {
+      margin: 0 0 8px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: calc(var(--assistant-font-size) * .92);
+      line-height: 1.55;
+      color: #dce3ec;
+    }
+
+    .assistant-msg.user {
+      color: #b7d4ff;
+    }
+
+    .assistant-msg.system {
+      color: #b7f0d3;
+    }
+
+    .assistant-context {
+      display: grid;
+      gap: 6px;
+      margin: 8px 0;
+      color: #9aa6b6;
+      font-size: calc(var(--assistant-font-size) * .85);
+    }
+
+    .assistant-context div {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      padding-bottom: 4px;
+    }
+
+    .assistant-context strong {
+      color: #edf1f7;
+      font-weight: 700;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .assistant-quick {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .assistant-quick .btn {
+      min-width: 0;
+      padding: 0 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: calc(var(--assistant-font-size) * .92);
+    }
+
+    .assistant-input-row {
+      display: grid;
+      grid-template-columns: 1fr 34px;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .assistant-input {
+      min-height: 34px;
+      resize: vertical;
+      border: 1px solid #303742;
+      border-radius: 8px;
+      background: #111419;
+      color: var(--text);
+      padding: 8px;
+      outline: none;
+      font: inherit;
+      font-size: calc(var(--assistant-font-size) * .92);
+    }
+
+    .assistant-send {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 8px;
     }
 
     .section {
@@ -1629,6 +1794,36 @@
     </main>
 
     <aside class="rightbar">
+      <div class="assistant-sidebar-resizer" id="assistantSidebarResizer" title="拖动调整助手宽度"></div>
+      <section class="assistant-panel" id="spAssistantPanel">
+        <div class="assistant-head">
+          <div class="assistant-title"><span class="assistant-pill">AI</span><span>SP 助手 / 任务记录</span></div>
+          <div class="assistant-actions">
+            <button class="btn btn-sm" id="assistantFontDownBtn" type="button" style="font-size:12px;padding:2px 7px;">A-</button>
+            <button class="btn btn-sm" id="assistantFontUpBtn" type="button" style="font-size:12px;padding:2px 7px;">A+</button>
+            <button class="btn btn-sm" id="assistantCopyContextBtn" type="button" style="font-size:12px;padding:2px 8px;">复制上下文</button>
+            <button class="btn btn-sm" id="assistantClearBtn" type="button" style="font-size:12px;padding:2px 8px;">清空</button>
+          </div>
+        </div>
+        <div class="assistant-context" id="assistantContext">
+          <div><span>模式</span><strong id="assistantModeText">-</strong></div>
+          <div><span>后端</span><strong id="assistantBackendText">-</strong></div>
+          <div><span>任务</span><strong id="assistantJobText">-</strong></div>
+        </div>
+        <div class="assistant-log" id="assistantLog">
+          <div class="assistant-msg system">我能查当前视频、项目、角色参考图、最近任务和日志。也可以帮你切 Wan2.2 / SCAIL2，或只跑当前视频的 SAM3 蒙版检查。</div>
+        </div>
+        <div class="assistant-quick">
+          <button class="btn btn-sm" type="button" data-assistant-cmd="当前传了哪些图">传了哪些图</button>
+          <button class="btn btn-sm" type="button" data-assistant-cmd="生成的视频在哪">视频在哪</button>
+          <button class="btn btn-sm" type="button" data-assistant-cmd="只检查蒙版">查蒙版</button>
+          <button class="btn btn-sm" type="button" data-assistant-cmd="切到wan2.2">切 Wan2.2</button>
+        </div>
+        <div class="assistant-input-row">
+          <textarea class="assistant-input" id="assistantInput" rows="1" placeholder="问我：刚才传了哪张图 / 生成视频在哪 / 切到wan2.2 / 只检查蒙版"></textarea>
+          <button class="btn primary assistant-send" id="assistantSendBtn" type="button" title="发送">↵</button>
+        </div>
+      </section>
       <section class="section">
         <h3 class="section-title">角色资产 / RVM 抠图</h3>
         <div class="field">
@@ -1731,10 +1926,225 @@
     const segmentsBody = $("#segmentsBody");
     const videoInput = $("#videoPathInput");
     const SPLIT_HEIGHT_KEY = "sp_split_preview_height";
+    const ASSISTANT_SIDEBAR_WIDTH_KEY = "sp_assistant_sidebar_width";
+    const ASSISTANT_FONT_KEY = "sp_assistant_font_size";
+
+    function clampUiNumber(value, min, max, fallback) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.min(max, Math.max(min, n));
+    }
+
+    function applyAssistantFontSize(value) {
+      const size = clampUiNumber(value, 12, 20, 13);
+      document.documentElement.style.setProperty("--assistant-font-size", `${size}px`);
+      localStorage.setItem(ASSISTANT_FONT_KEY, String(size));
+      return size;
+    }
+
+    function applyAssistantSidebarWidth(value) {
+      const viewport = Math.max(900, window.innerWidth || 1600);
+      const maxWidth = Math.min(720, Math.floor(viewport * 0.48));
+      const width = clampUiNumber(value, 300, maxWidth, 340);
+      document.documentElement.style.setProperty("--assistant-sidebar-width", `${width}px`);
+      localStorage.setItem(ASSISTANT_SIDEBAR_WIDTH_KEY, String(width));
+      return width;
+    }
+
+    function initAssistantSizing() {
+      applyAssistantFontSize(localStorage.getItem(ASSISTANT_FONT_KEY) || 13);
+      applyAssistantSidebarWidth(localStorage.getItem(ASSISTANT_SIDEBAR_WIDTH_KEY) || 340);
+      $("#assistantFontDownBtn")?.addEventListener("click", () => {
+        const current = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--assistant-font-size")) || 13;
+        assistantMessage(`字体已缩小：${applyAssistantFontSize(current - 1)}px`);
+      });
+      $("#assistantFontUpBtn")?.addEventListener("click", () => {
+        const current = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--assistant-font-size")) || 13;
+        assistantMessage(`字体已放大：${applyAssistantFontSize(current + 1)}px`);
+      });
+      const resizer = $("#assistantSidebarResizer");
+      const rightbar = document.querySelector(".rightbar");
+      if (!resizer || !rightbar) return;
+      let dragging = false;
+      const onMove = (event) => {
+        if (!dragging) return;
+        const width = Math.max(300, Math.min(720, Math.round((window.innerWidth || 1600) - event.clientX)));
+        applyAssistantSidebarWidth(width);
+      };
+      const onUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        rightbar.classList.remove("assistant-resizing");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+      resizer.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        dragging = true;
+        rightbar.classList.add("assistant-resizing");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+      });
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      window.addEventListener("resize", () => applyAssistantSidebarWidth(localStorage.getItem(ASSISTANT_SIDEBAR_WIDTH_KEY) || 340));
+    }
     const WORKFLOW_MODE_KEY = "sp_workflow_mode";
     let currentJobId = null;
     let pollTimer = null;
     let workflowMode = localStorage.getItem(WORKFLOW_MODE_KEY) || "transfer";
+
+    function assistantBackendLabel(value) {
+      const labels = {
+        wan22: "Wan2.2 云端",
+        scail2: "SCAIL-2 ComfyUI",
+        scail2_colored: "SCAIL-2 Colored Mask",
+        scail2_masked: "SCAIL-2 蒙版测试",
+        bernini: "Bernini 测试",
+        runninghub_bernini: "RunningHub Bernini",
+      };
+      return labels[value] || value || "-";
+    }
+
+    function readMainLogLines() {
+      const body = $("#mainLogBody") || $("#logBody");
+      if (!body) return [];
+      return Array.from(body.querySelectorAll("div")).map((item) => item.textContent.trim()).filter(Boolean);
+    }
+
+    function assistantMessage(text, kind = "system") {
+      const box = $("#assistantLog");
+      if (!box) return;
+      const div = document.createElement("div");
+      div.className = "assistant-msg " + kind;
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function assistantRoleReferenceLines() {
+      const lines = [];
+      const characters = lastAssets?.characters || {};
+      const selected = Array.from(selectedCharacterNames || []);
+      const names = selected.length ? selected : (currentCharacterName ? [currentCharacterName] : []);
+      const pushCharacter = (name, item = {}) => {
+        const ref = item.ref_image || item.target_image || "";
+        const extra = Array.isArray(item.extra_ref_images) ? item.extra_ref_images : [];
+        lines.push(`${name || item.name || "未命名"}: ${ref || "(没有主参考图)"}`);
+        extra.forEach((path, index) => lines.push(`  补充图${index + 1}: ${path}`));
+      };
+      if (names.length) {
+        names.forEach((name) => {
+          const found = Object.values(characters).find((item) => (item.name || "") === name) || {};
+          pushCharacter(name, found);
+        });
+      } else {
+        Object.values(characters).slice(0, 12).forEach((item) => pushCharacter(item.name || item.id, item));
+      }
+      return lines.length ? lines : ["当前还没有读取到角色参考图。先加载项目或保存角色资产。"];
+    }
+
+    function assistantOutputLines() {
+      const logs = readMainLogLines();
+      const outputKeys = ["完成", "输出", "output", "transfer done", "mask", "mp4", "json", "路径", "视频"];
+      const outputLines = logs.filter((line) => {
+        const text = String(line || "").toLowerCase();
+        return outputKeys.some((key) => text.includes(String(key).toLowerCase()));
+      });
+      return outputLines.slice(-16).length ? outputLines.slice(-16) : ["当前日志里还没有可识别的输出路径。"];
+    }
+
+    function assistantContextText() {
+      const backend = $("#transferBackendSelect")?.value || "wan22";
+      const lines = [
+        "SP 当前上下文",
+        `模式: ${workflowModeLabel()}`,
+        `后端: ${assistantBackendLabel(backend)}`,
+        `任务: ${currentJobId || "(无运行任务)"}`,
+        `原视频: ${$("#videoPathInput")?.value.trim() || ""}`,
+        `当前视频: ${getCurrentVideoPath() || ""}`,
+        `项目目录: ${$("#projectDirInput")?.value.trim() || ""}`,
+        "角色参考图:",
+        ...assistantRoleReferenceLines().map((line) => "  " + line),
+        "最近日志:",
+        ...readMainLogLines().slice(-20).map((line) => "  " + line),
+      ];
+      return lines.join("\n");
+    }
+
+    function updateAssistantContext() {
+      const backend = $("#transferBackendSelect")?.value || "wan22";
+      const modeText = $("#assistantModeText");
+      const backendText = $("#assistantBackendText");
+      const jobText = $("#assistantJobText");
+      if (modeText) modeText.textContent = workflowModeLabel();
+      if (backendText) backendText.textContent = assistantBackendLabel(backend);
+      if (jobText) jobText.textContent = currentJobId || "无运行任务";
+    }
+
+    async function assistantCopyText(text, okText = "已复制到剪贴板") {
+      try {
+        await navigator.clipboard.writeText(text);
+        assistantMessage(okText);
+      } catch (_) {
+        assistantMessage("复制失败，请手动选择页面文字复制。");
+      }
+    }
+
+    function assistantSetBackend(value) {
+      const select = $("#transferBackendSelect");
+      if (!select) return "没有找到后端选择框。";
+      select.value = value;
+      localStorage.setItem("sp_transfer_backend", value);
+      select.dispatchEvent(new Event("change"));
+      updateAssistantContext();
+      return "已切换后端: " + assistantBackendLabel(value);
+    }
+
+    async function assistantHandleCommand(raw) {
+      const text = String(raw || "").trim();
+      if (!text) return;
+      assistantMessage(text, "user");
+      const lower = text.toLowerCase();
+      if (lower.includes("wan") || lower.includes("2.2")) {
+        assistantMessage(assistantSetBackend("wan22"));
+        return;
+      }
+      if (lower.includes("scail")) {
+        assistantMessage(assistantSetBackend("scail2"));
+        return;
+      }
+      if (text.includes("传") || text.includes("图") || text.includes("参考")) {
+        assistantMessage("当前角色参考图:\n" + assistantRoleReferenceLines().join("\n"));
+        return;
+      }
+      if (text.includes("视频在哪") || text.includes("输出") || text.includes("生成的视频") || text.includes("地址")) {
+        assistantMessage("最近可见输出:\n" + assistantOutputLines().join("\n"));
+        return;
+      }
+      if (text.includes("日志")) {
+        assistantMessage("最近日志:\n" + readMainLogLines().slice(-24).join("\n"));
+        return;
+      }
+      if (text.includes("蒙版") || lower.includes("mask") || lower.includes("sam3")) {
+        assistantMessage("开始提交当前视频的蒙版检查；这一步只查 mask，不生成最终视频。");
+        await inspectMasksCurrentVideo();
+        updateAssistantContext();
+        return;
+      }
+      if (text.includes("上下文") || text.includes("当前状态")) {
+        assistantMessage(assistantContextText());
+        return;
+      }
+      assistantMessage([
+        "我现在能做这些本地操作:",
+        "1. 说“传了哪些图”列角色参考图路径",
+        "2. 说“生成的视频在哪”查最近输出",
+        "3. 说“切到wan2.2”或“切到scail2”改后端",
+        "4. 说“只检查蒙版”提交 SAM3 蒙版检查",
+        "5. 点“复制上下文”把路径、模式、日志一次复制出来",
+      ].join("\n"));
+    }
 
     // 页面加载时恢复正在运行的任务
     setTimeout(() => {
@@ -1782,6 +2192,7 @@
 
       const footer = $("#workflowModeFooter");
       if (footer) footer.textContent = workflowModeLabel();
+      updateAssistantContext();
 
       const transferControls = [
         "#transferBackendSelect",
@@ -1887,6 +2298,7 @@
     }
 
     updateVideoPreview();
+    initAssistantSizing();
     loadAssets();
     loadComfyInventory(false);
     videoInput.addEventListener("change", updateVideoPreview);
@@ -2008,6 +2420,31 @@
         setLogs(["✖ 复制失败,请手动选择复制"]);
       }
     });
+    $("#assistantSendBtn")?.addEventListener("click", async () => {
+      const input = $("#assistantInput");
+      const text = input?.value || "";
+      if (input) input.value = "";
+      await assistantHandleCommand(text);
+    });
+    $("#assistantInput")?.addEventListener("keydown", async (event) => {
+      if (event.key !== "Enter" || event.shiftKey) return;
+      event.preventDefault();
+      const input = event.currentTarget;
+      const text = input.value || "";
+      input.value = "";
+      await assistantHandleCommand(text);
+    });
+    $("#assistantCopyContextBtn")?.addEventListener("click", () => {
+      assistantCopyText(assistantContextText(), "上下文已复制。");
+    });
+    $("#assistantClearBtn")?.addEventListener("click", () => {
+      const box = $("#assistantLog");
+      if (box) box.innerHTML = "";
+      assistantMessage("已清空。你可以继续问路径、日志、模式和任务状态。");
+    });
+    $$("[data-assistant-cmd]").forEach((btn) => {
+      btn.addEventListener("click", () => assistantHandleCommand(btn.dataset.assistantCmd || ""));
+    });
     function initMainSplitter() {
       const main = $(".main");
       const resizer = $("#mainSplitResizer");
@@ -2078,6 +2515,7 @@
     }
     transferBackendSelect.addEventListener("change", () => {
       localStorage.setItem("sp_transfer_backend", transferBackendSelect.value);
+      updateAssistantContext();
     });
 
     function getTransferState() {
@@ -3417,6 +3855,7 @@ startBtn.addEventListener("click", async () => {
         logBody.appendChild(div);
       });
       logBody.scrollTop = logBody.scrollHeight;
+      updateAssistantContext();
     }
 
     function getAutoDirectorPlan() {

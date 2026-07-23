@@ -48,10 +48,30 @@ def ffprobe_path() -> str:
 
 
 def run_command(args: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        **subprocess_no_window_kwargs(),
+    )
     if result.returncode != 0:
         raise FfmpegError(result.stderr.strip() or result.stdout.strip() or f"Command failed: {args}")
     return result
+
+
+def subprocess_no_window_kwargs() -> dict[str, object]:
+    """Hide transient console windows for ffmpeg/ffprobe on Windows."""
+    if os.name != "nt":
+        return {}
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = subprocess.SW_HIDE
+    return {
+        "startupinfo": startupinfo,
+        "creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    }
 
 
 def _concat_file_line(path: Path) -> str:

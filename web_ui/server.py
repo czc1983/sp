@@ -62,6 +62,9 @@ SEEDANCE_A_TASKS: dict[str, dict[str, Any]] = {}
 SEEDANCE_A_TASKS_LOCK = threading.Lock()
 SAM3_PROTECTION_FPS = 15.0
 SAM3_PROTECTION_MAX_FRAMES = 180
+SAM3_SHAPE_MIN_OVERLAP = 0.12
+SAM3_SHAPE_OBJECT_TARGET_OVERLAP = 0.25
+SAM3_SHAPE_OBJECT_MATCH_THRESHOLD = 0.35
 SCAIL2_COLOR_NAMES = ("蓝色", "红色", "绿色", "紫色", "青色", "黄色")
 WAN22_MASK_COLOR_KEYS = ("blue", "red", "green", "magenta", "cyan", "yellow")
 DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000"
@@ -175,6 +178,32 @@ DEFAULT_STORYBOARD_PROJECT_CONFIG = {
 }
 
 
+def _latest_mode2_control_video(project_dir: str, video_path: str, output_kind: str = "white") -> Path | None:
+    try:
+        root = _resolve_storyboard_mode2_project_dir(project_dir)
+    except Exception:
+        return None
+    output_dir = root / "04_AI输出成片"
+    if not output_dir.exists():
+        return None
+    stem = Path(str(video_path or "")).stem
+    if not stem:
+        return None
+    kind = str(output_kind or "white").strip().lower()
+    if kind in {"background_gray", "bg_gray", "depth", "scene_depth"}:
+        patterns = [f"scail2_vda_depth_{stem}_*.mp4"]
+    elif kind in {"identity_gray_relief", "gray_relief", "light_gray_control"}:
+        patterns = [f"identity_gray_relief_{stem}_*.mp4"]
+    else:
+        patterns = [f"scail2_vda_white_{stem}_*.mp4", f"scail2_vda_strong_clay_{stem}_*.mp4"]
+    matches: list[Path] = []
+    for pattern in patterns:
+        matches.extend(path for path in output_dir.glob(pattern) if path.is_file())
+    if not matches:
+        return None
+    return max(matches, key=lambda path: path.stat().st_mtime)
+
+
 def _string_list(value: Any) -> list[str]:
     if value is None:
         return []
@@ -221,6 +250,126 @@ def _normalize_identity_shape(value: Any) -> dict[str, Any] | None:
     if len(points) < 3:
         return None
     return {"type": "freehand", "points": points}
+
+
+def _identity_shape_center(shape: dict[str, Any] | None) -> list[float] | None:
+    clean = _normalize_identity_shape(shape)
+    if not clean:
+        return None
+    xs = [float(point[0]) for point in clean["points"]]
+    ys = [float(point[1]) for point in clean["points"]]
+    if not xs or not ys:
+        return None
+    return [
+        max(0.0, min(1.0, (min(xs) + max(xs)) / 2.0)),
+        max(0.0, min(1.0, (min(ys) + max(ys)) / 2.0)),
+    ]
+
+
+def _identity_shape_seed_points(
+    shape: dict[str, Any] | None,
+    fallback_point: list[float] | None = None,
+) -> list[list[float]]:
+    clean = _normalize_identity_shape(shape)
+    fallback = None
+    if isinstance(fallback_point, (list, tuple)) and len(fallback_point) == 2:
+        try:
+            fallback = [
+                max(0.0, min(1.0, float(fallback_point[0]))),
+                max(0.0, min(1.0, float(fallback_point[1]))),
+            ]
+        except (TypeError, ValueError):
+            fallback = None
+    if not clean:
+        return [fallback] if fallback else []
+    import cv2
+    import numpy as np
+
+    points = np.asarray([[float(item[0]), float(item[1])] for item in clean["points"]], dtype=np.float32)
+    if points.shape[0] < 3:
+        return [fallback] if fallback else []
+    xs = points[:, 0]
+    ys = points[:, 1]
+    centroid = np.array([(float(xs.min()) + float(xs.max())) / 2.0, (float(ys.min()) + float(ys.max())) / 2.0], dtype=np.float32)
+    poly = np.round(points * 1000.0).astype(np.int32).reshape((-1, 1, 2))
+
+    def inside(point: list[float] | np.ndarray | None) -> bool:
+        if point is None:
+            return False
+        x, y = float(point[0]), float(point[1])
+        probe = (int(round(x * 1000.0)), int(round(y * 1000.0)))
+        return cv2.pointPolygonTest(poly, probe, False) >= 0
+
+    candidates: list[list[float]] = []
+    for point in (fallback, centroid.tolist()):
+        if point and inside(point):
+            candidates.append([max(0.0, min(1.0, float(point[0]))), max(0.0, min(1.0, float(point[1])))] )
+
+    # 从轮廓点向内收缩，避免把边缘和背景一起当成种子。
+    for item in points[:: max(1, len(points) // 6)][:6]:
+        inner = centroid + (item - centroid) * 0.58
+        inner_point = [float(inner[0]), float(inner[1])]
+        if inside(inner_point):
+            candidates.append([
+                max(0.0, min(1.0, inner_point[0])),
+                max(0.0, min(1.0, inner_point[1])),
+            ])
+
+    # 如果还不够，再补几个更靠中心的点。
+    for ratio in (0.45, 0.68):
+        for item in points[:: max(1, len(points) // 5)][:5]:
+            inner = centroid + (item - centroid) * ratio
+            inner_point = [float(inner[0]), float(inner[1])]
+            if inside(inner_point):
+                candidates.append([
+                    max(0.0, min(1.0, inner_point[0])),
+                    max(0.0, min(1.0, inner_point[1])),
+                ])
+
+    unique: list[list[float]] = []
+    for x, y in candidates:
+        point = [max(0.0, min(1.0, float(x))), max(0.0, min(1.0, float(y)))]
+        if any(math.hypot(point[0] - old[0], point[1] - old[1]) < 0.02 for old in unique):
+            continue
+        unique.append(point)
+        if len(unique) >= 5:
+            break
+    return unique or ([fallback] if fallback else [])
+
+
+def _identity_shape_mask_overlap(mask: Any, shape: dict[str, Any] | None) -> float | None:
+    clean = _normalize_identity_shape(shape)
+    if not clean:
+        return None
+    import cv2
+    import numpy as np
+
+    mask_array = np.asarray(mask)
+    if mask_array.ndim > 2:
+        mask_array = np.squeeze(mask_array)
+    if mask_array.ndim != 2:
+        return None
+    height, width = mask_array.shape[:2]
+    polygon = np.asarray(
+        [
+            [
+                max(0, min(width - 1, int(round(float(x) * (width - 1))))),
+                max(0, min(height - 1, int(round(float(y) * (height - 1))))),
+            ]
+            for x, y in clean["points"]
+        ],
+        dtype=np.int32,
+    )
+    if polygon.shape[0] < 3:
+        return None
+    seed = np.zeros((height, width), dtype=np.uint8)
+    cv2.fillPoly(seed, [polygon], 1)
+    seed_area = int(np.count_nonzero(seed))
+    if seed_area <= 0:
+        return None
+    threshold = 127 if float(np.max(mask_array)) > 1.0 else 0
+    selected = mask_array > threshold
+    return float(np.count_nonzero(selected & (seed > 0))) / float(seed_area)
 
 
 def _normalize_storyboard_reference_strategy(raw: Any) -> str:
@@ -513,6 +662,14 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/assistant-chat":
+            try:
+                payload = self._read_json()
+                self._send_json(_assistant_chat(payload))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"ok": False, "error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/pick-path":
             try:
                 payload = self._read_json()
@@ -601,6 +758,14 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/storyboard-assets/edit-shot":
+            try:
+                payload = self._read_json()
+                self._send_json(_edit_storyboard_mode2_shot(payload))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/storyboard-assets/update-asset":
             try:
                 payload = self._read_json()
@@ -679,6 +844,15 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 thread = threading.Thread(target=_run_storyboard_role_track_job, args=(job_id, payload), daemon=True)
                 thread.start()
                 self._send_json({"job_id": job_id})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/storyboard-role-track-preview":
+            try:
+                payload = self._read_json()
+                result = _storyboard_mode2_role_track_preview(payload)
+                self._send_json(result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
             return
@@ -812,6 +986,37 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 if is_normal_lighting:
                     raise ValueError("normal_lighting_white_mask_disabled")
                 is_identity_gray_relief = output_kind in {"identity_gray_relief", "gray_relief", "light_gray_control"}
+                cached_path = _latest_mode2_control_video(project_dir, video_path, output_kind)
+                if cached_path and output_kind == "white":
+                    job_id = uuid.uuid4().hex[:8]
+                    result = {
+                        "workflow_mode": "remote_vda_white_mask_cached",
+                        "video_path": video_path,
+                        "white_mask_path": str(cached_path),
+                        "output_path": str(cached_path),
+                        "mask_output_paths": {"white": [str(cached_path)]},
+                        "cached": True,
+                    }
+                    job = {
+                        "id": job_id,
+                        "type": "mode2_reference_white_mask",
+                        "status": "done",
+                        "created_at": time.time(),
+                        "finished_at": time.time(),
+                        "project_dir": project_dir,
+                        "video_path": video_path,
+                        "logs": [
+                            f"> 复用已有 VDA 白膜: {cached_path}",
+                            "> 如需强制重跑，请先删除旧白膜文件或换一个输出片段。",
+                        ],
+                        "result": result,
+                        "error": None,
+                    }
+                    with JOBS_LOCK:
+                        JOBS[job_id] = job
+                    _write_storyboard_job_snapshot(job)
+                    self._send_json({"job_id": job_id, "cached": True, "output_path": str(cached_path)})
+                    return
                 job_id = uuid.uuid4().hex[:8]
                 job = {
                     "id": job_id,
@@ -4537,6 +4742,451 @@ def _split_storyboard_mode2_scenes(payload: dict[str, Any]) -> dict[str, Any]:
     return response
 
 
+def _assistant_chat(payload: dict[str, Any]) -> dict[str, Any]:
+    base_url = str(payload.get("base_url") or payload.get("baseUrl") or "").strip().rstrip("/")
+    api_key = str(payload.get("api_key") or payload.get("apiKey") or "").strip()
+    model = str(payload.get("model") or "gpt-5.5").strip()
+    message = str(payload.get("message") or "").strip()
+    context = str(payload.get("context") or "").strip()
+    logs = payload.get("logs") if isinstance(payload.get("logs"), list) else []
+    screenshot = payload.get("screenshot") if isinstance(payload.get("screenshot"), dict) else {}
+    if not base_url:
+        raise ValueError("assistant_base_url_missing")
+    if not api_key:
+        raise ValueError("assistant_api_key_missing")
+    if not model:
+        raise ValueError("assistant_model_missing")
+    if not message:
+        raise ValueError("assistant_message_missing")
+
+    log_text = "\n".join(str(line or "") for line in logs[-80:])[:8000]
+    context_text = context[:8000]
+    screenshot_url = str(screenshot.get("data_url") or screenshot.get("dataUrl") or "").strip()
+    if screenshot_url and not screenshot_url.startswith("data:image/"):
+        screenshot_url = ""
+    user_text = (
+        f"页面上下文:\n{context_text or '-'}\n\n"
+        f"最近日志:\n{log_text or '-'}\n\n"
+        f"用户问题:\n{message}"
+    )
+    user_content: Any = user_text
+    if screenshot_url:
+        user_content = [
+            {"type": "text", "text": user_text + "\n\n请优先看截图上真实存在的按钮和位置。"},
+            {"type": "image_url", "image_url": {"url": screenshot_url}},
+        ]
+    url_candidates = []
+    if base_url.endswith("/chat/completions"):
+        url_candidates.append(base_url)
+    elif base_url.endswith("/v1"):
+        url_candidates.append(base_url.rstrip("/") + "/chat/completions")
+    else:
+        url_candidates.append(base_url.rstrip("/") + "/v1/chat/completions")
+    body = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是 SP 短剧视频工作台里的视频制作向导。回答要短，最多 3 条，每条尽量一句话。"
+                    "不要让用户到处找；能用助手动作完成的，就说“点助手里的按钮”。"
+                    "如果有截图，必须按截图上真实存在的按钮名和页面内容回答；不要编造右侧资产详情面板。"
+                    "当前资产卡常见按钮是“换图”“描点”“识别轨道”。"
+                    "优先给一个最该做的下一步；不知道就说需要先看日志或让用户贴截图。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": user_content,
+            },
+        ],
+        "temperature": 0.2,
+        "max_tokens": 500,
+    }
+    response = None
+    data = None
+    attempted_urls = []
+    last_error = ""
+    for url in dict.fromkeys(url_candidates):
+        attempted_urls.append(url)
+        response = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=body,
+            timeout=120,
+        )
+        response_text = response.text or ""
+        if response.status_code in {404, 405}:
+            last_error = f"assistant_http_{response.status_code}: {response_text[:800]}"
+            continue
+        if response.status_code >= 400:
+            tried = " -> ".join(attempted_urls)
+            raise RuntimeError(f"assistant_http_{response.status_code}: {response_text[:800]} | tried: {tried}")
+        try:
+            data = response.json()
+            break
+        except ValueError:
+            content_type = response.headers.get("Content-Type", "")
+            preview = response_text[:800] if response_text else "<empty response>"
+            last_error = (
+                f"assistant_non_json_response: status={response.status_code}, "
+                f"content_type={content_type}, body={preview}"
+            )
+            continue
+    if response is None:
+        raise RuntimeError("assistant_no_endpoint_attempted")
+    if data is None:
+        tried = " -> ".join(attempted_urls)
+        raise RuntimeError(f"{last_error or 'assistant_no_json_response'} | tried: {tried}")
+    text = ""
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if choices and isinstance(choices, list):
+        first = choices[0] if choices else {}
+        if isinstance(first, dict):
+            msg = first.get("message") if isinstance(first.get("message"), dict) else {}
+            text = str(msg.get("content") or first.get("text") or "").strip()
+    if not text and isinstance(data, dict):
+        text = str(data.get("output_text") or data.get("text") or "").strip()
+    return {"ok": True, "text": text, "raw_model": model}
+
+
+MODE2_TIMELINE_GENERATED_KEYS = {
+    "generated_path",
+    "seedance_output_path",
+    "new_video_path",
+    "generated_url",
+    "seedance_result_url",
+    "seedance_task_id",
+    "seedance_task_status",
+    "seedance_submitted_at",
+    "seedance_finished_at",
+    "generated_at",
+}
+
+MODE2_TIMELINE_PREVIEW_KEYS = {
+    "preview_clip_path",
+    "clip_output_path",
+    "output_path",
+}
+
+
+def _mode2_unique_list(*values: Any) -> list[str]:
+    items: list[str] = []
+    for value in values:
+        items.extend(_string_list(value))
+    return list(dict.fromkeys(items))
+
+
+def _mode2_shot_time_range(shot: dict[str, Any]) -> tuple[float, float]:
+    start = max(0.0, _mode2_float(shot.get("start"), 0.0))
+    end = _mode2_float(shot.get("end"), start + _mode2_float(shot.get("duration"), 0.0))
+    if end < start:
+        end = start
+    return start, end
+
+
+def _mode2_clear_timeline_outputs(shot: dict[str, Any], *, clear_preview: bool = True) -> None:
+    for key in MODE2_TIMELINE_GENERATED_KEYS:
+        shot.pop(key, None)
+    if clear_preview:
+        for key in MODE2_TIMELINE_PREVIEW_KEYS:
+            shot.pop(key, None)
+
+
+def _mode2_prune_timeline_fields(shot: dict[str, Any]) -> None:
+    start, end = _mode2_shot_time_range(shot)
+    shot["start"] = round(start, 3)
+    shot["end"] = round(end, 3)
+    shot["duration"] = round(max(0.0, end - start), 3)
+    for key in ("prompt", "compiled_prompt", "compiled_prompt_long", "analysis_prompt", "seedance_prompt", "asset_refs"):
+        shot.pop(key, None)
+    _mode2_clear_timeline_outputs(shot)
+
+
+def _mode2_merge_text(left: Any, right: Any, *, fallback: str = "") -> str:
+    values = [str(value or "").strip() for value in (left, right) if str(value or "").strip()]
+    if not values:
+        return fallback
+    return "；".join(list(dict.fromkeys(values)))
+
+
+def _mode2_merge_person_count(left: dict[str, Any], right: dict[str, Any]) -> int:
+    values = [
+        _safe_int(item.get("person_count"), -1)
+        for item in (left, right)
+    ]
+    values = [value for value in values if value >= 0]
+    return max(values) if values else -1
+
+
+def _mode2_apply_shot_id_mapping_to_assets(
+    assets: list[dict[str, Any]],
+    shot_id_map: dict[str, list[str]],
+) -> None:
+    def mapped_values(values: Any) -> list[str]:
+        result: list[str] = []
+        for value in _string_list(values):
+            result.extend(shot_id_map.get(value, [value]))
+        return list(dict.fromkeys([item for item in result if item]))
+
+    list_fields = (
+        "present_shots",
+        "used_shots",
+        "evidence_shots",
+        "shot_ids",
+        "split_assigned_shot_ids",
+        "assigned_shot_ids",
+    )
+    for asset in assets:
+        for key in list_fields:
+            if key in asset:
+                asset[key] = mapped_values(asset.get(key))
+        new_anchors: list[dict[str, Any]] = []
+        seen_anchor_keys: set[str] = set()
+        for anchor in asset.get("identity_anchors") or []:
+            if not isinstance(anchor, dict):
+                continue
+            old_id = str(anchor.get("shot_id") or "").strip()
+            mapped = shot_id_map.get(old_id)
+            target_ids = mapped if mapped else ([old_id] if old_id else [])
+            if not target_ids:
+                new_anchors.append(anchor)
+                continue
+            for target_id in target_ids:
+                cloned = copy.deepcopy(anchor)
+                cloned["shot_id"] = target_id
+                anchor_key = json.dumps(cloned, ensure_ascii=False, sort_keys=True, default=str)
+                if anchor_key in seen_anchor_keys:
+                    continue
+                seen_anchor_keys.add(anchor_key)
+                new_anchors.append(cloned)
+        if new_anchors:
+            asset["identity_anchors"] = new_anchors
+
+
+def _mode2_renumber_timeline_shots(
+    shots: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+    source_to_new: dict[str, list[str]] = {}
+    for index, shot in enumerate(shots, start=1):
+        old_id = str(shot.get("segment_id") or "").strip()
+        new_id = f"S{index:03d}"
+        if old_id:
+            source_to_new.setdefault(old_id, []).append(new_id)
+        if old_id != new_id:
+            _mode2_clear_timeline_outputs(shot)
+        shot["segment_id"] = new_id
+    return shots, source_to_new
+
+
+def _mode2_finish_timeline_edit(
+    root: Path,
+    store_path: Path,
+    data: dict[str, Any],
+    *,
+    edit_summary: dict[str, Any],
+    selected_segment_id: str,
+    selected_index: int,
+) -> dict[str, Any]:
+    assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
+    shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+    shots.sort(key=lambda item: (_mode2_float(item.get("start"), 0.0), _mode2_float(item.get("end"), 0.0)))
+    shots, shot_id_map = _mode2_renumber_timeline_shots(shots)
+    _mode2_apply_shot_id_mapping_to_assets(assets, shot_id_map)
+    data["assets"] = assets
+    data["shots"] = shots
+    if selected_segment_id in shot_id_map and shot_id_map[selected_segment_id]:
+        selected_segment_id = shot_id_map[selected_segment_id][0]
+    selected_index = next(
+        (idx for idx, shot in enumerate(shots) if str(shot.get("segment_id") or "") == selected_segment_id),
+        max(0, min(selected_index, len(shots) - 1)) if shots else -1,
+    )
+    if 0 <= selected_index < len(shots):
+        selected_segment_id = str(shots[selected_index].get("segment_id") or selected_segment_id)
+
+    edit_summary = {
+        **edit_summary,
+        "selected_segment_id": selected_segment_id,
+        "selected_index": selected_index,
+        "shot_count": len(shots),
+        "edited_at": time.time(),
+    }
+    history = data.get("timeline_manual_history") if isinstance(data.get("timeline_manual_history"), list) else []
+    history.append(edit_summary)
+    data["timeline_manual_history"] = history[-200:]
+    data["timeline_stage"] = "manual_timeline_edited"
+    data["storyboard_stage"] = "manual_timeline_edited"
+    _refresh_mode2_structured_fields(root, data)
+    _write_storyboard_mode2_store(root, data)
+    response = _load_mode2_storyboard_result(root, store_path)
+    response["timeline_edit"] = edit_summary
+    response["selected_segment_id"] = selected_segment_id
+    response["selected_index"] = selected_index
+    return response
+
+
+def _mode2_split_timeline_shot(
+    shots: list[dict[str, Any]],
+    index: int,
+    split_time: float,
+) -> tuple[list[dict[str, Any]], dict[str, Any], str, int]:
+    parent = shots[index]
+    parent_id = str(parent.get("segment_id") or "").strip()
+    start, end = _mode2_shot_time_range(parent)
+    min_piece = 0.3
+    if split_time <= start + min_piece or split_time >= end - min_piece:
+        raise ValueError(f"split_time_too_close_to_edge: {split_time:.3f}, shot={start:.3f}-{end:.3f}")
+
+    left = copy.deepcopy(parent)
+    right = copy.deepcopy(parent)
+    source_ids = _mode2_unique_list(parent.get("source_segment_ids"), [parent_id])
+    for child, child_start, child_end, child_role in (
+        (left, start, split_time, "left"),
+        (right, split_time, end, "right"),
+    ):
+        child["source_segment_ids"] = source_ids
+        child["manual_parent_segment_id"] = parent_id
+        child["manual_timeline_edit"] = {
+            "action": "split_at_time",
+            "parent_segment_id": parent_id,
+            "split_time": round(split_time, 3),
+            "part": child_role,
+        }
+        child["start"] = round(child_start, 3)
+        child["end"] = round(child_end, 3)
+        child["duration"] = round(child_end - child_start, 3)
+        _mode2_prune_timeline_fields(child)
+
+    new_shots = [*shots[:index], left, right, *shots[index + 1:]]
+    edit_summary = {
+        "action": "split_at_time",
+        "parent_segment_id": parent_id,
+        "split_time": round(split_time, 3),
+        "old_range": [round(start, 3), round(end, 3)],
+        "new_ranges": [[round(start, 3), round(split_time, 3)], [round(split_time, 3), round(end, 3)]],
+    }
+    return new_shots, edit_summary, parent_id, index
+
+
+def _mode2_merge_timeline_shots(
+    shots: list[dict[str, Any]],
+    left_index: int,
+    right_index: int,
+    *,
+    action: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any], str, int]:
+    left = shots[left_index]
+    right = shots[right_index]
+    left_id = str(left.get("segment_id") or "").strip()
+    right_id = str(right.get("segment_id") or "").strip()
+    left_start, left_end = _mode2_shot_time_range(left)
+    right_start, right_end = _mode2_shot_time_range(right)
+    if right_start < left_start:
+        raise ValueError("timeline_order_invalid")
+    if abs(left_end - right_start) > 0.12:
+        raise ValueError(f"shots_not_contiguous: {left_end:.3f}-{right_start:.3f}")
+
+    merged = copy.deepcopy(left)
+    merged["start"] = round(left_start, 3)
+    merged["end"] = round(right_end, 3)
+    merged["duration"] = round(max(0.0, right_end - left_start), 3)
+    merged["source_segment_ids"] = _mode2_unique_list(
+        left.get("source_segment_ids"),
+        right.get("source_segment_ids"),
+        [left_id, right_id],
+    )
+    for key in ("asset_ids", "role_asset_ids", "scene_asset_ids", "prop_asset_ids"):
+        merged[key] = _mode2_unique_list(left.get(key), right.get(key))
+    boundary_hints: list[Any] = []
+    for value in (left.get("boundary_hints"), right.get("boundary_hints")):
+        if isinstance(value, list):
+            boundary_hints.extend(item for item in value if item)
+    merged["boundary_hints"] = boundary_hints
+    merged["person_count"] = _mode2_merge_person_count(left, right)
+    merged["description"] = _mode2_merge_text(left.get("description"), right.get("description"), fallback="手工合并镜头")
+    merged["summary"] = _mode2_merge_text(left.get("summary"), right.get("summary"))
+    merged["manual_merged_segment_ids"] = _mode2_unique_list(
+        left.get("manual_merged_segment_ids"),
+        right.get("manual_merged_segment_ids"),
+        [left_id, right_id],
+    )
+    merged["manual_timeline_edit"] = {
+        "action": action,
+        "merged_segment_ids": [left_id, right_id],
+        "old_ranges": [
+            [round(left_start, 3), round(left_end, 3)],
+            [round(right_start, 3), round(right_end, 3)],
+        ],
+    }
+    _mode2_prune_timeline_fields(merged)
+
+    new_shots = [*shots[:left_index], merged, *shots[right_index + 1:]]
+    edit_summary = {
+        "action": action,
+        "merged_segment_ids": [left_id, right_id],
+        "old_ranges": [
+            [round(left_start, 3), round(left_end, 3)],
+            [round(right_start, 3), round(right_end, 3)],
+        ],
+        "new_range": [round(left_start, 3), round(right_end, 3)],
+    }
+    return new_shots, edit_summary, left_id, left_index
+
+
+def _edit_storyboard_mode2_shot(payload: dict[str, Any]) -> dict[str, Any]:
+    project_dir = str(payload.get("project_dir") or "").strip()
+    action = str(payload.get("action") or "").strip()
+    segment_id = str(payload.get("segment_id") or "").strip()
+    if not project_dir:
+        raise ValueError("missing_project_dir")
+    if action not in {"split_at_time", "merge_prev", "merge_next"}:
+        raise ValueError(f"invalid_timeline_action: {action}")
+    if not segment_id:
+        raise ValueError("missing_segment_id")
+
+    root = _resolve_storyboard_mode2_project_dir(project_dir)
+    store_path = _storyboard_mode2_asset_store_path(root)
+    data = _load_storyboard_mode2_store(root)
+    shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+    if not shots:
+        raise ValueError("mode2_timeline_empty")
+    index = next((idx for idx, shot in enumerate(shots) if str(shot.get("segment_id") or "") == segment_id), -1)
+    if index < 0:
+        raise ValueError(f"segment_not_found: {segment_id}")
+
+    if action == "split_at_time":
+        split_time = _mode2_float(payload.get("time"), -1.0)
+        shots, edit_summary, selected_segment_id, selected_index = _mode2_split_timeline_shot(shots, index, split_time)
+    elif action == "merge_prev":
+        if index <= 0:
+            raise ValueError("no_previous_shot_to_merge")
+        shots, edit_summary, selected_segment_id, selected_index = _mode2_merge_timeline_shots(
+            shots,
+            index - 1,
+            index,
+            action=action,
+        )
+    else:
+        if index >= len(shots) - 1:
+            raise ValueError("no_next_shot_to_merge")
+        shots, edit_summary, selected_segment_id, selected_index = _mode2_merge_timeline_shots(
+            shots,
+            index,
+            index + 1,
+            action=action,
+        )
+
+    data["shots"] = shots
+    return _mode2_finish_timeline_edit(
+        root,
+        store_path,
+        data,
+        edit_summary=edit_summary,
+        selected_segment_id=selected_segment_id,
+        selected_index=selected_index,
+    )
+
+
 MODE2_ASSET_AUDIT_SEVERITY_RANK = {"info": 0, "warning": 1, "blocked": 2}
 
 
@@ -5708,6 +6358,9 @@ def _update_storyboard_mode2_role_anchor(payload: dict[str, Any]) -> dict[str, A
             "source": "manual",
             "updated_at": time.time(),
         }
+        source_kind = str(payload.get("source_kind") or "").strip()
+        if source_kind:
+            anchor["source_kind"] = source_kind
         sam3_object_id = payload.get("sam3_object_id")
         if sam3_object_id not in (None, ""):
             try:
@@ -5747,16 +6400,38 @@ def _update_storyboard_mode2_role_anchor(payload: dict[str, Any]) -> dict[str, A
         if source_shape:
             anchor["source_shape"] = source_shape
             anchor["shape"] = source_shape
+        anchor_frame_path = str(anchor.get("frame_path") or "")
+        anchor_time = float(anchor.get("time") or 0.0)
+
+        def same_anchor_slot(item: dict[str, Any]) -> bool:
+            if str(item.get("role_id") or "") != role_id:
+                return False
+            item_id = str(item.get("id") or "")
+            if item_id and item_id == anchor_id:
+                return True
+            item_frame_path = str(item.get("frame_path") or "")
+            if anchor_frame_path and item_frame_path and anchor_frame_path == item_frame_path:
+                return True
+            try:
+                if abs(float(item.get("time") or 0.0) - anchor_time) < 0.05:
+                    return True
+            except (TypeError, ValueError):
+                pass
+            return False
+
         replaced = False
         for index, item in enumerate(annotations):
-            if str(item.get("id") or "") == anchor_id or str(item.get("role_id") or "") == role_id:
+            if same_anchor_slot(item):
                 annotations[index] = anchor
                 replaced = True
                 break
         if not replaced:
             annotations.append(anchor)
 
-    role_anchors = [item for item in annotations if str(item.get("role_id") or "") == role_id]
+    role_anchors = sorted(
+        [item for item in annotations if str(item.get("role_id") or "") == role_id],
+        key=lambda item: (float(item.get("time") or 0.0), float(item.get("updated_at") or 0.0)),
+    )
     role["identity_anchors"] = role_anchors
     role["identity_status"] = "annotated" if role_anchors else "needs_anchor"
     role["track_status"] = str(role.get("track_status") or "pending")
@@ -8671,7 +9346,7 @@ def _snap_role_point_to_person(
     """Snap a rough role mark to the torso of the detected person it identifies."""
     import cv2
     import subprocess
-    from spvideo.ffmpeg_tools import ffmpeg_path
+    from spvideo.ffmpeg_tools import ffmpeg_path, subprocess_no_window_kwargs
 
     ffmpeg = ffmpeg_path()
     frame_ext = ".jpg"
@@ -8714,6 +9389,7 @@ def _snap_role_point_to_person(
                 encoding="utf-8",
                 errors="replace",
                 timeout=30,
+                **subprocess_no_window_kwargs(),
             )
             if result.returncode == 0 and frame_path.exists() and frame_path.stat().st_size > 0:
                 break
@@ -8780,6 +9456,7 @@ def _validate_sam3_role_track(
     *,
     output_dir: Path,
     point: list[float],
+    source_shape: dict[str, Any] | None = None,
     prompt_frame: int,
     tracked_frames: int,
     total_frames: int,
@@ -8808,6 +9485,9 @@ def _validate_sam3_role_track(
     neighborhood = mask[max(0, py - radius): py + radius + 1, max(0, px - radius): px + radius + 1]
     if neighborhood.size == 0 or not np.any(neighborhood > 127):
         raise ValueError(f"{role_name} 的 SAM3 mask 没有覆盖手工身份点")
+    shape_overlap = _identity_shape_mask_overlap(mask, source_shape)
+    if shape_overlap is not None and shape_overlap < SAM3_SHAPE_MIN_OVERLAP:
+        raise ValueError(f"{role_name} 的 SAM3 mask 没有覆盖手绘身份区域: {shape_overlap:.0%}")
 
 
 def _run_wan_multi_role_transfer(
@@ -13875,7 +14555,13 @@ def _storyboard_mode2_role_track_dir(root: Path, role_id: str, job_id: str) -> P
     return root / "assets" / "role_tracks" / safe_role / job_id[:12]
 
 
-def _storyboard_mode2_track_quality(track_dir: Path, *, prompt_frame: int, point: list[float]) -> dict[str, Any]:
+def _storyboard_mode2_track_quality(
+    track_dir: Path,
+    *,
+    prompt_frame: int,
+    point: list[float],
+    source_shape: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     import cv2
     import numpy as np
 
@@ -13884,6 +14570,7 @@ def _storyboard_mode2_track_quality(track_dir: Path, *, prompt_frame: int, point
         return {"coverage": 0.0, "mean_area_ratio": 0.0, "warnings": ["no_masks"]}
     area_ratios: list[float] = []
     point_covered = False
+    shape_overlap: float | None = None
     for path in mask_paths:
         mask = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
         if mask is None:
@@ -13897,6 +14584,7 @@ def _storyboard_mode2_track_quality(track_dir: Path, *, prompt_frame: int, point
             radius = max(2, min(width, height) // 100)
             neighborhood = mask[max(0, py - radius): py + radius + 1, max(0, px - radius): px + radius + 1]
             point_covered = bool(neighborhood.size and np.any(neighborhood > 127))
+            shape_overlap = _identity_shape_mask_overlap(mask, source_shape)
     warnings: list[str] = []
     mean_area = sum(area_ratios) / len(area_ratios) if area_ratios else 0.0
     if mean_area < 0.01:
@@ -13905,12 +14593,15 @@ def _storyboard_mode2_track_quality(track_dir: Path, *, prompt_frame: int, point
         warnings.append("mask_too_large")
     if not point_covered:
         warnings.append("point_not_covered")
+    if shape_overlap is not None and shape_overlap < SAM3_SHAPE_MIN_OVERLAP:
+        warnings.append("shape_seed_not_covered")
     return {
         "coverage": round(len(area_ratios) / max(1, len(mask_paths)), 4),
         "mean_area_ratio": round(mean_area, 4),
         "min_area_ratio": round(min(area_ratios), 4) if area_ratios else 0.0,
         "max_area_ratio": round(max(area_ratios), 4) if area_ratios else 0.0,
         "prompt_point_covered": point_covered,
+        "source_shape_overlap": round(shape_overlap, 4) if shape_overlap is not None else None,
         "warnings": warnings,
     }
 
@@ -14063,8 +14754,17 @@ def _storyboard_mode2_track_role_with_sam3(
     role_id = str(role.get("id") or "")
     role_name = str(role.get("name") or role_id or "角色")
     point = [float(anchor["point"][0]), float(anchor["point"][1])]
+    source_kind = str(anchor.get("source_kind") or "").strip()
+    source_shape = _normalize_identity_shape(anchor.get("source_shape") or anchor.get("shape"))
+    shape_seed_points = _identity_shape_seed_points(source_shape, point)
     anchor_time = max(0.0, float(anchor.get("time") or role.get("source_time") or 0.1))
-    add_log(f"> [{role_name}] 准备 SAM3 身份分轨: time={anchor_time:.2f}s point=({point[0]:.3f},{point[1]:.3f})")
+    if source_shape and shape_seed_points:
+        add_log(
+            f"> [{role_name}] 准备 SAM3 身份分轨: time={anchor_time:.2f}s "
+            f"手绘区域种子={len(shape_seed_points)} 点"
+        )
+    else:
+        add_log(f"> [{role_name}] 准备 SAM3 身份分轨: time={anchor_time:.2f}s point=({point[0]:.3f},{point[1]:.3f})")
     meta = probe_video(video_path)
     source_fps = float(meta.fps or 0.0) or 24.0
     source_frame_idx = max(0, int(round(anchor_time * source_fps)))
@@ -14095,10 +14795,13 @@ def _storyboard_mode2_track_role_with_sam3(
         tracker = SAM3Tracker()
         try:
             if preferred_object_id is None:
-                add_log(f"> [{role_name}] 蒙版候选不可信/未选颜色块，使用手动点提示重跑 SAM3...")
+                if source_shape and shape_seed_points:
+                    add_log(f"> [{role_name}] 使用手绘区域内多点提示重跑 SAM3...")
+                else:
+                    add_log(f"> [{role_name}] 蒙版候选不可信/未选颜色块，使用手动点提示重跑 SAM3...")
                 tracked = tracker.track_by_point(
                     video_path=str(clip_path),
-                    point=point,
+                    point=shape_seed_points or point,
                     frame_idx=prompt_frame,
                     max_frames=clip_frames,
                     propagation_direction="both",
@@ -14117,11 +14820,16 @@ def _storyboard_mode2_track_role_with_sam3(
 
     clip_start_time = start_frame / source_fps
     anchor_frame = max(0, min(clip_frames - 1, int(round((anchor_time - clip_start_time) * track_fps))))
-    prompt_source = "mode2_sam3_point_prompt" if preferred_object_id is None else "mode2_sam3_text_objects"
+    prompt_source = (
+        "mode2_sam3_shape_prompt"
+        if preferred_object_id is None and source_shape
+        else ("mode2_sam3_point_prompt" if preferred_object_id is None else "mode2_sam3_text_objects")
+    )
     prompt_mode = str(tracked.get("prompt_mode") or ("points" if preferred_object_id is None else "text_objects"))
     best_object_id: int | None = None
-    object_match_source = "manual_point_prompt" if preferred_object_id is None else "nearest_identity_point"
+    object_match_source = "manual_shape_prompt" if preferred_object_id is None and source_shape else ("manual_point_prompt" if preferred_object_id is None else "nearest_identity_point")
     identity_distance = 0.0
+    source_shape_overlap: float | None = None
 
     if preferred_object_id is None:
         for frame_index, mask in enumerate(tracked.get("masks") or []):
@@ -14138,7 +14846,7 @@ def _storyboard_mode2_track_role_with_sam3(
         if not object_ids:
             raise ValueError(f"{role_name} SAM3 没有检测到 person object")
 
-        def point_cost(obj_id: int) -> float:
+        def object_point_distance(obj_id: int) -> float:
             mask = tracked["objects"][obj_id]["masks"][anchor_frame]
             if mask is None:
                 return 10.0
@@ -14151,19 +14859,36 @@ def _storyboard_mode2_track_role_with_sam3(
             distances = cv2.distanceTransform((1 - mask_array).astype(np.uint8), cv2.DIST_L2, 3)
             return float(distances[py, px]) / float(max(width, height))
 
+        def object_shape_overlap(obj_id: int) -> float | None:
+            mask = tracked["objects"][obj_id]["masks"][anchor_frame]
+            if mask is None:
+                return None
+            mask_array = np.squeeze(mask).astype(np.uint8)
+            return _identity_shape_mask_overlap(mask_array, source_shape)
+
+        def object_cost(obj_id: int) -> float:
+            distance = object_point_distance(obj_id)
+            if not source_shape:
+                return distance
+            overlap = object_shape_overlap(obj_id)
+            return distance + max(0.0, SAM3_SHAPE_OBJECT_TARGET_OVERLAP - float(overlap or 0.0))
+
         if preferred_object_id in object_ids:
-            preferred_distance = point_cost(int(preferred_object_id))
-            if preferred_distance <= 0.05:
+            preferred_distance = object_point_distance(int(preferred_object_id))
+            preferred_cost = object_cost(int(preferred_object_id))
+            match_threshold = SAM3_SHAPE_OBJECT_MATCH_THRESHOLD if source_shape else 0.05
+            if preferred_cost <= match_threshold:
                 best_object_id = int(preferred_object_id)
                 identity_distance = preferred_distance
                 object_match_source = "saved_sam3_object_id"
             else:
-                best_object_id = min(object_ids, key=point_cost)
-                identity_distance = point_cost(best_object_id)
-                object_match_source = "saved_object_id_missed_fallback_to_point"
+                best_object_id = min(object_ids, key=object_cost)
+                identity_distance = object_point_distance(best_object_id)
+                object_match_source = "saved_object_id_missed_fallback_to_shape" if source_shape else "saved_object_id_missed_fallback_to_point"
         else:
-            best_object_id = min(object_ids, key=point_cost)
-            identity_distance = point_cost(best_object_id)
+            best_object_id = min(object_ids, key=object_cost)
+            identity_distance = object_point_distance(best_object_id)
+        source_shape_overlap = object_shape_overlap(best_object_id)
         object_result = tracked["objects"][best_object_id]
         for frame_index, mask in enumerate(object_result["masks"]):
             if mask is None:
@@ -14181,6 +14906,7 @@ def _storyboard_mode2_track_role_with_sam3(
         _validate_sam3_role_track(
             output_dir=output_dir,
             point=point,
+            source_shape=source_shape,
             prompt_frame=anchor_frame,
             tracked_frames=tracked_frames,
             total_frames=total_frames,
@@ -14200,10 +14926,15 @@ def _storyboard_mode2_track_role_with_sam3(
         "role_id": role_id,
         "role_name": role_name,
         "anchor": anchor,
+        "source_kind": source_kind,
+        "source_shape_used": bool(source_shape),
+        "source_shape": source_shape or {},
+        "prompt_points": shape_seed_points or [point],
         "sam3_object_id": best_object_id,
         "saved_sam3_object_id": preferred_object_id,
         "object_match_source": object_match_source,
         "identity_point_distance": identity_distance,
+        "source_shape_overlap": source_shape_overlap,
         "video_path": video_path,
         "clip_path": str(clip_path),
         "clip_start_frame": start_frame,
@@ -14222,8 +14953,10 @@ def _storyboard_mode2_track_role_with_sam3(
         "status": status,
         "warning": warning,
     }
-    quality = _storyboard_mode2_track_quality(output_dir, prompt_frame=anchor_frame, point=point)
+    quality = _storyboard_mode2_track_quality(output_dir, prompt_frame=anchor_frame, point=point, source_shape=source_shape)
     quality["identity_point_distance"] = round(identity_distance, 4)
+    if source_shape_overlap is not None:
+        quality["source_shape_overlap"] = round(source_shape_overlap, 4)
     summary["track_quality"] = quality
     bundle = _storyboard_mode2_extract_role_source_bundle(
         video_path=video_path,
@@ -14235,9 +14968,19 @@ def _storyboard_mode2_track_role_with_sam3(
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
     first_mask = next(iter(sorted(output_dir.glob("mask_*.png"))), None)
+    role_anchor_list = [
+        item for item in (role.get("identity_anchors") or [])
+        if isinstance(item, dict)
+    ]
+    if not any(str(item.get("id") or "") == str(anchor.get("id") or "") for item in role_anchor_list):
+        role_anchor_list.append(anchor)
+    role_anchor_list = sorted(
+        role_anchor_list,
+        key=lambda item: (float(item.get("time") or 0.0), float(item.get("updated_at") or 0.0)),
+    )
     role.update({
         "identity_status": "tracked" if status == "ready" else "needs_review",
-        "identity_anchors": [anchor],
+        "identity_anchors": role_anchor_list,
         "role_track_id": track_id,
         "track_dir": str(output_dir),
         "track_summary": str(summary_path),
@@ -14278,6 +15021,131 @@ def _storyboard_mode2_track_role_with_sam3(
         add_log(f"> [{role_name}] SAM3 point prompt {tracked_frames}/{summary['num_frames']} 帧 status={status}")
     else:
         add_log(f"> [{role_name}] SAM3 object={best_object_id} {tracked_frames}/{summary['num_frames']} 帧 status={status}")
+    return summary
+
+
+def _storyboard_mode2_track_role_with_remote_sam3(
+    *,
+    root: Path,
+    video_path: str,
+    role: dict[str, Any],
+    anchor: dict[str, Any],
+    job_id: str,
+    add_log,
+) -> dict[str, Any]:
+    from spvideo.scail2_client import Scail2Client
+
+    role_id = str(role.get("id") or "")
+    role_name = str(role.get("name") or role_id or "角色")
+    ref_image = str(role.get("target_image") or role.get("refined_image") or role.get("representative_image") or role.get("source_image") or "").strip()
+    if not ref_image:
+        raise ValueError(f"{role_name} 缺少参考图，无法提交服务器分轨")
+    point = [float(anchor["point"][0]), float(anchor["point"][1])]
+    source_shape = _normalize_identity_shape(anchor.get("source_shape") or anchor.get("shape"))
+    add_log(f"> [{role_name}] 正在提交服务器 SAM3 分轨...")
+    client = Scail2Client()
+    result = client.inspect_masks(
+        video_path=video_path,
+        ref_images=[ref_image],
+        role_names=[role_name],
+        source_identity_points=[point],
+        source_identity_shapes=[source_shape],
+        on_progress=add_log,
+    )
+    output_path = str(result.get("output_path") or "").strip()
+    mask_output_paths = result.get("mask_output_paths") if isinstance(result.get("mask_output_paths"), dict) else {}
+    pose_paths = [str(path) for path in (mask_output_paths.get("pose") or []) if str(path or "").strip()]
+    summary_path = Path(output_path).with_suffix(".json") if output_path else (Path(video_path).parent / f"{role_id}_{job_id[:8]}_remote_sam3_summary.json")
+    status = "ready" if output_path and not (result.get("warnings") or []) else "needs_review"
+    warning = ""
+    warnings = [str(item) for item in (result.get("warnings") or []) if str(item or "").strip()]
+    if warnings:
+        warning = "; ".join(warnings[:4])
+    summary = {
+        "role_track_id": f"{role_id}_{job_id[:10]}",
+        "prompt_source": "remote_sam3_color_mask",
+        "prompt_mode": "remote_sam3_color_mask",
+        "role_id": role_id,
+        "role_name": role_name,
+        "anchor": anchor,
+        "source_kind": "remote_sam3_color_mask",
+        "source_shape_used": bool(source_shape),
+        "source_shape": source_shape or {},
+        "prompt_points": [point],
+        "sam3_object_id": None,
+        "saved_sam3_object_id": None,
+        "object_match_source": "remote_sam3_color_mask",
+        "identity_point_distance": 0.0,
+        "source_shape_overlap": None,
+        "video_path": video_path,
+        "clip_path": video_path,
+        "clip_start_frame": 0,
+        "clip_start_time": 0.0,
+        "text_prompt": "person",
+        "text_prompt_frame": 0,
+        "clip_prompt_frame": 0,
+        "source_fps": None,
+        "track_fps": None,
+        "prompt_point": point,
+        "candidate_time": float(anchor.get("time") or 0.0),
+        "propagation_direction": "both",
+        "num_frames": 0,
+        "tracked_frames": 0,
+        "output_dir": str(Path(output_path).parent if output_path else Path(video_path).parent),
+        "status": status,
+        "warning": warning,
+        "track_quality": {
+            "coverage": 1.0 if output_path else 0.0,
+            "mean_area_ratio": 0.0,
+            "warnings": warnings,
+        },
+        "remote_result": result,
+        "color_preview_path": output_path,
+        "mask_output_paths": mask_output_paths,
+        "source_mask_paths": pose_paths,
+    }
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    role.update({
+        "identity_status": "tracked" if status == "ready" else "needs_review",
+        "identity_anchors": sorted(
+            list((role.get("identity_anchors") or [])) + [anchor],
+            key=lambda item: (float(item.get("time") or 0.0), float(item.get("updated_at") or 0.0)),
+        ),
+        "role_track_id": summary["role_track_id"],
+        "track_dir": str(Path(output_path).parent if output_path else summary_path.parent),
+        "track_summary": str(summary_path),
+        "track_source": "remote_sam3_color_mask",
+        "track_status": status,
+        "track_quality": summary["track_quality"],
+        "track_path": output_path,
+        "mask_path": output_path,
+        "source_image": str(ref_image),
+        "source_images": [str(ref_image)],
+        "source_crop_paths": [],
+        "source_mask_paths": pose_paths,
+        "source_frame_count": 0,
+        "source_kind": "remote_sam3_color_mask",
+        "source_identity_status": "tracked_identity",
+        "source_collision": False,
+        "source_collision_with": [],
+        "refinement_status": status,
+        "refinement_method": "remote_sam3_color_mask",
+        "refinement_kind": "role_identity_track_bundle",
+        "refined_source_image": str(ref_image),
+        "refined_source_images": [str(ref_image)],
+        "refined_mask_image": output_path,
+        "refined_cutout_image": "",
+        "refinement_prompt": "remote SAM3 color mask track",
+        "refinement_warning": warning,
+        "refinement_error": "",
+        "refinement_job_id": job_id,
+        "refinement_source_path": ref_image,
+    })
+    add_log(f"> [{role_name}] 服务器 SAM3 分轨完成: {output_path or '无输出'}")
+    if warnings:
+        for item in warnings[:4]:
+            add_log(f"> [{role_name}] 蒙版提醒: {item}")
     return summary
 
 
@@ -14328,6 +15196,14 @@ def _run_storyboard_role_track_job(job_id: str, payload: dict[str, Any]) -> None
         data["role_tracks_version"] = int(data.get("role_tracks_version") or 1)
         data["role_tracks"] = role_tracks
         data.setdefault("role_track_history", [])
+        project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
+        track_mode = str(payload.get("mode") or project_config.get("mask_source") or DEFAULT_STORYBOARD_PROJECT_CONFIG["mask_source"]).strip()
+        use_remote_track = track_mode == "remote_sam3_color"
+        summary["track_mode"] = "remote_sam3_color" if use_remote_track else "local_sam3"
+        add_log(
+            "> 角色分轨来源: "
+            + ("服务器 SAM3 彩色蒙版" if use_remote_track else "本机 SAM3")
+        )
 
         def persist() -> None:
             data["assets"] = assets
@@ -14337,7 +15213,18 @@ def _run_storyboard_role_track_job(job_id: str, payload: dict[str, Any]) -> None
         for index, role in enumerate(roles, 1):
             role_id = str(role.get("id") or "")
             role_name = str(role.get("name") or role_id)
-            anchor = next((item for item in annotations if str(item.get("role_id") or "") == role_id), None)
+            anchor_candidates = [
+                item for item in annotations
+                if str(item.get("role_id") or "") == role_id
+            ]
+            anchor = max(
+                anchor_candidates,
+                key=lambda item: (
+                    1 if _normalize_identity_shape(item.get("source_shape") or item.get("shape")) else 0,
+                    float(item.get("updated_at") or item.get("time") or 0.0),
+                ),
+                default=None,
+            )
             if not anchor:
                 role["identity_status"] = "needs_anchor"
                 role["track_status"] = "needs_anchor"
@@ -14346,19 +15233,31 @@ def _run_storyboard_role_track_job(job_id: str, payload: dict[str, Any]) -> None
                 add_log(f"> [{index}/{len(roles)}] {role_name} 缺少身份点，跳过")
                 persist()
                 continue
+            if len(anchor_candidates) > 1:
+                add_log(f"> [{index}/{len(roles)}] {role_name} 已有 {len(anchor_candidates)} 个锚点，本次使用最近的手绘/点位种子")
             role["identity_status"] = "tracking"
             role["track_status"] = "tracking"
             persist()
-            add_log(f"> [{index}/{len(roles)}] 跑 SAM3 身份分轨: {role_name} @ {float(anchor.get('time') or 0):.2f}s")
+            add_log(f"> [{index}/{len(roles)}] 跑 {'服务器' if use_remote_track else '本机'} SAM3 身份分轨: {role_name} @ {float(anchor.get('time') or 0):.2f}s")
             try:
-                item = _storyboard_mode2_track_role_with_sam3(
-                    root=root,
-                    video_path=video_path,
-                    role=role,
-                    anchor=anchor,
-                    job_id=job_id,
-                    add_log=add_log,
-                )
+                if use_remote_track:
+                    item = _storyboard_mode2_track_role_with_remote_sam3(
+                        root=root,
+                        video_path=video_path,
+                        role=role,
+                        anchor=anchor,
+                        job_id=job_id,
+                        add_log=add_log,
+                    )
+                else:
+                    item = _storyboard_mode2_track_role_with_sam3(
+                        root=root,
+                        video_path=video_path,
+                        role=role,
+                        anchor=anchor,
+                        job_id=job_id,
+                        add_log=add_log,
+                    )
                 _storyboard_mode2_attach_role_presence_to_shots(role, shots, item)
                 role_tracks[role_id] = item
                 summary["processed"] += 1
@@ -14879,7 +15778,7 @@ def _make_sam3_window_clip(
 ) -> tuple[Path, int, int, int, float]:
     """Build a short SAM3 tracking clip with ffmpeg for more reliable seeking."""
     import subprocess
-    from spvideo.ffmpeg_tools import ffmpeg_path, probe_video
+    from spvideo.ffmpeg_tools import ffmpeg_path, probe_video, subprocess_no_window_kwargs
 
     meta = probe_video(Path(video_path))
     fps = float(meta.fps or 0) or 24.0
@@ -14943,6 +15842,7 @@ def _make_sam3_window_clip(
             encoding="utf-8",
             errors="replace",
             timeout=120,
+            **subprocess_no_window_kwargs(),
         )
         if result.returncode == 0 and clip_path.exists() and clip_path.stat().st_size > 0:
             break
