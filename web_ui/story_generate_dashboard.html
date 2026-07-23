@@ -1791,6 +1791,37 @@
       cursor: pointer;
     }
 
+    .asset-card-main {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      min-height: 0;
+      border-bottom: 1px solid #263038;
+      background: #0c1013;
+    }
+
+    .asset-card-main .asset-card-body {
+      border-bottom: 0;
+    }
+
+    .asset-action-rail {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      justify-content: center;
+      padding: 8px 6px;
+      border-right: 1px solid #263038;
+      background: #0b0f12;
+    }
+
+    .asset-action-rail .tiny-btn {
+      width: 100%;
+      min-height: 32px;
+      padding: 0 4px;
+      justify-content: center;
+      font-size: 11px;
+    }
+
     .asset-card-body.has-refined {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       height: 150px;
@@ -1895,7 +1926,6 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      border-top: 1px solid #263038;
       padding: 8px 10px;
       color: var(--muted);
       font-size: 12px;
@@ -1912,15 +1942,6 @@
 
     .asset-card-foot .tiny-btn {
       flex: 0 0 auto;
-    }
-
-    .asset-card-quick-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 8px 10px;
-      border-bottom: 1px solid #263038;
-      background: #0c1013;
     }
 
     .asset-binding-preview {
@@ -5316,6 +5337,7 @@
     let currentRoleTrackJobId = null;
     let roleTrackPollTimer = null;
     let roleTrackRunningIds = [];
+    let roleTrackPollErrorCount = 0;
     let currentSeedanceTaskId = null;
     let currentSeedanceTimelineIndex = -1;
     let seedancePollTimer = null;
@@ -6718,6 +6740,14 @@
       return picked.map((issue) => String(issue.message || "")).join("；") + suffix;
     }
 
+    function isRoleTrackRunning(assetOrId) {
+      const roleId = typeof assetOrId === "string"
+        ? assetOrId
+        : String(assetOrId?.id || "");
+      return Boolean(roleTrackPollTimer || currentRoleTrackJobId)
+        && (!roleTrackRunningIds.length || roleTrackRunningIds.includes(roleId));
+    }
+
     function assetStatusText(asset) {
       if (isMixedSceneAsset(asset)) return "混合场景，需先拆分";
       if (hasRefinementProvenanceIssue(asset)) return "来源需人工复查";
@@ -6728,6 +6758,7 @@
       if (isPlaceholderAsset(asset)) return "待识别";
       if (isUnconfirmedPropCandidate(asset)) return "物品待确认";
       if (isUnusableSceneCandidate(asset)) return "场景待确认";
+      if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "分轨中";
       if (asset?.kind === "role" && asset?.identity_status === "tracking") return "分轨中";
       if (asset?.kind === "role" && asset?.identity_status === "tracked") return "已分轨";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") return "需要人工复查";
@@ -6750,6 +6781,7 @@
       if (isPlaceholderAsset(asset)) return "这个资产还只是占位，需要手动确认名称和参考图。";
       if (isMixedSceneAsset(asset)) return "这个场景混入了多个画面，需要先拆分再当作干净参考。";
       if (hasRefinementProvenanceIssue(asset)) return "自动图和原片来源可能不一致，请人工确认，必要时手动换图。";
+      if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "角色身份分轨正在运行，完成后会自动刷新。";
       if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "角色身份不够稳定，需要补锚点后再分轨。";
       if (asset?.kind === "role" && asset?.identity_status === "failed") return asset.track_error || "角色分轨失败，请改用手动建资产或重跑分轨。";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") {
@@ -6769,8 +6801,7 @@
     function updateRoleTrackButtons() {
       document.querySelectorAll("[data-track-role]").forEach((button) => {
         const roleId = String(button.dataset.trackRole || "");
-        const running = Boolean(roleTrackPollTimer)
-          && (!roleTrackRunningIds.length || roleTrackRunningIds.includes(roleId));
+        const running = isRoleTrackRunning(roleId);
         button.disabled = running;
         button.textContent = running ? "分轨中..." : "识别轨道";
         button.title = running
@@ -6970,6 +7001,10 @@
       }, {});
       const readyCount = storyAssets.filter((asset) => assetHasTargetReference(asset)).length;
       const missingCount = Math.max(storyAssets.length - readyCount, 0);
+      const missingNames = storyAssets
+        .filter((asset) => !assetHasTargetReference(asset))
+        .map((asset) => `${assetKindLabel(asset?.kind || "asset")}${asset?.name ? `「${asset.name}」` : ""}`)
+        .slice(0, 4);
       const noticeCount = storyAssets.filter((asset) => Boolean(assetQualityNoticeText(asset))).length;
       const countText = [
         counts.role ? `\u89d2\u8272 ${counts.role}` : "",
@@ -6978,7 +7013,7 @@
         counts.asset ? `\u5176\u4ed6 ${counts.asset}` : "",
       ].filter(Boolean).join(" / ") || `\u8d44\u4ea7 ${storyAssets.length}`;
       const stateText = missingCount
-        ? `\u5df2\u7ed1\u5b9a\u53c2\u8003\u56fe ${readyCount}/${storyAssets.length}\uff0c\u8fd8\u6709 ${missingCount} \u4e2a\u9700\u8981\u8865\u56fe\u6216\u786e\u8ba4\u3002`
+        ? `\u5df2\u7ed1\u5b9a\u53c2\u8003\u56fe ${readyCount}/${storyAssets.length}\uff0c\u8fd8\u6709 ${missingCount} \u4e2a\u9700\u8981\u8865\u56fe\u6216\u786e\u8ba4：${missingNames.join("、")}\u3002`
         : `\u5df2\u7ed1\u5b9a\u53c2\u8003\u56fe ${readyCount}/${storyAssets.length}\uff0c\u53ef\u4ee5\u8fdb\u5165\u5206\u955c\u7ba1\u7406\u3002`;
       const noticeText = noticeCount ? `\u6709 ${noticeCount} \u4e2a\u8d44\u4ea7\u5e26\u63d0\u9192\uff0c\u70b9\u5f00\u8be6\u60c5\u6216\u5361\u7247\u5904\u7406\u3002` : "\u5b8c\u6574\u6e05\u5355\u9ed8\u8ba4\u6536\u8d77\uff0c\u9700\u8981\u65f6\u518d\u5c55\u5f00\u6216\u590d\u5236\u3002";
       return `
@@ -7053,16 +7088,15 @@
       const notice = assetQualityNoticeText(asset);
       const tag = asset?.tag ? `<span class="mode-pill">${escapeHtml(asset.tag)}</span>` : "";
       const editLabel = asset?.kind === "role" ? "\u6362\u56fe" : "\u7f16\u8f91";
-      const roleActions = asset?.kind === "role"
-        ? `<button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button><button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>`
-        : "";
-      const quickActions = asset?.kind === "role"
-        ? `<div class="asset-card-quick-actions">
+      const actionRail = asset?.kind === "role"
+        ? `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
             <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button>
             <button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>
           </div>`
-        : "";
+        : `<div class="asset-action-rail">
+            <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">${escapeHtml(editLabel)}</button>
+          </div>`;
       return `
         <article class="asset-card" data-asset-card="${escapeHtml(id)}">
           <div class="asset-card-head">
@@ -7073,15 +7107,15 @@
             <span class="asset-status">${escapeHtml(status)}</span>
           </div>
           ${notice ? `<div class="asset-warning">${escapeHtml(notice)}</div>` : ""}
-          ${quickActions}
-          <div class="asset-card-body" data-edit-asset="${escapeHtml(id)}">
-            <div class="asset-media asset-media-primary">${assetMediaHtml(asset, "source")}</div>
-            <div class="asset-media asset-media-secondary">${assetMediaHtml(asset, "target")}</div>
+          <div class="asset-card-main">
+            ${actionRail}
+            <div class="asset-card-body" data-edit-asset="${escapeHtml(id)}">
+              <div class="asset-media asset-media-primary">${assetMediaHtml(asset, "source")}</div>
+              <div class="asset-media asset-media-secondary">${assetMediaHtml(asset, "target")}</div>
+            </div>
           </div>
           <div class="asset-card-foot">
             <span class="asset-foot-text">${escapeHtml(asset?.prompt || "\u70b9\u51fb\u7f16\u8f91\u8865\u5145\u8d44\u4ea7\u4fe1\u606f")}</span>
-            <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">${escapeHtml(editLabel)}</button>
-            ${roleActions}
           </div>
         </article>
       `;
@@ -9206,6 +9240,8 @@
       setStoryStatus(lines, "warn");
       setLogs(lines);
       roleTrackRunningIds = selectedRoleIds.slice();
+      roleTrackPollErrorCount = 0;
+      renderStoryAssets();
       updateRoleTrackButtons();
       try {
         const response = await fetch("/api/storyboard-role-tracks/run", {
@@ -9216,13 +9252,17 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "提交角色分轨失败");
         currentRoleTrackJobId = data.job_id;
+        roleTrackPollErrorCount = 0;
         showStoryJobId(data.job_id);
         setStoryStatus(["> 角色分轨任务已提交", `> job_id: ${data.job_id}`, "> 分轨完成后会刷新原片、蒙版证据和绑定状态"], "warn");
         roleTrackPollTimer = setInterval(pollRoleTrackJob, 1400);
+        renderStoryAssets();
         updateRoleTrackButtons();
         pollRoleTrackJob();
       } catch (error) {
         roleTrackRunningIds = [];
+        roleTrackPollErrorCount = 0;
+        renderStoryAssets();
         updateRoleTrackButtons();
         setStoryStatus(["x " + error.message], "bad");
         setLogs(["x " + error.message]);
@@ -9235,12 +9275,14 @@
         const response = await fetch("/api/jobs/" + encodeURIComponent(currentRoleTrackJobId));
         const job = await response.json();
         if (!response.ok) throw new Error(job.error || "查询角色分轨任务失败");
+        roleTrackPollErrorCount = 0;
         const logs = Array.isArray(job.logs) ? job.logs : [];
         setLogs(logs);
         if (job.status === "done") {
           clearInterval(roleTrackPollTimer);
           roleTrackPollTimer = null;
           roleTrackRunningIds = [];
+          roleTrackPollErrorCount = 0;
           const result = job.result || {};
           applyLoadedProject(result, { story: result.storyboard || {} });
           const summary = result.role_track || {};
@@ -9256,18 +9298,31 @@
           clearInterval(roleTrackPollTimer);
           roleTrackPollTimer = null;
           roleTrackRunningIds = [];
+          roleTrackPollErrorCount = 0;
           await refreshStoryAssetsFromBackend();
           setStoryStatus(["x 角色分轨失败", `> job_id: ${currentRoleTrackJobId}`, `> ${job.error || job.status}`], "bad");
+          renderStoryAssets();
           updateRoleTrackButtons();
         } else {
           setStoryStatus(["> 角色分轨运行中", `> job_id: ${currentRoleTrackJobId}`, ...logs.slice(-3)], "warn");
+          renderStoryAssets();
           updateRoleTrackButtons();
         }
       } catch (error) {
+        roleTrackPollErrorCount += 1;
+        if (roleTrackPollErrorCount < 4) {
+          setStoryStatus(["> 角色分轨状态查询中", `> job_id: ${currentRoleTrackJobId}`, `> 暂时没有拿到状态，继续重试 ${roleTrackPollErrorCount}/3`], "warn");
+          renderStoryAssets();
+          updateRoleTrackButtons();
+          return;
+        }
         clearInterval(roleTrackPollTimer);
         roleTrackPollTimer = null;
         roleTrackRunningIds = [];
-        setStoryStatus(["x 角色分轨任务失败", `> job_id: ${currentRoleTrackJobId}`, "> " + error.message], "bad");
+        roleTrackPollErrorCount = 0;
+        await refreshStoryAssetsFromBackend();
+        setStoryStatus(["x 角色分轨状态查询失败", `> job_id: ${currentRoleTrackJobId}`, "> " + error.message], "bad");
+        renderStoryAssets();
         updateRoleTrackButtons();
       }
     }

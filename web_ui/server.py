@@ -15633,14 +15633,31 @@ def _run_storyboard_role_track_job(job_id: str, payload: dict[str, Any]) -> None
             add_log(f"> [{index}/{len(roles)}] 跑 {'服务器' if use_remote_track else '本机'} SAM3 身份分轨: {role_name} @ {float(anchor.get('time') or 0):.2f}s")
             try:
                 if use_remote_track:
-                    item = _storyboard_mode2_track_role_with_remote_sam3(
-                        root=root,
-                        video_path=video_path,
-                        role=role,
-                        anchor=anchor,
-                        job_id=job_id,
-                        add_log=add_log,
-                    )
+                    remote_error = ""
+                    try:
+                        item = _storyboard_mode2_track_role_with_remote_sam3(
+                            root=root,
+                            video_path=video_path,
+                            role=role,
+                            anchor=anchor,
+                            job_id=job_id,
+                            add_log=add_log,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        remote_error = str(exc)
+                        add_log(f"> {role_name} 服务器 SAM3 分轨失败，改用本机兜底: {remote_error}")
+                        item = _storyboard_mode2_track_role_with_sam3(
+                            root=root,
+                            video_path=video_path,
+                            role=role,
+                            anchor=anchor,
+                            job_id=job_id,
+                            add_log=add_log,
+                        )
+                        item["remote_fallback_used"] = True
+                        item["remote_error"] = remote_error
+                        item["track_mode"] = "remote_failed_local_sam3"
+                        add_log(f"> {role_name} 本机 SAM3 兜底完成: status={item.get('status')}")
                 else:
                     item = _storyboard_mode2_track_role_with_sam3(
                         root=root,
