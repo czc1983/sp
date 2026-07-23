@@ -7022,8 +7022,16 @@
       });
       board.querySelectorAll("[data-anchor-role]").forEach((button) => {
         button.addEventListener("click", (event) => {
+          event.preventDefault();
           event.stopPropagation();
-          openRoleAnchorEditor(button.dataset.anchorRole || "");
+          const cardRoleId = button.closest("[data-asset-card]")?.dataset.assetCard || "";
+          const roleId = button.dataset.anchorRole || cardRoleId;
+          const role = findStoryAsset(roleId);
+          if (!role || role.kind !== "role") {
+            setStoryStatus(["x 没有找到要标注的角色", "> 请刷新页面后重新点击角色卡片上的锚点。"], "bad");
+            return;
+          }
+          openRoleAnchorEditor(role.id);
         });
       });
       board.querySelectorAll("[data-track-role]").forEach((button) => {
@@ -8214,6 +8222,11 @@
     }
 
     function openRoleAnchorEditor(assetId) {
+      if (typeof window.__closeMode2RoleAnchorEditor === "function") {
+        try {
+          window.__closeMode2RoleAnchorEditor();
+        } catch (_) {}
+      }
       const asset = findStoryAsset(assetId);
       if (!asset || asset.kind !== "role") return;
       const roleAssets = () => storyAssets.filter((item) => item.kind === "role");
@@ -8243,6 +8256,8 @@
       let maskCandidates = null;
       let maskErrorText = "";
       let maskRequestSerial = 0;
+      let closed = false;
+      let activeDrawPointerId = null;
 
       const overlay = document.createElement("div");
       overlay.className = "modal-overlay";
@@ -8545,13 +8560,76 @@
 
       function setRoleAnchorDrawMode(enabled) {
         drawShapeMode = !!enabled;
-        if (!drawShapeMode) shapeDrawing = null;
+        if (!drawShapeMode) {
+          shapeDrawing = null;
+          activeDrawPointerId = null;
+          removeRoleAnchorDrawEndListeners();
+        }
         const button = $("#roleAnchorDrawShapeBtn");
         if (button) {
           button.textContent = drawShapeMode ? "正在圈选..." : "圈选人物";
           button.classList.toggle("active", drawShapeMode);
         }
         updateRoleAnchorShapePreview();
+      }
+
+      function removeRoleAnchorDrawEndListeners() {
+        window.removeEventListener("pointerup", onRoleAnchorGlobalPointerUp, true);
+        window.removeEventListener("pointercancel", onRoleAnchorGlobalPointerCancel, true);
+        window.removeEventListener("blur", onRoleAnchorWindowBlur, true);
+        window.removeEventListener("contextmenu", onRoleAnchorContextMenu, true);
+      }
+
+      function addRoleAnchorDrawEndListeners() {
+        removeRoleAnchorDrawEndListeners();
+        window.addEventListener("pointerup", onRoleAnchorGlobalPointerUp, true);
+        window.addEventListener("pointercancel", onRoleAnchorGlobalPointerCancel, true);
+        window.addEventListener("blur", onRoleAnchorWindowBlur, true);
+        window.addEventListener("contextmenu", onRoleAnchorContextMenu, true);
+      }
+
+      function releaseRoleAnchorPointerCapture(event = null) {
+        const pointerId = event?.pointerId ?? activeDrawPointerId;
+        if (pointerId == null) return;
+        ["#roleAnchorFrameDrawLayer", "#roleAnchorMaskDrawLayer"].forEach((selector) => {
+          const layer = $(selector);
+          if (!layer?.releasePointerCapture) return;
+          try {
+            if (!layer.hasPointerCapture || layer.hasPointerCapture(pointerId)) {
+              layer.releasePointerCapture(pointerId);
+            }
+          } catch (_) {}
+        });
+      }
+
+      function endActiveRoleAnchorDraw(commit = true, event = null) {
+        if (event?.pointerId != null && activeDrawPointerId != null && event.pointerId !== activeDrawPointerId) return;
+        releaseRoleAnchorPointerCapture(event);
+        removeRoleAnchorDrawEndListeners();
+        activeDrawPointerId = null;
+        if (shapeDrawing) {
+          finishRoleAnchorShapeDraw(commit);
+        } else if (!commit) {
+          setRoleAnchorDrawMode(false);
+        }
+      }
+
+      function onRoleAnchorGlobalPointerUp(event) {
+        endActiveRoleAnchorDraw(true, event);
+      }
+
+      function onRoleAnchorGlobalPointerCancel(event) {
+        endActiveRoleAnchorDraw(false, event);
+      }
+
+      function onRoleAnchorWindowBlur() {
+        endActiveRoleAnchorDraw(false);
+      }
+
+      function onRoleAnchorContextMenu(event) {
+        if (!drawShapeMode && !shapeDrawing) return;
+        event.preventDefault();
+        endActiveRoleAnchorDraw(false, event);
       }
 
       function appendRoleAnchorShapePoint(point) {
@@ -8567,9 +8645,12 @@
         updateRoleAnchorShapePreview();
       }
 
-      function beginRoleAnchorShapeDraw(point) {
+      function beginRoleAnchorShapeDraw(point, event = null) {
         shapeDrawing = { type: "freehand", points: [] };
+        activeDrawPointerId = event?.pointerId ?? null;
+        addRoleAnchorDrawEndListeners();
         selectedPoint = Array.isArray(point) ? [Number(point[0]) || 0, Number(point[1]) || 0] : selectedPoint;
+        selectedMaskObject = null;
         selectedShape = null;
         appendRoleAnchorShapePoint(point);
       }
@@ -8582,9 +8663,7 @@
           selectedPoint = shapeCenterPoint(clean) || selectedPoint;
           setStoryStatus(["> 已圈选当前角色", "> 检查左图蓝色轮廓，没问题就保存当前角色。"], "good");
         }
-        shapeDrawing = null;
-        drawShapeMode = false;
-        updateRoleAnchorShapePreview();
+        setRoleAnchorDrawMode(false);
         updatePointText();
       }
 
@@ -8805,17 +8884,16 @@
         selectedMaskObject = null;
         selectedPoint = anchor?.point?.length === 2 ? [Number(anchor.point[0]), Number(anchor.point[1])] : null;
         selectedShape = sanitizeSubclipShape(anchor?.source_shape || anchor?.shape);
-        shapeDrawing = null;
-        drawShapeMode = false;
         const noteInput = $("#roleAnchorNoteInput");
         if (noteInput) noteInput.value = anchor?.note || "";
+        setRoleAnchorDrawMode(false);
         updateSelectionMarkers();
         updatePointText();
         renderRoleMaskObjects();
-        updateRoleAnchorShapePreview();
       }
 
       async function loadRoleMaskCandidates() {
+        if (closed) return;
         const frame = currentFrame();
         const serial = ++maskRequestSerial;
         const projectDir = $("#projectDirInput")?.value.trim() || "";
@@ -8855,7 +8933,7 @@
             body: JSON.stringify(payload),
           });
           const data = await response.json().catch(() => ({}));
-          if (serial !== maskRequestSerial) return;
+          if (closed || serial !== maskRequestSerial) return;
           if (!response.ok || data.ok === false) {
             throw new Error(data.error || data.message || "彩色蒙版接口不可用");
           }
@@ -8881,7 +8959,7 @@
           updateSelectionMarkers();
           requestAnimationFrame(renderRoleAnchorSavedMarkers);
         } catch (error) {
-          if (serial !== maskRequestSerial) return;
+          if (closed || serial !== maskRequestSerial) return;
           maskErrorText = error.message || "未知错误";
           if (status) status.textContent = "读取失败";
           if (empty) {
@@ -8893,12 +8971,26 @@
         }
       }
 
+      function closeRoleAnchorEditorModal() {
+        if (closed) return;
+        closed = true;
+        maskRequestSerial += 1;
+        endActiveRoleAnchorDraw(false);
+        setRoleAnchorDrawMode(false);
+        if (window.__closeMode2RoleAnchorEditor === closeRoleAnchorEditorModal) {
+          window.__closeMode2RoleAnchorEditor = null;
+        }
+        overlay.remove();
+      }
+      window.__closeMode2RoleAnchorEditor = closeRoleAnchorEditorModal;
+
       if (selectedPoint) {
         requestAnimationFrame(updateSelectionMarkers);
       }
       $("#roleAnchorFrameImg").addEventListener("load", () => {
         updateSelectionMarkers();
         renderRoleAnchorSavedMarkers();
+        updateRoleAnchorShapePreview();
       });
       $("#roleAnchorMaskImg").addEventListener("load", () => {
         updateSelectionMarkers();
@@ -8913,6 +9005,7 @@
         $("#roleAnchorTitleName").textContent = role.name || role.id || "角色";
         resetSelectionFromAnchor();
       });
+      $("#roleAnchorRoleSelect").value = selectedRoleId;
       $("#roleAnchorFrameSelect").addEventListener("change", () => {
         selectedIndex = Number($("#roleAnchorFrameSelect").value || 0);
         pendingFrameBindings = new Map();
@@ -8950,7 +9043,7 @@
         if (!object) return;
         warnManualLeftAnchor(roleMaskObjectBlockReason(object));
       });
-      $("#closeRoleAnchorBtn").addEventListener("click", () => overlay.remove());
+      $("#closeRoleAnchorBtn").addEventListener("click", closeRoleAnchorEditorModal);
       $("#stageRoleAnchorBtn").addEventListener("click", () => {
         if (stageCurrentRoleBinding()) {
           setStoryStatus(["> 已加入本帧", `> ${selectedRoleDisplayName()} @ ${formatNum(currentFrame().time)}s`, "> 可以继续选择另一个角色，在左侧原图圈选。"], "good");
@@ -9013,12 +9106,10 @@
           selectedPoint = null;
           selectedMaskObject = null;
           selectedShape = null;
-          shapeDrawing = null;
-          drawShapeMode = false;
+          setRoleAnchorDrawMode(false);
           hideSelectionMarkers();
           updatePointText();
           renderRoleMaskObjects();
-          updateRoleAnchorShapePreview();
           requestAnimationFrame(renderRoleAnchorSavedMarkers);
           setStoryStatus(["> 当前角色锚点已保存", `> ${targetRole.name || selectedRoleId} @ ${formatNum(frame.time)}s`, "> 可以切换角色，在左侧原图继续圈下一个人。"], "good");
         } catch (error) {
@@ -9049,12 +9140,10 @@
           selectedPoint = null;
           selectedMaskObject = null;
           selectedShape = null;
-          shapeDrawing = null;
-          drawShapeMode = false;
+          setRoleAnchorDrawMode(false);
           hideSelectionMarkers();
           updatePointText();
           renderRoleMaskObjects();
-          updateRoleAnchorShapePreview();
           requestAnimationFrame(renderRoleAnchorSavedMarkers);
           setStoryStatus(["> 本帧全部角色锚点已保存", `> ${bindings.length} 个角色 @ ${formatNum(currentFrame().time)}s`, "> 可以继续检查分轨，或切换关键帧补充锚点。"], "good");
         } catch (error) {
@@ -9077,10 +9166,12 @@
         );
       });
       $("#roleAnchorClearShapeBtn").addEventListener("click", () => {
+        selectedPoint = null;
         selectedShape = null;
-        shapeDrawing = null;
-        drawShapeMode = false;
-        updateRoleAnchorShapePreview();
+        selectedMaskObject = null;
+        setRoleAnchorDrawMode(false);
+        hideSelectionMarkers();
+        updatePointText();
         setStoryStatus(["> 已清除轮廓", "> 你可以在左侧原图重新圈选，或者直接点脸/身体。"], "warn");
       });
       const frameDrawLayer = $("#roleAnchorFrameDrawLayer");
@@ -9091,7 +9182,7 @@
           if (!img || img.hidden) return;
           event.preventDefault();
           event.stopPropagation();
-          beginRoleAnchorShapeDraw(pointFromImageClick(event, img));
+          beginRoleAnchorShapeDraw(pointFromImageClick(event, img), event);
           updateRoleAnchorShapePreview();
           try {
             frameDrawLayer.setPointerCapture(event.pointerId);
@@ -9107,42 +9198,13 @@
         const endFrameDraw = (event, commit = true) => {
           if (!shapeDrawing) return;
           event?.preventDefault?.();
-          finishRoleAnchorShapeDraw(commit);
+          endActiveRoleAnchorDraw(commit, event);
         };
         frameDrawLayer.addEventListener("pointerup", (event) => endFrameDraw(event, true));
         frameDrawLayer.addEventListener("pointercancel", (event) => endFrameDraw(event, false));
       }
-      const maskDrawLayer = $("#roleAnchorMaskDrawLayer");
-      if (maskDrawLayer) {
-        maskDrawLayer.addEventListener("pointerdown", (event) => {
-          if (!drawShapeMode) return;
-          const img = $("#roleAnchorMaskImg");
-          if (!img || img.hidden) return;
-          event.preventDefault();
-          event.stopPropagation();
-          beginRoleAnchorShapeDraw(pointFromImageClick(event, img));
-          updateRoleAnchorShapePreview();
-          try {
-            maskDrawLayer.setPointerCapture(event.pointerId);
-          } catch (_) {}
-        });
-        maskDrawLayer.addEventListener("pointermove", (event) => {
-          if (!drawShapeMode || !shapeDrawing) return;
-          const img = $("#roleAnchorMaskImg");
-          if (!img || img.hidden) return;
-          event.preventDefault();
-          appendRoleAnchorShapePoint(pointFromImageClick(event, img));
-        });
-        const endDraw = (event, commit = true) => {
-          if (!shapeDrawing) return;
-          event?.preventDefault?.();
-          finishRoleAnchorShapeDraw(commit);
-        };
-        maskDrawLayer.addEventListener("pointerup", (event) => endDraw(event, true));
-        maskDrawLayer.addEventListener("pointercancel", (event) => endDraw(event, false));
-      }
       overlay.addEventListener("click", (event) => {
-        if (event.target === overlay) overlay.remove();
+        if (event.target === overlay) closeRoleAnchorEditorModal();
       });
 
       renderRoleMaskObjects();
