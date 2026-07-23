@@ -15356,10 +15356,30 @@ def _storyboard_mode2_track_role_with_sam3(
         track_dir=output_dir,
         summary=summary,
     )
+    mask_paths = sorted(output_dir.glob("mask_*.png"))
+    preview_path = output_dir / f"role_track_preview_{role_id}_{job_id[:8]}.mp4"
+    try:
+        from spvideo.scail2_client import Scail2Client
+
+        Scail2Client._render_colored_mask_preview_video(
+            [mask_paths],
+            preview_path,
+            track_fps,
+        )
+        summary["track_path"] = str(preview_path)
+        summary["color_preview_path"] = str(preview_path)
+        summary["mask_path"] = str(preview_path)
+        add_log(f"> [{role_name}] 分轨检查视频已生成: {preview_path}")
+    except Exception as exc:  # noqa: BLE001
+        summary["track_path"] = ""
+        summary["color_preview_path"] = ""
+        summary["mask_path"] = ""
+        add_log(f"> [{role_name}] 分轨检查视频生成失败，保留逐帧 PNG: {exc}")
     summary_path = output_dir / "track_summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 
-    first_mask = next(iter(sorted(output_dir.glob("mask_*.png"))), None)
+    first_mask = next(iter(mask_paths), None)
+    display_mask = Path(str(summary.get("mask_path") or "")) if str(summary.get("mask_path") or "").strip() else first_mask
     role_anchor_list = [
         item for item in (role.get("identity_anchors") or [])
         if isinstance(item, dict)
@@ -15379,7 +15399,8 @@ def _storyboard_mode2_track_role_with_sam3(
         "track_source": prompt_source,
         "track_status": status,
         "track_quality": quality,
-        "mask_path": str(first_mask or ""),
+        "track_path": str(summary.get("track_path") or ""),
+        "mask_path": str(display_mask or ""),
         "source_image": bundle["source_image"],
         "source_images": bundle["source_images"],
         "source_crop_paths": bundle["source_crop_paths"],
@@ -15394,7 +15415,7 @@ def _storyboard_mode2_track_role_with_sam3(
         "refinement_kind": "role_identity_track_bundle",
         "refined_source_image": bundle["source_image"],
         "refined_source_images": bundle["source_images"],
-        "refined_mask_image": str(first_mask or ""),
+        "refined_mask_image": str(display_mask or ""),
         "refined_cutout_image": "",
         "refinement_prompt": "mode2 SAM3 identity track from manual anchor",
         "refinement_warning": warning,

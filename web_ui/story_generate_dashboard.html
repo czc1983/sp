@@ -7121,15 +7121,29 @@
       `;
     }
 
+    function isVideoMediaPath(path) {
+      return /\.(mp4|mov|mkv|avi|webm)$/i.test(String(path || "").split(/[?#]/, 1)[0]);
+    }
+
+    function mediaPreviewHtml(path, label = "") {
+      const value = String(path || "").trim();
+      if (!value) return "";
+      const src = escapeHtml(mediaSrc(value, 0.1));
+      const alt = escapeHtml(label || "");
+      return isVideoMediaPath(value)
+        ? `<video controls muted playsinline preload="metadata" src="${src}"></video>`
+        : `<img src="${src}" alt="${alt}">`;
+    }
+
     function assetPreviewHtml(asset, side) {
       const image = side === "target"
         ? asset.target_image
         : side === "refined"
           ? (asset.refined_source_image || asset.refined_cutout_image || "")
           : side === "mask"
-            ? (asset.refined_mask_image || asset.mask_path || "")
+            ? (asset.track_path || asset.refined_mask_image || asset.mask_path || "")
             : asset.source_image;
-      if (image) return `<img src="${escapeHtml(mediaSrc(image, 0.1))}" alt="">`;
+      if (image) return mediaPreviewHtml(image);
       if (side === "source" && asset.source_video_path) {
         return `<video controls preload="metadata" src="${escapeHtml(mediaSrc(asset.source_video_path, asset.source_time || 0.1))}"></video>`;
       }
@@ -7147,7 +7161,7 @@
       if (!path) return "";
       return `
         <div class="asset-review-thumb" title="${escapeHtml(path)}">
-          <img src="${escapeHtml(mediaSrc(path, 0.1))}" alt="">
+          ${mediaPreviewHtml(path, label)}
           <span>${escapeHtml(label)}</span>
         </div>
       `;
