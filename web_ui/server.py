@@ -65,6 +65,7 @@ SAM3_PROTECTION_MAX_FRAMES = 180
 SAM3_SHAPE_MIN_OVERLAP = 0.12
 SAM3_SHAPE_OBJECT_TARGET_OVERLAP = 0.25
 SAM3_SHAPE_OBJECT_MATCH_THRESHOLD = 0.35
+SAM3_REMOTE_MAX_SPARSE_RATIO = 0.10
 SCAIL2_COLOR_NAMES = ("蓝色", "红色", "绿色", "紫色", "青色", "黄色")
 WAN22_MASK_COLOR_KEYS = ("blue", "red", "green", "magenta", "cyan", "yellow")
 DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000"
@@ -15407,7 +15408,7 @@ def _storyboard_mode2_track_role_with_sam3(
         "source_mask_paths": bundle["source_mask_paths"],
         "source_frame_count": bundle["source_frame_count"],
         "source_kind": "mode2_role_identity_track_bundle",
-        "source_identity_status": "tracked_identity",
+        "source_identity_status": "tracked_identity" if status == "ready" else "needs_review",
         "source_collision": False,
         "source_collision_with": [],
         "refinement_status": status,
@@ -15463,16 +15464,18 @@ def _storyboard_mode2_track_role_with_remote_sam3(
     output_dir = _storyboard_mode2_role_track_dir(root, role_id, job_id)
     output_dir.mkdir(parents=True, exist_ok=True)
     add_log(f"> [{role_name}] 正在提交服务器 SAM3 分轨...")
+    clip_mode = "forward" if source_shape else "centered"
     clip_path, prompt_frame, clip_start_frame, clip_frames, track_fps = _make_sam3_window_clip(
         video_path,
         frame_idx=source_frame_idx,
         max_frames=SAM3_PROTECTION_MAX_FRAMES,
         job_id=f"{job_id}_{role_id}_remote",
         max_side=640,
+        mode=clip_mode,
     )
     add_log(
         f"> [{role_name}] Remote SAM3 proxy ready: frames={clip_frames}, "
-        f"fps={track_fps:.2f}, prompt_frame={prompt_frame}, input={clip_path.name}"
+        f"fps={track_fps:.2f}, prompt_frame={prompt_frame}, mode={clip_mode}, input={clip_path.name}"
     )
     client = Scail2Client()
     result = client.inspect_masks(
@@ -15489,15 +15492,26 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         source_identity_points=[point],
         source_identity_shapes=[source_shape],
         output_dir=output_dir,
+        repair_sparse_masks=False,
         on_progress=add_log,
     )
     output_path = str(result.get("output_path") or "").strip()
     mask_output_paths = result.get("mask_output_paths") if isinstance(result.get("mask_output_paths"), dict) else {}
     pose_paths = [str(path) for path in (mask_output_paths.get("pose") or []) if str(path or "").strip()]
     summary_path = Path(output_path).with_suffix(".json") if output_path else (Path(video_path).parent / f"{role_id}_{job_id[:8]}_remote_sam3_summary.json")
-    status = "ready" if output_path and not (result.get("warnings") or []) else "needs_review"
-    warning = ""
     warnings = [str(item) for item in (result.get("warnings") or []) if str(item or "").strip()]
+    sparse_count = 0
+    for item in warnings:
+        match = re.search(r"sparse_sam3_track_masks(?::|_propagated:|_repaired_by_hold_last:)(\d+)", item)
+        if match:
+            sparse_count = max(sparse_count, int(match.group(1)))
+    sparse_ratio = sparse_count / max(1, int(clip_frames or 0))
+    if sparse_ratio > SAM3_REMOTE_MAX_SPARSE_RATIO:
+        warnings.append(
+            f"remote_sam3_sparse_too_high:{sparse_count}/{clip_frames}; needs_redraw_or_earlier_anchor"
+        )
+    status = "ready" if output_path and not warnings else "needs_review"
+    warning = ""
     if warnings:
         warning = "; ".join(warnings[:4])
     summary = {
@@ -15527,15 +15541,18 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         "track_fps": track_fps,
         "prompt_point": point,
         "candidate_time": anchor_time,
-        "propagation_direction": "both",
-        "num_frames": 0,
-        "tracked_frames": 0,
+        "propagation_direction": "forward" if clip_mode == "forward" else "both",
+        "num_frames": int(clip_frames or 0),
+        "tracked_frames": max(0, int(clip_frames or 0) - sparse_count),
         "output_dir": str(Path(output_path).parent if output_path else output_dir),
         "status": status,
         "warning": warning,
         "track_quality": {
-            "coverage": 1.0 if output_path else 0.0,
+            "coverage": round(max(0.0, 1.0 - sparse_ratio), 4) if output_path else 0.0,
             "mean_area_ratio": 0.0,
+            "sparse_count": sparse_count,
+            "sparse_ratio": round(sparse_ratio, 4),
+            "clip_mode": clip_mode,
             "warnings": warnings,
         },
         "remote_result": result,
@@ -15565,7 +15582,7 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         "source_mask_paths": pose_paths,
         "source_frame_count": 0,
         "source_kind": "remote_sam3_color_mask",
-        "source_identity_status": "tracked_identity",
+        "source_identity_status": "tracked_identity" if status == "ready" else "needs_review",
         "source_collision": False,
         "source_collision_with": [],
         "refinement_status": status,

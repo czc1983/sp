@@ -591,6 +591,7 @@ class Scail2Client:
         source_identity_points: list[list[float] | None] | None = None,
         source_identity_shapes: list[dict | None] | None = None,
         output_dir: str | Path | None = None,
+        repair_sparse_masks: bool = True,
         on_progress: Optional[Callable[[str], None]] = None,
     ) -> dict:
         """Run only remote SAM3 + SCAIL2ColoredMaskV2 and download debug masks."""
@@ -816,14 +817,28 @@ class Scail2Client:
             if local_paths:
                 role_track_paths.append([Path(path) for path in local_paths])
         if role_track_paths:
-            propagated_count = self._propagate_sparse_masks_from_video(role_track_paths, Path(video_path))
-            if propagated_count:
-                warnings.append(f"sparse_sam3_track_masks_propagated:{propagated_count}")
-                log(f"SAM3 track 稀疏兜底: 已按源视频运动传播 {propagated_count} 帧")
-            repaired_count = self._hold_last_nonempty_masks(role_track_paths)
-            if repaired_count:
-                warnings.append(f"sparse_sam3_track_masks_repaired_by_hold_last:{repaired_count}")
-                log(f"SAM3 track 稀疏兜底: 已用上一帧非空 mask 补齐 {repaired_count} 帧")
+            sparse_count = 0
+            for paths in role_track_paths:
+                for path in paths:
+                    try:
+                        if self._mask_nonzero_ratio(path) < 0.003:
+                            sparse_count += 1
+                    except Exception:
+                        sparse_count += 1
+            if sparse_count:
+                warnings.append(f"sparse_sam3_track_masks:{sparse_count}")
+                log(f"SAM3 track 稀疏: {sparse_count} 帧没有稳定 mask")
+            if repair_sparse_masks:
+                propagated_count = self._propagate_sparse_masks_from_video(role_track_paths, Path(video_path))
+                if propagated_count:
+                    warnings.append(f"sparse_sam3_track_masks_propagated:{propagated_count}")
+                    log(f"SAM3 track 稀疏兜底: 已按源视频运动传播 {propagated_count} 帧")
+                repaired_count = self._hold_last_nonempty_masks(role_track_paths)
+                if repaired_count:
+                    warnings.append(f"sparse_sam3_track_masks_repaired_by_hold_last:{repaired_count}")
+                    log(f"SAM3 track 稀疏兜底: 已用上一帧非空 mask 补齐 {repaired_count} 帧")
+            elif sparse_count:
+                log("SAM3 track 稀疏: 已关闭自动补帧，保留真实分轨结果供复查")
             preview_path = output_dir / f"scail2_mask_only_colored_{Path(video_path).stem}_{task_id[:8]}.mp4"
             self._render_colored_mask_preview_video(
                 role_track_paths,
@@ -899,6 +914,7 @@ class Scail2Client:
             "sam3_initial_mask_seed_mode": "shape_independent" if independent_preview_saves else ("shape" if has_shape_seed else ("point" if seed_points else "")),
             "source_identity_points": seed_points,
             "source_identity_shapes": source_identity_shapes or [],
+            "repair_sparse_masks": repair_sparse_masks,
             "warnings": warnings,
         }
 
@@ -2459,21 +2475,30 @@ class Scail2Client:
         ]
         if len(points) < 3:
             raise ValueError("source_identity_shape_needs_at_least_3_points")
+        center_x = sum(x for x, _ in points) / max(1, len(points))
+        center_y = sum(y for _, y in points) / max(1, len(points))
+        seed_points = [
+            (
+                int(round(center_x + (x - center_x) * 0.55)),
+                int(round(center_y + (y - center_y) * 0.55)),
+            )
+            for x, y in points
+        ]
         seed_dir = output_dir / ".sam3_identity_seeds"
         seed_dir.mkdir(parents=True, exist_ok=True)
         mask_path = seed_dir / f"source_identity_shape_{index}_{uuid.uuid4().hex[:8]}.png"
         image = Image.new("RGBA", (width, height), (0, 0, 0, 255))
         draw = ImageDraw.Draw(image)
-        brush = max(6, int(round(min(width, height) * 0.025)))
+        brush = max(3, int(round(min(width, height) * 0.01)))
         selected = (255, 255, 255, 0)
-        draw.polygon(points, fill=selected)
-        draw.line(points + [points[0]], fill=selected, width=brush, joint="curve")
+        draw.polygon(seed_points, fill=selected)
+        draw.line(seed_points + [seed_points[0]], fill=selected, width=brush, joint="curve")
         image.save(mask_path)
         preview_path = mask_path.with_name(mask_path.stem + "_preview.png")
         preview = Image.new("RGB", (width, height), (0, 0, 0))
         preview_draw = ImageDraw.Draw(preview)
-        preview_draw.polygon(points, fill=(255, 255, 255))
-        preview_draw.line(points + [points[0]], fill=(255, 255, 255), width=brush, joint="curve")
+        preview_draw.polygon(seed_points, fill=(255, 255, 255))
+        preview_draw.line(seed_points + [seed_points[0]], fill=(255, 255, 255), width=brush, joint="curve")
         preview.save(preview_path)
         return mask_path
 
