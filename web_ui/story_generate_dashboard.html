@@ -2528,6 +2528,23 @@
       white-space: nowrap;
     }
 
+    .role-anchor-inline-status {
+      min-height: 22px;
+      margin-top: 8px;
+      color: #9fb1bb;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .role-anchor-inline-status.is-good {
+      color: #7ee0a3;
+    }
+
+    .role-anchor-inline-status.is-bad {
+      color: #ff918d;
+    }
+
     .role-anchor-toolbar {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -8295,6 +8312,7 @@
           <div class="asset-editor-prompt">
             <div class="label"><span>备注</span><span id="roleAnchorPointText">${selectedShape ? "已有圈选轮廓" : "未圈选"}</span></div>
             <textarea class="textarea" id="roleAnchorNoteInput">${escapeHtml(initialAnchor?.note || "")}</textarea>
+            <div class="role-anchor-inline-status" id="roleAnchorInlineStatus"></div>
           </div>
           <div class="asset-editor-actions" style="align-items:end;">
             <button class="btn" id="closeRoleAnchorBtn" type="button">关闭</button>
@@ -8701,6 +8719,14 @@
         pointText.textContent = `${selectedRoleDisplayName()} · 已圈选轮廓`;
       }
 
+      function setRoleAnchorInlineStatus(text = "", tone = "") {
+        const node = $("#roleAnchorInlineStatus");
+        if (!node) return;
+        node.textContent = text;
+        node.classList.toggle("is-good", tone === "good");
+        node.classList.toggle("is-bad", tone === "bad");
+      }
+
       function stageCurrentRoleBinding(options = {}) {
         const currentShape = selectedRoleShape();
         if (!currentShape) {
@@ -8991,15 +9017,22 @@
       $("#saveRoleAnchorBtn").addEventListener("click", async () => {
         const shape = selectedRoleShape();
         if (!shape) {
+          setRoleAnchorInlineStatus("请先在左侧原图圈选这个角色。", "bad");
           return setStoryStatus(["x 请先在左侧原图圈选这个角色"], "bad");
         }
         if (selectedMaskObject) {
+          setRoleAnchorInlineStatus("右侧机器分割只作检查，请用左侧原图圈选。", "bad");
           return warnManualLeftAnchor(roleMaskObjectBlockReason(selectedMaskObject) || "右侧机器分割现在只作检查，不作为正式锚点。");
         }
         const frame = currentFrame();
         const targetRole = selectedRoleAsset();
         const saveButton = $("#saveRoleAnchorBtn");
-        if (saveButton) saveButton.disabled = true;
+        if (saveButton) {
+          saveButton.disabled = true;
+          saveButton.textContent = "保存中...";
+        }
+        setRoleAnchorInlineStatus("正在保存当前角色...", "");
+        let savedOk = false;
         try {
           const data = await saveRoleAnchorPayload({
             role_id: selectedRoleId,
@@ -9018,10 +9051,19 @@
           renderRoleMaskObjects();
           requestAnimationFrame(renderRoleAnchorSavedMarkers);
           setStoryStatus(["> 当前角色锚点已保存", `> ${targetRole.name || selectedRoleId} @ ${formatNum(frame.time)}s`, "> 可以切换角色，在左侧原图继续圈下一个人。"], "good");
+          savedOk = true;
+          setRoleAnchorInlineStatus("已保存，正在关闭窗口...", "good");
+          window.setTimeout(() => {
+            closeRoleAnchorEditorModal();
+          }, 180);
         } catch (error) {
+          setRoleAnchorInlineStatus(error.message || "保存失败，请重试。", "bad");
           setStoryStatus(["x " + error.message], "bad");
         } finally {
-          if (saveButton) saveButton.disabled = false;
+          if (saveButton && !closed && !savedOk) {
+            saveButton.disabled = false;
+            saveButton.textContent = "保存当前角色";
+          }
         }
       });
       $("#saveFrameRoleAnchorsBtn")?.addEventListener("click", async () => {
