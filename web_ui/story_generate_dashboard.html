@@ -5338,6 +5338,7 @@
     let roleTrackPollTimer = null;
     let roleTrackRunningIds = [];
     let roleTrackPollErrorCount = 0;
+    let roleTrackLatestLogs = [];
     let currentSeedanceTaskId = null;
     let currentSeedanceTimelineIndex = -1;
     let seedancePollTimer = null;
@@ -6744,7 +6745,7 @@
       const roleId = typeof assetOrId === "string"
         ? assetOrId
         : String(assetOrId?.id || "");
-      return Boolean(roleTrackPollTimer || currentRoleTrackJobId)
+      return Boolean(roleTrackPollTimer && currentRoleTrackJobId)
         && (!roleTrackRunningIds.length || roleTrackRunningIds.includes(roleId));
     }
 
@@ -6781,7 +6782,10 @@
       if (isPlaceholderAsset(asset)) return "这个资产还只是占位，需要手动确认名称和参考图。";
       if (isMixedSceneAsset(asset)) return "这个场景混入了多个画面，需要先拆分再当作干净参考。";
       if (hasRefinementProvenanceIssue(asset)) return "自动图和原片来源可能不一致，请人工确认，必要时手动换图。";
-      if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "角色身份分轨正在运行，完成后会自动刷新。";
+      if (asset?.kind === "role" && isRoleTrackRunning(asset)) {
+        const latest = [...roleTrackLatestLogs].reverse().find((line) => /进度|SAM3|ComfyUI|推理|分轨|Track/i.test(String(line || "")));
+        return latest ? String(latest) : "角色身份分轨正在运行，完成后会自动刷新。";
+      }
       if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "角色身份不够稳定，需要补锚点后再分轨。";
       if (asset?.kind === "role" && asset?.identity_status === "failed") return asset.track_error || "角色分轨失败，请改用手动建资产或重跑分轨。";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") {
@@ -9255,6 +9259,7 @@
       setLogs(lines);
       roleTrackRunningIds = selectedRoleIds.slice();
       roleTrackPollErrorCount = 0;
+      roleTrackLatestLogs = [];
       renderStoryAssets();
       updateRoleTrackButtons();
       try {
@@ -9274,8 +9279,10 @@
         updateRoleTrackButtons();
         pollRoleTrackJob();
       } catch (error) {
+        currentRoleTrackJobId = null;
         roleTrackRunningIds = [];
         roleTrackPollErrorCount = 0;
+        roleTrackLatestLogs = [];
         renderStoryAssets();
         updateRoleTrackButtons();
         setStoryStatus(["x " + error.message], "bad");
@@ -9291,30 +9298,37 @@
         if (!response.ok) throw new Error(job.error || "查询角色分轨任务失败");
         roleTrackPollErrorCount = 0;
         const logs = Array.isArray(job.logs) ? job.logs : [];
+        roleTrackLatestLogs = logs.slice(-12);
         setLogs(logs);
         if (job.status === "done") {
+          const doneJobId = currentRoleTrackJobId;
           clearInterval(roleTrackPollTimer);
           roleTrackPollTimer = null;
+          currentRoleTrackJobId = null;
           roleTrackRunningIds = [];
           roleTrackPollErrorCount = 0;
+          roleTrackLatestLogs = [];
           const result = job.result || {};
           applyLoadedProject(result, { story: result.storyboard || {} });
           const summary = result.role_track || {};
           setStoryStatus([
             "> 角色分轨已完成",
-            `> job_id: ${currentRoleTrackJobId}`,
+            `> job_id: ${doneJobId}`,
             `> ready=${summary.ready || 0} manual=${summary.needs_manual_review || 0} failed=${summary.failed || 0}`,
             "> 已刷新资产图、mask 证据和分镜绑定",
           ], summary.failed ? "warn" : "good");
           switchModule("assets");
           updateRoleTrackButtons();
         } else if (job.status === "failed" || job.status === "cancelled") {
+          const failedJobId = currentRoleTrackJobId;
           clearInterval(roleTrackPollTimer);
           roleTrackPollTimer = null;
+          currentRoleTrackJobId = null;
           roleTrackRunningIds = [];
           roleTrackPollErrorCount = 0;
+          roleTrackLatestLogs = [];
           await refreshStoryAssetsFromBackend();
-          setStoryStatus(["x 角色分轨失败", `> job_id: ${currentRoleTrackJobId}`, `> ${job.error || job.status}`], "bad");
+          setStoryStatus(["x 角色分轨失败", `> job_id: ${failedJobId}`, `> ${job.error || job.status}`], "bad");
           renderStoryAssets();
           updateRoleTrackButtons();
         } else {
@@ -9330,12 +9344,15 @@
           updateRoleTrackButtons();
           return;
         }
+        const queryJobId = currentRoleTrackJobId;
         clearInterval(roleTrackPollTimer);
         roleTrackPollTimer = null;
+        currentRoleTrackJobId = null;
         roleTrackRunningIds = [];
         roleTrackPollErrorCount = 0;
+        roleTrackLatestLogs = [];
         await refreshStoryAssetsFromBackend();
-        setStoryStatus(["x 角色分轨状态查询失败", `> job_id: ${currentRoleTrackJobId}`, "> " + error.message], "bad");
+        setStoryStatus(["x 角色分轨状态查询失败", `> job_id: ${queryJobId}`, "> " + error.message], "bad");
         renderStoryAssets();
         updateRoleTrackButtons();
       }
