@@ -2558,7 +2558,25 @@
       line-height: 1;
       white-space: nowrap;
       box-shadow: 0 0 0 2px rgba(0,0,0,.58);
-      pointer-events: none;
+      pointer-events: auto;
+      cursor: grab;
+      z-index: 3;
+    }
+
+    .role-anchor-saved-marker:active {
+      cursor: grabbing;
+    }
+
+    .role-anchor-saved-marker.is-current {
+      width: 22px;
+      min-width: 22px;
+      height: 22px;
+      padding: 0;
+      justify-content: center;
+      border-color: #fff;
+      background: rgba(239, 111, 108, .82);
+      color: #fff;
+      font-size: 10px;
     }
 
     .role-anchor-toolbar {
@@ -8175,17 +8193,9 @@
             }))
             .filter((frame) => frame.path)
         : [];
-      const sourceFrames = [
-        asset.source_image ? {
-          time: Number(asset.source_time || 0.1),
-          path: String(asset.source_image || ""),
-          reason: "当前角色源图",
-          priority: 4,
-        } : null,
-      ].filter((frame) => frame?.path);
       const merged = [];
       const seen = new Set();
-      [...anchorFrames, ...frames, ...candidateFrames, ...sourceFrames].forEach((frame) => {
+      [...anchorFrames, ...frames, ...candidateFrames].forEach((frame) => {
         const key = `${frame.path}|${Math.round(Number(frame.time || 0) * 20)}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -8297,9 +8307,12 @@
       const roleName = String(asset.name || asset.id || "角色");
       const roleTag = String(asset.tag || "").trim();
       const roleLabel = roleTag && roleTag !== roleName ? `${roleName} / ${roleTag}` : roleName;
-      const frameOptions = frames.map((frame, index) => (
-        `<option value="${index}"${index === selectedIndex ? " selected" : ""}>${formatNum(frame.time)}s ${escapeHtml(frame.reason || "候选身份帧")}</option>`
-      )).join("");
+      const frameOptions = frames.map((frame, index) => {
+        const label = frame.priority === 0
+          ? "已保存锚点帧"
+          : (frame.priority === 1 ? "推荐锚点帧" : "补充检查帧");
+        return `<option value="${index}"${index === selectedIndex ? " selected" : ""}>${formatNum(frame.time)}s ${escapeHtml(label)}</option>`;
+      }).join("");
       box.innerHTML = `
         <h4><span id="roleAnchorTitleName">${escapeHtml(asset.name)}</span> <span class="mode-pill">角色锚点标注</span></h4>
         <p>在左侧原图圈住当前角色，线条可以稍微贴着人物外轮廓画。右侧机器分割只用来检查，粘人、串人时不要点它。</p>
@@ -8309,7 +8322,7 @@
             <div class="input role-anchor-locked-role" id="roleAnchorRoleLocked">${escapeHtml(roleLabel)}</div>
           </div>
           <div class="field">
-            <div class="label"><span>关键帧</span><span>选一帧最清楚的人物画面</span></div>
+            <div class="label"><span>关键帧</span><span>先标 1 帧；不准时再补 1 帧</span></div>
             <select class="input" id="roleAnchorFrameSelect">
               ${frameOptions}
             </select>
@@ -8747,7 +8760,9 @@
             if (point.length !== 2) return;
             const left = viewport.left - boxRect.left + Number(point[0]) * viewport.width;
             const top = viewport.top - boxRect.top + Number(point[1]) * viewport.height;
-            markers.push(`<div class="role-anchor-saved-marker" style="left:${left}px;top:${top}px;">${escapeHtml(role.name || role.id)}</div>`);
+            const isCurrentRole = String(role.id || "") === String(selectedRoleId || "");
+            const label = isCurrentRole ? "拖" : String(role.name || role.id || "");
+            markers.push(`<div class="role-anchor-saved-marker${isCurrentRole ? " is-current" : ""}" data-drag-anchor-role="${escapeHtml(role.id || "")}" style="left:${left}px;top:${top}px;" title="${escapeHtml(role.name || role.id || "角色")}">${escapeHtml(label)}</div>`);
           });
         });
         holder.innerHTML = markers.join("");
@@ -8756,6 +8771,59 @@
       function renderRoleAnchorSavedMarkers() {
         renderSavedMarkersFor("#roleAnchorSavedMarkers", "#roleAnchorFrameImg", "#roleAnchorFrameBox");
         renderSavedMarkersFor("#roleAnchorMaskSavedMarkers", "#roleAnchorMaskImg", "#roleAnchorMaskBox");
+        bindRoleAnchorMarkerDrag();
+      }
+
+      function bindRoleAnchorMarkerDrag() {
+        const holder = $("#roleAnchorSavedMarkers");
+        const img = $("#roleAnchorFrameImg");
+        if (!holder || !img) return;
+        holder.querySelectorAll("[data-drag-anchor-role]").forEach((marker) => {
+          if (marker.dataset.dragBound === "1") return;
+          marker.dataset.dragBound = "1";
+          marker.addEventListener("pointerdown", (event) => {
+            if (String(marker.dataset.dragAnchorRole || "") !== String(selectedRoleId || "")) return;
+            event.preventDefault();
+            event.stopPropagation();
+            setRoleAnchorDrawMode(false);
+            try {
+              marker.setPointerCapture(event.pointerId);
+            } catch (_) {}
+            const move = (moveEvent) => {
+              moveEvent.preventDefault();
+              selectedPoint = pointFromImageClick(moveEvent, img);
+              selectedMaskObject = null;
+              const viewport = roleAnchorImageViewport(img);
+              const boxRect = $("#roleAnchorFrameBox")?.getBoundingClientRect();
+              if (boxRect) {
+                marker.style.left = `${viewport.left - boxRect.left + selectedPoint[0] * viewport.width}px`;
+                marker.style.top = `${viewport.top - boxRect.top + selectedPoint[1] * viewport.height}px`;
+              }
+              updateSelectionMarkers();
+              updatePointText();
+            };
+            const end = (endEvent) => {
+              endEvent?.preventDefault?.();
+              marker.removeEventListener("pointermove", move);
+              marker.removeEventListener("pointerup", end);
+              marker.removeEventListener("pointercancel", cancel);
+              try {
+                marker.releasePointerCapture(event.pointerId);
+              } catch (_) {}
+              renderRoleAnchorSavedMarkers();
+              setStoryStatus(["> 已移动当前角色锚点", "> 如需调整轮廓，请点“清除重画”后重新圈选。"], "good");
+            };
+            const cancel = (cancelEvent) => {
+              cancelEvent?.preventDefault?.();
+              marker.removeEventListener("pointermove", move);
+              marker.removeEventListener("pointerup", end);
+              marker.removeEventListener("pointercancel", cancel);
+            };
+            marker.addEventListener("pointermove", move);
+            marker.addEventListener("pointerup", end);
+            marker.addEventListener("pointercancel", cancel);
+          });
+        });
       }
 
       function hideSelectionMarkers() {
