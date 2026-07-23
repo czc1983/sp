@@ -5290,6 +5290,8 @@
     let seedanceMaskPollTimer = null;
     let seedanceMaskVideoIndex = -1;
     let seedanceMaskContext = null;
+    let currentMode2ServerTransferJobId = null;
+    let mode2ServerTransferPollTimer = null;
     let seedanceReferenceSubclipState = {
       subclips: [],
       selectedIndex: 0,
@@ -11399,6 +11401,179 @@
       addLogs(["> 已复制通道A日志"]);
     }
 
+    function setMode2ServerTransferRunning(running) {
+      const button = $("#openTransferWorkbenchBtn");
+      if (!button) return;
+      button.disabled = !!running;
+      button.textContent = running ? "服务器换人中..." : "去服务器换人";
+    }
+
+    async function startMode2ServerTransfer() {
+      if (currentMode2ServerTransferJobId) {
+        setSeedanceSubmitStatus(["> 服务器换人任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
+        return;
+      }
+      if (!isWhiteMaskRoute()) {
+        const lines = ["> 当前不是白膜路线", "> 只有白膜路线才走服务器 Scail2/Wan 换人。"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return;
+      }
+      if (selectedTimelineIndex < 0 && timelineSegments.length) {
+        selectTimelineSegment(0);
+      }
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const videoPath = shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
+      const segmentId = String(seg.segment_id || "").trim();
+      const roles = currentShotRoleAssets(seg).filter((asset) => asset.kind === "role");
+      const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
+      if (!projectDir) {
+        const lines = ["x 项目目录为空", "> 请先读取或创建 Mode2 项目。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      if (!videoPath) {
+        const lines = ["x 当前镜头视频为空", "> 请先选择分镜，或把原视频加入参考视频。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      if (!readyRoles.length) {
+        const lines = ["x 当前镜头没有可替换角色参考图", "> 请先在资产库给角色绑定参考图。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      const reviewRoles = readyRoles
+        .filter((asset) => !["ready", "tracked"].includes(String(asset.track_status || asset.identity_status || "").trim()))
+        .map((asset) => asset.name || asset.id)
+        .slice(0, 4);
+      const body = {
+        project_dir: projectDir,
+        video_path: videoPath,
+        segment_id: segmentId,
+        role_ids: readyRoles.map((asset) => asset.id).filter(Boolean),
+        transfer_backend: "scail2",
+        normalize_size: true,
+        sampler_preset: "balanced",
+        video_window: {
+          frame_load_cap: 241,
+          skip_first_frames: 0,
+          select_every_nth: 1,
+        },
+        positive_prompt: seedanceDraft.prompt || currentShotPrompt() || "",
+        sam_text: "person",
+      };
+      const intro = [
+        "> 正在提交 Mode2 服务器换人...",
+        `> 视频: ${fileName(videoPath)}`,
+        `> 角色: ${readyRoles.map((asset) => asset.name || asset.id).join(", ")}`,
+        reviewRoles.length ? `> 注意: ${reviewRoles.join(", ")} 的分轨状态需要复查，先按现有锚点/轨迹试跑。` : "",
+      ].filter(Boolean);
+      setSeedanceSubmitStatus(intro, "warn");
+      assistantSetRunStatus(["服务器换人提交中", fileName(videoPath)], true);
+      setMode2ServerTransferRunning(true);
+      addLogs(intro);
+      try {
+        const response = await fetch("/api/storyboard-server-transfer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || "Mode2 服务器换人提交失败");
+        currentMode2ServerTransferJobId = data.job_id;
+        const mappingLogs = (data.mapping || []).map((item) => `> ${item.color || item.order}: ${item.role || "角色"} -> ${item.target_ref || ""}`);
+        const lines = [
+          "> Mode2 服务器换人已提交",
+          `> job_id: ${data.job_id}`,
+          `> backend: ${data.backend || "scail2"}`,
+          ...mappingLogs,
+          data.mapping_warning ? `> 提醒: ${data.mapping_warning}` : "",
+        ].filter(Boolean);
+        setSeedanceSubmitStatus(lines, data.mapping_warning ? "warn" : "good");
+        assistantSetRunStatus(["服务器换人运行中", `job_id: ${data.job_id}`], true);
+        addLogs(lines);
+        pollMode2ServerTransferJob(data.job_id, videoPath);
+      } catch (error) {
+        currentMode2ServerTransferJobId = null;
+        setMode2ServerTransferRunning(false);
+        assistantSetRunStatus([], false);
+        const lines = ["x Mode2 服务器换人提交失败", "> " + (error.message || error)];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        addLogs(lines);
+      }
+    }
+
+    function pollMode2ServerTransferJob(jobId, sourcePath) {
+      if (mode2ServerTransferPollTimer) clearInterval(mode2ServerTransferPollTimer);
+      mode2ServerTransferPollTimer = setInterval(async () => {
+        try {
+          const response = await fetch("/api/jobs/" + encodeURIComponent(jobId));
+          const job = await response.json();
+          if (!response.ok || job.error && !job.status) throw new Error(job.error || "job_not_found");
+          const logs = Array.isArray(job.logs) ? job.logs.slice(-8) : [];
+          if (job.status === "done") {
+            clearInterval(mode2ServerTransferPollTimer);
+            mode2ServerTransferPollTimer = null;
+            currentMode2ServerTransferJobId = null;
+            setMode2ServerTransferRunning(false);
+            assistantSetRunStatus([], false);
+            const outputPath = String(job.result?.output_path || (job.result?.output_paths || [])[0] || "").trim();
+            const lines = [
+              "> Mode2 服务器换人完成",
+              `> job_id: ${jobId}`,
+              outputPath ? `> 输出: ${outputPath}` : "> 输出: 未返回路径，请看日志",
+            ];
+            setSeedanceSubmitStatus(lines, outputPath ? "good" : "warn");
+            assistantSetStatus([
+              outputPath ? "服务器换人成片已完成。" : "服务器换人完成，但没有返回输出路径。",
+              outputPath ? "左侧已显示结果对比，可以检查是否满意。" : "请看运行日志。",
+            ], outputPath ? "good" : "warn");
+            if (outputPath) {
+              const seg = timelineSegments[selectedTimelineIndex];
+              if (seg) {
+                seg.generated_path = outputPath;
+                renderTimeline();
+                updateCompareStage();
+              }
+              renderSeedanceSingleMaskCompare(sourcePath, outputPath, "服务器换人结果", 0);
+            }
+            addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
+            return;
+          }
+          if (job.status === "failed" || job.status === "cancelled") {
+            clearInterval(mode2ServerTransferPollTimer);
+            mode2ServerTransferPollTimer = null;
+            currentMode2ServerTransferJobId = null;
+            setMode2ServerTransferRunning(false);
+            assistantSetRunStatus([], false);
+            const lines = ["x Mode2 服务器换人失败", `> job_id: ${jobId}`, "> " + (job.error || job.status)];
+            setSeedanceSubmitStatus(lines, "bad");
+            assistantSetStatus(lines, "bad");
+            addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
+            return;
+          }
+          const lines = ["> Mode2 服务器换人运行中", `> job_id: ${jobId}`, ...logs.map((line) => `> ${line}`)];
+          setSeedanceSubmitStatus(lines, "warn");
+          assistantSetRunStatus(["服务器换人运行中", `job_id: ${jobId}`], true);
+        } catch (error) {
+          clearInterval(mode2ServerTransferPollTimer);
+          mode2ServerTransferPollTimer = null;
+          currentMode2ServerTransferJobId = null;
+          setMode2ServerTransferRunning(false);
+          assistantSetRunStatus([], false);
+          const lines = ["x 查询服务器换人任务失败", `> job_id: ${jobId}`, "> " + (error.message || error)];
+          setSeedanceSubmitStatus(lines, "bad");
+          assistantSetStatus(lines, "bad");
+          addLogs(lines);
+        }
+      }, 5000);
+    }
+
     function setSeedanceSubmitting(running) {
       seedanceSubmitting = !!running;
       const button = $("#batchGenerateBtn");
@@ -11739,10 +11914,7 @@
         localStorage.setItem(MODE_KEY, "transfer");
         window.location.href = "/";
       });
-      bindClick("#openTransferWorkbenchBtn", () => {
-        localStorage.setItem(MODE_KEY, "transfer");
-        window.location.href = "/";
-      });
+      bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
       bindClick("#openPlanBtn", () => openLocalPath(PLAN_PATH));
       bindClick("#pickVideoBtn", () => pickPath("file", "#videoPathInput"));
       bindClick("#pickProjectBtn", () => pickPath("dir", "#projectDirInput"));

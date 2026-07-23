@@ -1685,6 +1685,137 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/storyboard-server-transfer":
+            try:
+                payload = self._read_json()
+                project_dir = str(payload.get("project_dir") or "").strip()
+                video_path = str(payload.get("video_path") or "").strip()
+                segment_id = str(payload.get("segment_id") or "").strip()
+                sampler_preset = str(payload.get("sampler_preset") or "balanced")
+                video_window = payload.get("video_window") or {}
+                normalize_size = bool(payload.get("normalize_size", True))
+                raw_transfer_backend = payload.get("transfer_backend") or "scail2"
+                transfer_backend = _normalize_transfer_backend(raw_transfer_backend)
+                if transfer_backend is None:
+                    self._send_json({"error": "invalid_transfer_backend"}, status=400)
+                    return
+                if transfer_backend == "wan22":
+                    self._send_json({"error": "mode2_server_transfer_prefers_scail2"}, status=400)
+                    return
+                if not project_dir:
+                    self._send_json({"error": "project_dir_required"}, status=400)
+                    return
+                if not video_path:
+                    self._send_json({"error": "video_path_required"}, status=400)
+                    return
+                root = _resolve_storyboard_mode2_project_dir(project_dir)
+                store_path = _storyboard_mode2_asset_store_path(root)
+                data = json.loads(store_path.read_text(encoding="utf-8-sig"))
+                if not segment_id:
+                    shot = next((item for item in (data.get("shots") or []) if isinstance(item, dict)), None)
+                    segment_id = str((shot or {}).get("segment_id") or "").strip()
+                role_pairs, pair_warnings = _mode2_reference_mask_role_pairs_from_store(
+                    str(root),
+                    segment_id,
+                    [],
+                    prefer_current_shot_roles=True,
+                )
+                role_ids = _string_list(payload.get("role_ids"))
+                if role_ids:
+                    role_id_set = set(role_ids)
+                    role_pairs = [
+                        pair for pair in role_pairs
+                        if str(pair.get("asset_id") or "") in role_id_set
+                    ]
+                if not role_pairs:
+                    self._send_json({"error": "mode2_role_pairs_required"}, status=400)
+                    return
+                from spvideo.ffmpeg_tools import probe_video
+                meta = probe_video(Path(video_path)) if Path(video_path).exists() else None
+                if meta and meta.duration and meta.duration > 120:
+                    self._send_json({"error": f"segment_too_long: {meta.duration:.1f}s"}, status=400)
+                    return
+                assets_by_id = {
+                    str(asset.get("id") or ""): asset
+                    for asset in (data.get("assets") or [])
+                    if isinstance(asset, dict)
+                }
+                status_warnings: list[str] = []
+                for pair in role_pairs:
+                    asset = assets_by_id.get(str(pair.get("asset_id") or ""))
+                    if not asset:
+                        continue
+                    track_status = str(asset.get("track_status") or asset.get("identity_status") or "").strip()
+                    if track_status and track_status not in {"ready", "tracked"}:
+                        status_warnings.append(f"{pair.get('name')}: track_status={track_status}")
+                job_id = uuid.uuid4().hex[:8]
+                public_mapping = [
+                    {
+                        "order": index + 1,
+                        "color": SCAIL2_COLOR_NAMES[index],
+                        "role": pair.get("name"),
+                        "target_ref": Path(str(pair.get("ref_image") or "")).name,
+                        "source_x": (
+                            float(pair["source_point"][0])
+                            if isinstance(pair.get("source_point"), (list, tuple)) and pair.get("source_point")
+                            else None
+                        ),
+                        "mark_time": pair.get("source_time"),
+                        "asset_id": pair.get("asset_id"),
+                    }
+                    for index, pair in enumerate(role_pairs)
+                ]
+                with JOBS_LOCK:
+                    JOBS[job_id] = {
+                        "id": job_id,
+                        "type": "mode2_server_transfer",
+                        "status": "running",
+                        "video_path": video_path,
+                        "project_dir": str(root),
+                        "segment_id": segment_id,
+                        "mapping": public_mapping,
+                        "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
+                        "transfer_backend": transfer_backend,
+                        "logs": [
+                            f"> Mode2 服务器换人: {Path(video_path).name}",
+                            f"> 当前后端: {transfer_backend}",
+                            f"> 角色: {', '.join(str(pair.get('name') or '') for pair in role_pairs)}",
+                            *[f"> 提醒: {line}" for line in pair_warnings],
+                            *[f"> 分轨需复查: {line}" for line in status_warnings],
+                        ],
+                        "result": None,
+                        "error": None,
+                    }
+                thread = threading.Thread(
+                    target=_run_transfer_job,
+                    args=(
+                        job_id,
+                        video_path,
+                        role_pairs,
+                        str(root),
+                        "",
+                        segment_id,
+                        False,
+                        sampler_preset,
+                        video_window,
+                        normalize_size,
+                        str(payload.get("positive_prompt") or ""),
+                        str(payload.get("sam_text") or ""),
+                        transfer_backend,
+                    ),
+                    daemon=True,
+                )
+                thread.start()
+                self._send_json({
+                    "job_id": job_id,
+                    "backend": transfer_backend,
+                    "mapping": public_mapping,
+                    "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
+                })
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/transfer-segment":
             try:
                 payload = self._read_json()
