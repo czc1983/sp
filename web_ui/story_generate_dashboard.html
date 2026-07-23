@@ -8860,6 +8860,15 @@
         if (savedMaskHolder) savedMaskHolder.innerHTML = "";
         renderRoleMaskObjects();
 
+        function maskCandidateSourceLabel(data) {
+          const source = String(data?.candidate_source || "");
+          const cached = !!data?.cached;
+          const fallback = !!data?.fallback_used;
+          if (source === "remote_sam3_color") return cached ? "服务器缓存" : "服务器已生成";
+          if (source === "local_sam3") return fallback ? (cached ? "服务器失败·本机缓存" : "服务器失败·本机生成") : (cached ? "本机缓存" : "本机已生成");
+          return cached ? "已读取缓存" : "已生成";
+        }
+
         try {
           const payload = {
             project_dir: projectDir,
@@ -8888,7 +8897,7 @@
             maskImg.src = mediaSrc(maskPath, frame.time || 0.1);
             maskImg.hidden = false;
             if (empty) empty.hidden = true;
-            if (status) status.textContent = data.cached ? "已读取缓存" : "已生成";
+            if (status) status.textContent = maskCandidateSourceLabel(data);
           } else {
             if (empty) {
               empty.hidden = false;

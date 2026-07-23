@@ -6593,6 +6593,8 @@ def _storyboard_mode2_role_mask_candidates(payload: dict[str, Any]) -> dict[str,
     root = _resolve_storyboard_mode2_project_dir(project_dir)
     data = _load_storyboard_mode2_store(root)
     assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
+    project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
+    prefer_remote = project_config.get("mask_source") == "remote_sam3_color"
     asset_id = str(payload.get("asset_id") or payload.get("role_id") or "").strip()
     asset = next((item for item in assets if str(item.get("id") or "") == asset_id), {}) if asset_id else {}
 
@@ -6623,6 +6625,7 @@ def _storyboard_mode2_role_mask_candidates(payload: dict[str, Any]) -> dict[str,
     cache_dir = root / "assets" / "identity_candidates" / candidate_id
     result_path = cache_dir / "result.json"
     force = bool(payload.get("force"))
+    cached_fallback: dict[str, Any] | None = None
 
     if not force and result_path.exists():
         try:
@@ -6635,7 +6638,10 @@ def _storyboard_mode2_role_mask_candidates(payload: dict[str, Any]) -> dict[str,
                 and Path(colored_path).exists()
             ):
                 cached["cached"] = True
-                return cached
+                candidate_source = str(cached.get("candidate_source") or "").strip()
+                if not prefer_remote or candidate_source == "remote_sam3_color":
+                    return cached
+                cached_fallback = cached
         except Exception:  # noqa: BLE001
             pass
 
@@ -6661,6 +6667,10 @@ def _storyboard_mode2_role_mask_candidates(payload: dict[str, Any]) -> dict[str,
         "overlay_image": "",
         "objects": [],
         "cached": False,
+        "candidate_source": "",
+        "preferred_source": "remote_sam3_color" if prefer_remote else "local_sam3",
+        "fallback_used": False,
+        "fallback_reason": "",
         "mask_status": "failed",
         "error": "",
     }
@@ -6669,24 +6679,268 @@ def _storyboard_mode2_role_mask_candidates(payload: dict[str, Any]) -> dict[str,
         result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         return result
 
-    try:
-        result.update(_build_storyboard_mode2_role_mask_candidates(
-            video_path=video_path,
-            time_seconds=time_seconds,
-            original_frame=original_frame,
-            cache_dir=cache_dir,
-            candidate_id=candidate_id,
-        ))
-        result["ok"] = True
-        result["mask_status"] = "ready"
-    except Exception as exc:  # noqa: BLE001
-        result["ok"] = False
-        result["mask_status"] = "failed"
-        result["error"] = str(exc)
-        logging.warning("Mode2 SAM3 role mask candidate failed: %s", exc)
+    remote_error = ""
+    if prefer_remote:
+        try:
+            result.update(_build_storyboard_mode2_remote_role_mask_candidates(
+                root=root,
+                assets=assets,
+                asset_id=asset_id,
+                video_path=video_path,
+                time_seconds=time_seconds,
+                original_frame=original_frame,
+                cache_dir=cache_dir,
+                candidate_id=candidate_id,
+            ))
+            result["ok"] = True
+            result["mask_status"] = "ready"
+            result["candidate_source"] = "remote_sam3_color"
+        except Exception as exc:  # noqa: BLE001
+            remote_error = str(exc)
+            logging.warning("Mode2 remote SAM3 role mask candidate failed, fallback local: %s", exc)
+
+    if not result.get("ok"):
+        if cached_fallback:
+            cached_fallback["cached"] = True
+            cached_fallback["preferred_source"] = "remote_sam3_color" if prefer_remote else "local_sam3"
+            cached_fallback["fallback_used"] = bool(prefer_remote)
+            cached_fallback["fallback_reason"] = remote_error or "remote_sam3_color_unavailable"
+            return cached_fallback
+        try:
+            result.update(_build_storyboard_mode2_role_mask_candidates(
+                video_path=video_path,
+                time_seconds=time_seconds,
+                original_frame=original_frame,
+                cache_dir=cache_dir,
+                candidate_id=candidate_id,
+            ))
+            result["ok"] = True
+            result["mask_status"] = "ready"
+            result["candidate_source"] = "local_sam3"
+            if prefer_remote:
+                result["fallback_used"] = True
+                result["fallback_reason"] = remote_error or "remote_sam3_color_unavailable"
+        except Exception as exc:  # noqa: BLE001
+            if remote_error:
+                result["remote_error"] = remote_error
+            raise exc
 
     result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     return result
+
+
+def _storyboard_mode2_role_pairs_for_remote_mask(
+    assets: list[dict[str, Any]],
+    *,
+    asset_id: str,
+    time_seconds: float,
+) -> list[dict[str, Any]]:
+    pairs: list[dict[str, Any]] = []
+    role_assets = [item for item in assets if str(item.get("kind") or "") == "role"]
+    role_assets.sort(key=lambda item: 0 if str(item.get("id") or "") == asset_id else 1)
+    seen_refs: set[str] = set()
+    for role in role_assets:
+        role_id = str(role.get("id") or "").strip()
+        ref_image = str(role.get("target_image") or role.get("seedance_reference_image") or "").strip()
+        if not ref_image or not Path(ref_image).exists():
+            continue
+        ref_key = str(Path(ref_image)).lower()
+        if ref_key in seen_refs:
+            continue
+        seen_refs.add(ref_key)
+        anchors = [item for item in (role.get("identity_anchors") or []) if isinstance(item, dict)]
+        preferred = min(
+            anchors,
+            key=lambda item: abs(float(item.get("time") or time_seconds) - float(time_seconds)),
+            default={},
+        )
+        source_shape = _normalize_identity_shape(preferred.get("source_shape") or preferred.get("shape"))
+        source_point = preferred.get("point") if isinstance(preferred.get("point"), (list, tuple)) else None
+        pairs.append({
+            "name": str(role.get("name") or role.get("tag") or role_id or f"角色{len(pairs) + 1}"),
+            "ref_image": ref_image,
+            "source_shape": source_shape,
+            "source_point": source_point,
+        })
+        if len(pairs) >= len(WAN22_MASK_COLOR_KEYS):
+            break
+    return pairs
+
+
+def _extract_first_video_frame_to_png(video_path: str | Path, output_path: str | Path) -> None:
+    import cv2
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    capture = cv2.VideoCapture(str(video_path))
+    try:
+        ok, frame = capture.read()
+        if not ok or frame is None:
+            raise ValueError(f"cannot_read_remote_mask_video: {video_path}")
+        cv2.imwrite(str(output), frame)
+    finally:
+        capture.release()
+    if not output.exists() or output.stat().st_size <= 0:
+        raise ValueError(f"remote_mask_frame_missing: {output}")
+
+
+def _storyboard_mode2_objects_from_colored_mask(mask_path: Path, cache_dir: Path) -> list[dict[str, Any]]:
+    import cv2
+    import numpy as np
+
+    image = cv2.imread(str(mask_path), cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError(f"cannot_read_colored_mask: {mask_path}")
+    height, width = image.shape[:2]
+    palette_rgb: dict[str, tuple[int, int, int]] = {
+        "blue": (40, 120, 255),
+        "red": (255, 64, 64),
+        "green": (52, 211, 153),
+        "magenta": (216, 80, 255),
+        "cyan": (45, 212, 255),
+        "yellow": (250, 204, 21),
+    }
+    color_labels = {
+        "blue": "蓝色",
+        "red": "红色",
+        "green": "绿色",
+        "magenta": "紫色",
+        "cyan": "青色",
+        "yellow": "黄色",
+    }
+    object_dir = cache_dir / "objects"
+    object_dir.mkdir(parents=True, exist_ok=True)
+    objects: list[dict[str, Any]] = []
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
+    min_area = max(16, int(width * height * 0.001))
+    for index, color_key in enumerate(WAN22_MASK_COLOR_KEYS):
+        color_rgb = np.array(palette_rgb[color_key], dtype=np.float32)
+        distance = np.sqrt(np.sum((image_rgb - color_rgb) ** 2, axis=2))
+        selected = distance < 90
+        area = int(np.count_nonzero(selected))
+        if area < min_area:
+            continue
+        ys, xs = np.where(selected)
+        x1, x2 = int(xs.min()), int(xs.max()) + 1
+        y1, y2 = int(ys.min()), int(ys.max()) + 1
+        cx = float(xs.mean()) / float(width)
+        cy = float(ys.mean()) / float(height)
+        object_mask_path = object_dir / f"{color_key}_remote_object_{index}_mask.png"
+        cv2.imwrite(str(object_mask_path), selected.astype(np.uint8) * 255)
+        objects.append({
+            "object_id": index,
+            "color_key": color_key,
+            "color_label": color_labels.get(color_key, color_key),
+            "color_rgb": list(palette_rgb[color_key]),
+            "bbox": [
+                round(x1 / width, 6),
+                round(y1 / height, 6),
+                round((x2 - x1) / width, 6),
+                round((y2 - y1) / height, 6),
+            ],
+            "bbox_xywh": [
+                round(x1 / width, 6),
+                round(y1 / height, 6),
+                round((x2 - x1) / width, 6),
+                round((y2 - y1) / height, 6),
+            ],
+            "bbox_mode": "xywh",
+            "center_point": [round(cx, 6), round(cy, 6)],
+            "area_ratio": round(area / float(max(1, width * height)), 5),
+            "score": 0.0,
+            "mask_path": str(object_mask_path),
+            "crop_path": "",
+        })
+    if not objects:
+        raise ValueError("remote_colored_mask_has_no_palette_objects")
+    return objects
+
+
+def _build_storyboard_mode2_remote_role_mask_candidates(
+    *,
+    root: Path,
+    assets: list[dict[str, Any]],
+    asset_id: str,
+    video_path: str,
+    time_seconds: float,
+    original_frame: Path,
+    cache_dir: Path,
+    candidate_id: str,
+) -> dict[str, Any]:
+    from spvideo.ffmpeg_tools import probe_video
+    from spvideo.scail2_client import Scail2Client
+
+    role_pairs = _storyboard_mode2_role_pairs_for_remote_mask(
+        assets,
+        asset_id=asset_id,
+        time_seconds=time_seconds,
+    )
+    if not role_pairs:
+        raise ValueError("remote_sam3_requires_role_target_images")
+    meta = probe_video(video_path)
+    source_fps = max(1, int(round(float(meta.fps or 24.0))))
+    source_frame_idx = max(0, int(round(float(time_seconds or 0.0) * source_fps)))
+    clip_path, prompt_frame, clip_start_frame, clip_frames, track_fps = _make_sam3_window_clip(
+        video_path,
+        frame_idx=source_frame_idx,
+        max_frames=1,
+        job_id=f"{candidate_id}_remote",
+        max_side=720,
+    )
+    client = Scail2Client()
+    result = client.inspect_masks(
+        video_path=str(clip_path),
+        ref_images=[str(pair["ref_image"]) for pair in role_pairs],
+        role_names=[str(pair["name"]) for pair in role_pairs],
+        video_window={
+            "force_rate": max(1, int(round(track_fps or source_fps))),
+            "frame_load_cap": 1,
+            "skip_first_frames": 0,
+            "select_every_nth": 1,
+        },
+        sampler_preset="fast",
+        normalize_size=True,
+        sam_text="person",
+        strict_track_preflight=False,
+        source_identity_points=[
+            pair.get("source_point") if isinstance(pair.get("source_point"), (list, tuple)) else None
+            for pair in role_pairs
+        ],
+        source_identity_shapes=[
+            pair.get("source_shape") if isinstance(pair.get("source_shape"), dict) else None
+            for pair in role_pairs
+        ],
+    )
+    output_path = str(result.get("output_path") or "").strip()
+    if not output_path or not Path(output_path).exists():
+        raise ValueError("remote_sam3_did_not_return_colored_mask_video")
+    colored_mask_path = cache_dir / "remote_colored_mask.png"
+    _extract_first_video_frame_to_png(output_path, colored_mask_path)
+    objects = _storyboard_mode2_objects_from_colored_mask(colored_mask_path, cache_dir)
+    return {
+        "colored_mask": str(colored_mask_path),
+        "overlay_image": str(colored_mask_path),
+        "objects": objects,
+        "remote_output_path": output_path,
+        "remote_result": {
+            "prompt_id": result.get("prompt_id"),
+            "workflow_path": result.get("workflow_path"),
+            "role_names": result.get("role_names"),
+            "mask_output_paths": result.get("mask_output_paths"),
+            "warnings": result.get("warnings") or [],
+        },
+        "sam3": {
+            "source": "remote_sam3_color",
+            "object_count": len(objects),
+            "role_count": len(role_pairs),
+            "clip_path": str(clip_path),
+            "source_frame_idx": source_frame_idx,
+            "clip_start_frame": clip_start_frame,
+            "prompt_frame": prompt_frame,
+            "clip_frames": clip_frames,
+            "force_rate": max(1, int(round(track_fps or source_fps))),
+        },
+    }
 
 
 def _build_storyboard_mode2_role_mask_candidates(
