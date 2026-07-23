@@ -1908,6 +1908,15 @@
       flex: 0 0 auto;
     }
 
+    .asset-card-quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #263038;
+      background: #0c1013;
+    }
+
     .asset-binding-preview {
       min-height: 64px;
       margin-top: 12px;
@@ -7008,7 +7017,14 @@
       const tag = asset?.tag ? `<span class="mode-pill">${escapeHtml(asset.tag)}</span>` : "";
       const editLabel = asset?.kind === "role" ? "\u6362\u56fe" : "\u7f16\u8f91";
       const roleActions = asset?.kind === "role"
-        ? `<button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button><button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u5206\u8f68</button>`
+        ? `<button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button><button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>`
+        : "";
+      const quickActions = asset?.kind === "role"
+        ? `<div class="asset-card-quick-actions">
+            <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
+            <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button>
+            <button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>
+          </div>`
         : "";
       return `
         <article class="asset-card" data-asset-card="${escapeHtml(id)}">
@@ -7020,6 +7036,7 @@
             <span class="asset-status">${escapeHtml(status)}</span>
           </div>
           ${notice ? `<div class="asset-warning">${escapeHtml(notice)}</div>` : ""}
+          ${quickActions}
           <div class="asset-card-body" data-edit-asset="${escapeHtml(id)}">
             <div class="asset-media asset-media-primary">${assetMediaHtml(asset, "source")}</div>
             <div class="asset-media asset-media-secondary">${assetMediaHtml(asset, "target")}</div>
