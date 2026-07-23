@@ -8298,8 +8298,6 @@
           </div>
           <div class="asset-editor-actions" style="align-items:end;">
             <button class="btn" id="closeRoleAnchorBtn" type="button">关闭</button>
-            <button class="btn" id="stageRoleAnchorBtn" type="button">加入本帧</button>
-            <button class="btn good" id="saveFrameRoleAnchorsBtn" type="button">保存本帧全部角色</button>
             <button class="btn good" id="saveRoleAnchorBtn" type="button">保存当前角色</button>
           </div>
         </div>
@@ -8950,7 +8948,7 @@
         warnManualLeftAnchor(roleMaskObjectBlockReason(object));
       });
       $("#closeRoleAnchorBtn").addEventListener("click", closeRoleAnchorEditorModal);
-      $("#stageRoleAnchorBtn").addEventListener("click", () => {
+      $("#stageRoleAnchorBtn")?.addEventListener("click", () => {
         if (stageCurrentRoleBinding()) {
           setStoryStatus(["> 已加入本帧", `> ${selectedRoleDisplayName()} @ ${formatNum(currentFrame().time)}s`, "> 可以继续选择另一个角色，在左侧原图圈选。"], "good");
         }
@@ -9026,7 +9024,7 @@
           if (saveButton) saveButton.disabled = false;
         }
       });
-      $("#saveFrameRoleAnchorsBtn").addEventListener("click", async () => {
+      $("#saveFrameRoleAnchorsBtn")?.addEventListener("click", async () => {
         stageCurrentRoleBinding({ silent: true });
         const bindings = Array.from(pendingFrameBindings.values());
         if (!bindings.length) {
