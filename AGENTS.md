@@ -15,3 +15,15 @@ This preference does not override higher-priority safety, tool, or user instruct
 ## Mode 1 / Mode 2 Boundary
 
 Mode 2 must remain independent from Mode 1. It may reuse ideas and small utility patterns from Mode 1, but should not import or depend on Mode 1's transfer/render workflow. When sharing concepts such as role anchors or timeline annotation, prefer Mode-2-specific functions, endpoints, and storage fields unless a small pure helper is clearly safe.
+
+## Frontend Safety Rules
+
+Large Mode 2 frontend files are high-risk change targets, especially `web_ui/story_generate_dashboard.html`.
+
+- Before editing large frontend files, run `git status --short` and create a checkpoint with `scripts/safe_checkpoint.ps1`.
+- Do not rewrite large Chinese HTML files with PowerShell `Set-Content`, shell redirection, or ad hoc full-file string generation.
+- Prefer small `apply_patch` edits. If a large redesign is necessary, make a checkpoint commit first.
+- After editing `story_generate_dashboard.html`, extract scripts and run `node --check`; also run `git diff --check`.
+- If a UI change affects layout, routes, assistant guidance, or generation flow, keep a screenshot or clear visual verification note.
+- Do not claim a page is fixed only because it loads. Confirm the expected UI state and workflow are still present.
+- Do not let multiple agents edit the same large HTML file in parallel.
