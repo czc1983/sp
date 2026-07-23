@@ -8162,7 +8162,10 @@
       const merged = [];
       const seen = new Set();
       [...anchorFrames, ...frames, ...candidateFrames].forEach((frame) => {
-        const key = `${frame.path}|${Math.round(Number(frame.time || 0) * 20)}`;
+        const timeBucket = Math.round(Number(frame.time || 0) * 20);
+        const key = Number.isFinite(timeBucket) && timeBucket > 0
+          ? `time:${timeBucket}`
+          : `path:${frame.path}`;
         if (seen.has(key)) return;
         seen.add(key);
         merged.push(frame);
