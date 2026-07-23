@@ -1748,6 +1748,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     track_status = str(asset.get("track_status") or asset.get("identity_status") or "").strip()
                     if track_status and track_status not in {"ready", "tracked"}:
                         status_warnings.append(f"{pair.get('name')}: track_status={track_status}")
+                if status_warnings and not bool(payload.get("allow_unreviewed_tracks")):
+                    self._send_json({
+                        "error": "mode2_track_needs_review",
+                        "message": "分轨还没通过，已阻止 Scail2 生成。请先查看分轨或重画锚点。",
+                        "warnings": status_warnings,
+                    }, status=400)
+                    return
                 job_id = uuid.uuid4().hex[:8]
                 public_mapping = [
                     {
@@ -1777,7 +1784,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
                         "transfer_backend": transfer_backend,
                         "logs": [
-                            f"> Mode2 服务器换人: {Path(video_path).name}",
+                            f"> Scail2 生成: {Path(video_path).name}",
                             f"> 当前后端: {transfer_backend}",
                             f"> 角色: {', '.join(str(pair.get('name') or '') for pair in role_pairs)}",
                             *[f"> 提醒: {line}" for line in pair_warnings],
@@ -7868,7 +7875,7 @@ def _mode2_reference_mask_role_pairs_from_store(
         if isinstance(item, dict)
     ]
 
-    role_ids = _string_list(shot.get("role_asset_ids") or shot.get("role_ids"))
+    role_ids = _string_list(shot.get("role_ids") or shot.get("role_asset_ids"))
     if not role_ids:
         role_ids = [
             asset_id for asset_id in _string_list(shot.get("asset_ids"))

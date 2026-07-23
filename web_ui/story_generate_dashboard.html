@@ -3190,6 +3190,13 @@
       color: #ffb7bf;
     }
 
+    .seedance-submit-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     .assistant-panel {
       min-height: 0;
       border: 1px solid var(--line);
@@ -4952,7 +4959,7 @@
       <section class="panel module-view" data-module-view="generate">
         <div class="panel-head">
           <span>Seedance2 通道A重拍</span>
-          <button class="btn good" id="openTransferWorkbenchBtn" type="button">去服务器换人</button>
+          <button class="btn good" id="openTransferWorkbenchBtn" type="button">Scail2 生成</button>
           <button class="btn primary" id="batchGenerateBtn" type="button">提交通道A生成</button>
         </div>
         <div class="panel-body">
@@ -5225,7 +5232,7 @@
         value: "white_mask_route",
         label: "白膜路线",
         button: "1 白膜路线",
-        note: "默认路线。先做白膜/彩色蒙版检查，再走服务器 Scail2/Wan 逐人替换；这里需要锚点和分轨。",
+        note: "默认路线。先做白膜/彩色蒙版检查，再点 Scail2 生成；这里需要锚点和分轨。",
       },
       {
         value: "seedance_direct",
@@ -5341,12 +5348,65 @@
       box.textContent = (lines || []).join("\n");
     }
 
-    function setSeedanceSubmitStatus(lines, tone = "info") {
+    function setSeedanceSubmitStatus(lines, tone = "info", actions = []) {
       const box = $("#seedanceSubmitStatus");
       if (!box) return;
       box.className = "seedance-submit-status" + (tone && tone !== "info" ? " " + tone : "");
       seedanceLastStatusText = (lines || []).join("\n");
       box.textContent = seedanceLastStatusText;
+      const actionList = Array.isArray(actions) ? actions.filter((item) => item && item.action && item.label) : [];
+      if (!actionList.length) return;
+      const actionBox = document.createElement("div");
+      actionBox.className = "seedance-submit-actions";
+      actionList.forEach((item) => {
+        const button = document.createElement("button");
+        button.className = "tiny-btn";
+        button.type = "button";
+        button.textContent = String(item.label || "");
+        button.dataset.seedanceStatusAction = String(item.action || "");
+        button.dataset.roleId = String(item.roleId || "");
+        button.dataset.roleIds = Array.isArray(item.roleIds) ? item.roleIds.join(",") : String(item.roleIds || "");
+        actionBox.appendChild(button);
+      });
+      box.appendChild(actionBox);
+      actionBox.querySelectorAll("[data-seedance-status-action]").forEach((button) => {
+        button.addEventListener("click", () => handleSeedanceStatusAction(button));
+      });
+    }
+
+    function focusStoryAssetCard(assetId) {
+      switchModule("assets");
+      const id = String(assetId || "").trim();
+      window.setTimeout(() => {
+        const card = id ? document.querySelector(`[data-asset-card="${CSS.escape(id)}"]`) : null;
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          card.classList.add("selected");
+          window.setTimeout(() => card.classList.remove("selected"), 1600);
+        }
+      }, 80);
+    }
+
+    function handleSeedanceStatusAction(button) {
+      const action = String(button?.dataset?.seedanceStatusAction || "").trim();
+      const roleId = String(button?.dataset?.roleId || "").trim();
+      const roleIds = String(button?.dataset?.roleIds || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (action === "view_track") {
+        focusStoryAssetCard(roleId || roleIds[0] || "");
+        return;
+      }
+      if (action === "open_anchor") {
+        switchModule("assets");
+        if (roleId) openRoleAnchorEditor(roleId);
+        return;
+      }
+      if (action === "run_track") {
+        switchModule("assets");
+        startRoleTrack(roleIds.length ? roleIds : (roleId ? [roleId] : []));
+      }
     }
 
     function normalizeStoryGenerationRoute(value) {
@@ -5506,7 +5566,7 @@
       assistantSetStatus([
         "白膜路线已准备当前镜头。",
         "下一步：点参考视频下面的“白膜”。",
-        "白膜完成后走服务器 Scail2/Wan 逐人替换；不要点通道A提交。",
+        "白膜通过后点“Scail2 生成”；不要点通道A提交。",
       ], "good");
     }
 
@@ -6951,7 +7011,7 @@
         ? `<button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button><button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u5206\u8f68</button>`
         : "";
       return `
-        <article class="asset-card">
+        <article class="asset-card" data-asset-card="${escapeHtml(id)}">
           <div class="asset-card-head">
             <span class="asset-kind">${escapeHtml(kind)}</span>
             <span class="asset-card-name">${escapeHtml(name)}</span>
@@ -9708,6 +9768,9 @@
       }
       const promptDraft = $("#promptDraft");
       if (promptDraft) promptDraft.value = buildPromptDraft(seg, index);
+      if (isWhiteMaskRoute()) {
+        syncSeedanceDraftImagesFromCurrentShot(seg);
+      }
 
       document.querySelector(`.timeline-card[data-index="${index}"]`)?.scrollIntoView({
         behavior: "smooth",
@@ -9791,7 +9854,7 @@
         ? seg.asset_ids.map((id) => String(id || "").trim()).filter(Boolean)
         : [];
       return ids.map((id) => findStoryAsset(id))
-        .filter((asset) => asset && !assetApprovalRestricted(asset))
+        .filter((asset) => asset && asset.kind === "role" && !assetApprovalRestricted(asset))
         .map((asset) => asset.target_image || "")
         .map((path) => String(path || "").trim())
         .filter(Boolean)
@@ -9814,6 +9877,33 @@
           seen.add(id);
           return true;
         });
+    }
+
+    function currentServerTransferRoleAssets(seg) {
+      const explicitIds = Array.isArray(seg?.role_ids) && seg.role_ids.length
+        ? seg.role_ids
+        : (Array.isArray(seg?.role_asset_ids) && seg.role_asset_ids.length
+          ? seg.role_asset_ids
+          : (Array.isArray(seg?.asset_ids) ? seg.asset_ids : []));
+      const seen = new Set();
+      return explicitIds
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+        .map((id) => findStoryAsset(id))
+        .filter((asset) => asset && asset.kind === "role" && !assetApprovalRestricted(asset))
+        .filter((asset) => {
+          const id = String(asset.id || "").trim();
+          if (!id || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+    }
+
+    function syncSeedanceDraftImagesFromCurrentShot(seg = timelineSegments[selectedTimelineIndex]) {
+      const images = shotTargetImages(seg);
+      seedanceDraft.images = images.length ? normalizeMaterialList(images, 1) : [""];
+      renderSeedanceMaterialSlots("images");
+      renderSeedancePayload();
     }
 
     function roleAnchorPointForShot(asset, seg) {
@@ -10887,7 +10977,7 @@
       seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
       if (path) seedanceDraft.videos[0] = path;
       const images = shotTargetImages(seg);
-      if (images.length) seedanceDraft.images = normalizeMaterialList(images, 1);
+      seedanceDraft.images = images.length ? normalizeMaterialList(images, 1) : [""];
       const promptInput = $("#seedancePromptInput");
       const taskNameInput = $("#seedanceTaskNameInput");
       const durationSelect = $("#seedanceDurationSelect");
@@ -11288,7 +11378,7 @@
           assistantSetRunStatus([], false);
           assistantSetStatus([
             outputPath ? "控制视频生成完成。" : "控制视频没有返回输出。",
-            outputPath ? "先看对比播放器，满意后再继续服务器替换。" : "请查看左侧日志。",
+            outputPath ? "先看对比播放器；满意后点“Scail2 生成”。" : "请查看左侧日志。",
           ], outputPath ? "good" : "warn");
           setSeedanceSubmitStatus(lines, outputPath ? "good" : "warn");
           addLogs([...lines, ...logs.slice(-4).map((line) => `> ${line}`)]);
@@ -11405,16 +11495,16 @@
       const button = $("#openTransferWorkbenchBtn");
       if (!button) return;
       button.disabled = !!running;
-      button.textContent = running ? "服务器换人中..." : "去服务器换人";
+      button.textContent = running ? "Scail2 生成中..." : "Scail2 生成";
     }
 
     async function startMode2ServerTransfer() {
       if (currentMode2ServerTransferJobId) {
-        setSeedanceSubmitStatus(["> 服务器换人任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
+        setSeedanceSubmitStatus(["> Scail2 生成任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
         return;
       }
       if (!isWhiteMaskRoute()) {
-        const lines = ["> 当前不是白膜路线", "> 只有白膜路线才走服务器 Scail2/Wan 换人。"];
+        const lines = ["> 当前不是白膜路线", "> 只有白膜路线才走 Scail2 生成。"];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
         return;
@@ -11426,7 +11516,8 @@
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
       const segmentId = String(seg.segment_id || "").trim();
-      const roles = currentShotRoleAssets(seg).filter((asset) => asset.kind === "role");
+      syncSeedanceDraftImagesFromCurrentShot(seg);
+      const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
       const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
       if (!projectDir) {
         const lines = ["x 项目目录为空", "> 请先读取或创建 Mode2 项目。"];
@@ -11446,10 +11537,32 @@
         assistantSetStatus(lines, "bad");
         return;
       }
-      const reviewRoles = readyRoles
-        .filter((asset) => !["ready", "tracked"].includes(String(asset.track_status || asset.identity_status || "").trim()))
+      const reviewRoleAssets = readyRoles
+        .filter((asset) => !["ready", "tracked"].includes(String(asset.track_status || asset.identity_status || "").trim()));
+      const reviewRoles = reviewRoleAssets
         .map((asset) => asset.name || asset.id)
         .slice(0, 4);
+      if (reviewRoles.length) {
+        const primaryReviewRole = reviewRoleAssets[0] || {};
+        const reviewRoleIds = reviewRoleAssets.map((asset) => String(asset.id || "").trim()).filter(Boolean);
+        const lines = [
+          "x 分轨还没通过，已阻止 Scail2 生成",
+          `> 需要复查：${reviewRoles.join("、")}`,
+          "> 先点“查看分轨”确认彩色蒙版锁对人，或回资产库重画锚点。",
+        ];
+        setSeedanceSubmitStatus(lines, "bad", [
+          { label: "查看分轨", action: "view_track", roleId: primaryReviewRole.id },
+          { label: "打开锚点", action: "open_anchor", roleId: primaryReviewRole.id },
+          { label: "重新分轨", action: "run_track", roleIds: reviewRoleIds },
+        ]);
+        assistantSetStatus([
+          "先别生成，当前分轨会换错人。",
+          `需要复查：${reviewRoles.join("、")}`,
+          "请查看分轨或重画锚点后再点 Scail2 生成。",
+        ], "bad");
+        addLogs(lines);
+        return;
+      }
       const body = {
         project_dir: projectDir,
         video_path: videoPath,
@@ -11467,13 +11580,13 @@
         sam_text: "person",
       };
       const intro = [
-        "> 正在提交 Mode2 服务器换人...",
+        "> 正在提交 Scail2 生成...",
         `> 视频: ${fileName(videoPath)}`,
         `> 角色: ${readyRoles.map((asset) => asset.name || asset.id).join(", ")}`,
         reviewRoles.length ? `> 注意: ${reviewRoles.join(", ")} 的分轨状态需要复查，先按现有锚点/轨迹试跑。` : "",
       ].filter(Boolean);
       setSeedanceSubmitStatus(intro, "warn");
-      assistantSetRunStatus(["服务器换人提交中", fileName(videoPath)], true);
+      assistantSetRunStatus(["Scail2 生成提交中", fileName(videoPath)], true);
       setMode2ServerTransferRunning(true);
       addLogs(intro);
       try {
@@ -11483,25 +11596,25 @@
           body: JSON.stringify(body),
         });
         const data = await response.json();
-        if (!response.ok || data.error) throw new Error(data.error || "Mode2 服务器换人提交失败");
+        if (!response.ok || data.error) throw new Error(data.error || "Scail2 生成提交失败");
         currentMode2ServerTransferJobId = data.job_id;
         const mappingLogs = (data.mapping || []).map((item) => `> ${item.color || item.order}: ${item.role || "角色"} -> ${item.target_ref || ""}`);
         const lines = [
-          "> Mode2 服务器换人已提交",
+          "> Scail2 生成已提交",
           `> job_id: ${data.job_id}`,
           `> backend: ${data.backend || "scail2"}`,
           ...mappingLogs,
           data.mapping_warning ? `> 提醒: ${data.mapping_warning}` : "",
         ].filter(Boolean);
         setSeedanceSubmitStatus(lines, data.mapping_warning ? "warn" : "good");
-        assistantSetRunStatus(["服务器换人运行中", `job_id: ${data.job_id}`], true);
+        assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${data.job_id}`], true);
         addLogs(lines);
         pollMode2ServerTransferJob(data.job_id, videoPath);
       } catch (error) {
         currentMode2ServerTransferJobId = null;
         setMode2ServerTransferRunning(false);
         assistantSetRunStatus([], false);
-        const lines = ["x Mode2 服务器换人提交失败", "> " + (error.message || error)];
+        const lines = ["x Scail2 生成提交失败", "> " + (error.message || error)];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
         addLogs(lines);
@@ -11524,13 +11637,13 @@
             assistantSetRunStatus([], false);
             const outputPath = String(job.result?.output_path || (job.result?.output_paths || [])[0] || "").trim();
             const lines = [
-              "> Mode2 服务器换人完成",
+              "> Scail2 生成完成",
               `> job_id: ${jobId}`,
               outputPath ? `> 输出: ${outputPath}` : "> 输出: 未返回路径，请看日志",
             ];
             setSeedanceSubmitStatus(lines, outputPath ? "good" : "warn");
             assistantSetStatus([
-              outputPath ? "服务器换人成片已完成。" : "服务器换人完成，但没有返回输出路径。",
+              outputPath ? "Scail2 成片已完成。" : "Scail2 生成完成，但没有返回输出路径。",
               outputPath ? "左侧已显示结果对比，可以检查是否满意。" : "请看运行日志。",
             ], outputPath ? "good" : "warn");
             if (outputPath) {
@@ -11541,7 +11654,7 @@
                 renderTimeline(timelineSegments);
                 selectTimelineSegment(keepIndex);
               }
-              renderSeedanceSingleMaskCompare(sourcePath, outputPath, "服务器换人结果", 0);
+              renderSeedanceSingleMaskCompare(sourcePath, outputPath, "Scail2 生成结果", 0);
             }
             addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
             return;
@@ -11552,22 +11665,22 @@
             currentMode2ServerTransferJobId = null;
             setMode2ServerTransferRunning(false);
             assistantSetRunStatus([], false);
-            const lines = ["x Mode2 服务器换人失败", `> job_id: ${jobId}`, "> " + (job.error || job.status)];
+            const lines = ["x Scail2 生成失败", `> job_id: ${jobId}`, "> " + (job.error || job.status)];
             setSeedanceSubmitStatus(lines, "bad");
             assistantSetStatus(lines, "bad");
             addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
             return;
           }
-          const lines = ["> Mode2 服务器换人运行中", `> job_id: ${jobId}`, ...logs.map((line) => `> ${line}`)];
+          const lines = ["> Scail2 生成运行中", `> job_id: ${jobId}`, ...logs.map((line) => `> ${line}`)];
           setSeedanceSubmitStatus(lines, "warn");
-          assistantSetRunStatus(["服务器换人运行中", `job_id: ${jobId}`], true);
+          assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${jobId}`], true);
         } catch (error) {
           clearInterval(mode2ServerTransferPollTimer);
           mode2ServerTransferPollTimer = null;
           currentMode2ServerTransferJobId = null;
           setMode2ServerTransferRunning(false);
           assistantSetRunStatus([], false);
-          const lines = ["x 查询服务器换人任务失败", `> job_id: ${jobId}`, "> " + (error.message || error)];
+          const lines = ["x 查询 Scail2 生成任务失败", `> job_id: ${jobId}`, "> " + (error.message || error)];
           setSeedanceSubmitStatus(lines, "bad");
           assistantSetStatus(lines, "bad");
           addLogs(lines);
@@ -11669,7 +11782,7 @@
         const meta = storyGenerationRouteMeta();
         const lines = [
           `x 当前是${meta.label}，不提交通道A`,
-          "> 白膜路线要先生成白膜/彩色蒙版检查，再走服务器 Scail2/Wan 逐人替换。",
+          "> 白膜路线要先生成白膜/彩色蒙版检查，再点“Scail2 生成”。",
           "> 如果你要走 Seedance 直出，请先在右侧切到“2 Seedance直出”。",
         ];
         setSeedanceSubmitStatus(lines, "warn");
