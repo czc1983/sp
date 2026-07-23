@@ -11536,9 +11536,10 @@
             if (outputPath) {
               const seg = timelineSegments[selectedTimelineIndex];
               if (seg) {
+                const keepIndex = selectedTimelineIndex;
                 seg.generated_path = outputPath;
-                renderTimeline();
-                updateCompareStage();
+                renderTimeline(timelineSegments);
+                selectTimelineSegment(keepIndex);
               }
               renderSeedanceSingleMaskCompare(sourcePath, outputPath, "服务器换人结果", 0);
             }
