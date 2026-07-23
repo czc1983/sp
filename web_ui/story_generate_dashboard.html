@@ -1119,13 +1119,8 @@
       border-radius: 10px;
     }
 
-    .asset-binding-preview {
-      position: sticky;
-      top: 0;
-      min-height: 340px;
-      max-height: calc(100vh - 120px);
-      overflow: auto;
-      color: #b6c2c8;
+    section[data-module-view="assets"] #assetBindingPreview {
+      display: none;
     }
 
     .asset-card-head {
@@ -1944,6 +1939,41 @@
       flex: 0 0 auto;
     }
 
+    .asset-track-preview {
+      display: grid;
+      gap: 6px;
+      padding: 8px 10px 10px;
+      border-top: 1px solid #263038;
+      background: #080b0d;
+    }
+
+    .asset-track-preview-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #cfe5ff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .asset-track-preview video {
+      width: 100%;
+      height: clamp(140px, 12vw, 220px);
+      display: block;
+      object-fit: contain;
+      border: 1px solid #27343b;
+      border-radius: 6px;
+      background: #030405;
+    }
+
+    .asset-track-preview small {
+      color: #8aa3ad;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .asset-binding-preview {
       min-height: 64px;
       margin-top: 12px;
@@ -1958,12 +1988,7 @@
     }
 
     section[data-module-view="assets"] #assetBindingPreview {
-      grid-area: details;
-      margin-top: 0;
-      position: sticky;
-      top: 0;
-      max-height: calc(100vh - 180px);
-      overflow: auto;
+      display: none;
     }
 
     .asset-binding-summary {
@@ -2948,7 +2973,7 @@
 
     @media (min-width: 1800px) {
       section[data-module-view="assets"] > .panel-body {
-        grid-template-columns: minmax(760px, 1fr) minmax(380px, 520px);
+        grid-template-columns: minmax(0, 1fr);
       }
 
       #assetBoard.asset-board {
@@ -2968,13 +2993,7 @@
           "toolbar"
           "banner"
           "tools"
-          "board"
-          "details";
-      }
-
-      section[data-module-view="assets"] #assetBindingPreview {
-        position: static;
-        max-height: none;
+          "board";
       }
     }
 
@@ -4335,11 +4354,11 @@
     }
 
     section[data-module-view="assets"] > .panel-body {
-      grid-template-columns: minmax(520px, .9fr) minmax(360px, .75fr);
+      grid-template-columns: minmax(0, 1fr);
       grid-template-areas:
-        "toolbar details"
-        "tools details"
-        "board details";
+        "toolbar"
+        "tools"
+        "board";
       gap: 14px;
     }
 
@@ -6968,6 +6987,21 @@
       return `<div class="asset-empty-side">\u6682\u65e0\u7d20\u6750</div>`;
     }
 
+    function assetTrackPreviewHtml(asset) {
+      const trackPath = String(asset?.track_path || asset?.mask_path || asset?.refined_mask_image || "").trim();
+      if (!trackPath || !isVideoMediaPath(trackPath)) return "";
+      const label = String(asset?.track_status || asset?.identity_status || "").trim();
+      return `
+        <div class="asset-track-preview">
+          <div class="asset-track-preview-head">
+            <span>分轨结果</span>
+            ${label ? `<small title="${escapeHtml(label)}">${escapeHtml(label)}</small>` : ""}
+          </div>
+          <video controls muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(trackPath, 0.1))}"></video>
+        </div>
+      `;
+    }
+
     function buildAssetBindingTextV2() {
       if (!storyAssets.length) return "\u6682\u65e0\u8d44\u4ea7\u8be6\u60c5";
       return storyAssets.map((asset, index) => {
@@ -7092,6 +7126,7 @@
       const notice = assetQualityNoticeText(asset);
       const tag = asset?.tag ? `<span class="mode-pill">${escapeHtml(asset.tag)}</span>` : "";
       const editLabel = asset?.kind === "role" ? "\u6362\u56fe" : "\u7f16\u8f91";
+      const trackPreview = asset?.kind === "role" ? assetTrackPreviewHtml(asset) : "";
       const actionRail = asset?.kind === "role"
         ? `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
@@ -7118,6 +7153,7 @@
               <div class="asset-media asset-media-secondary">${assetMediaHtml(asset, "target")}</div>
             </div>
           </div>
+          ${trackPreview}
           <div class="asset-card-foot">
             <span class="asset-foot-text">${escapeHtml(asset?.prompt || "\u70b9\u51fb\u7f16\u8f91\u8865\u5145\u8d44\u4ea7\u4fe1\u606f")}</span>
           </div>
