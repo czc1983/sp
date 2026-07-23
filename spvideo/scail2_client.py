@@ -590,6 +590,7 @@ class Scail2Client:
         strict_track_preflight: bool = False,
         source_identity_points: list[list[float] | None] | None = None,
         source_identity_shapes: list[dict | None] | None = None,
+        output_dir: str | Path | None = None,
         on_progress: Optional[Callable[[str], None]] = None,
     ) -> dict:
         """Run only remote SAM3 + SCAIL2ColoredMaskV2 and download debug masks."""
@@ -616,7 +617,7 @@ class Scail2Client:
         video_window = self._resolve_video_window(meta, video_window)
         if normalize_size:
             width, height = self._normalized_size(meta.width, meta.height, width, height)
-        output_dir = Path(video_path).parent.parent.parent / "04_AI输出成片"
+        output_dir = Path(output_dir) if output_dir else Path(video_path).parent.parent.parent / "04_AI输出成片"
         output_dir.mkdir(parents=True, exist_ok=True)
         log(
             f"远程 SAM3 蒙版检查: {meta.width}x{meta.height} {meta.fps:.2f}fps "

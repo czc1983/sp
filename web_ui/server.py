@@ -15425,6 +15425,7 @@ def _storyboard_mode2_track_role_with_remote_sam3(
     job_id: str,
     add_log,
 ) -> dict[str, Any]:
+    from spvideo.ffmpeg_tools import probe_video
     from spvideo.scail2_client import Scail2Client
 
     role_id = str(role.get("id") or "")
@@ -15434,14 +15435,39 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         raise ValueError(f"{role_name} 缺少参考图，无法提交服务器分轨")
     point = [float(anchor["point"][0]), float(anchor["point"][1])]
     source_shape = _normalize_identity_shape(anchor.get("source_shape") or anchor.get("shape"))
+    anchor_time = max(0.0, float(anchor.get("time") or role.get("source_time") or 0.1))
+    meta = probe_video(video_path)
+    source_fps = float(meta.fps or 0.0) or 24.0
+    source_frame_idx = max(0, int(round(anchor_time * source_fps)))
+    output_dir = _storyboard_mode2_role_track_dir(root, role_id, job_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
     add_log(f"> [{role_name}] 正在提交服务器 SAM3 分轨...")
+    clip_path, prompt_frame, clip_start_frame, clip_frames, track_fps = _make_sam3_window_clip(
+        video_path,
+        frame_idx=source_frame_idx,
+        max_frames=SAM3_PROTECTION_MAX_FRAMES,
+        job_id=f"{job_id}_{role_id}_remote",
+        max_side=640,
+    )
+    add_log(
+        f"> [{role_name}] Remote SAM3 proxy ready: frames={clip_frames}, "
+        f"fps={track_fps:.2f}, prompt_frame={prompt_frame}, input={clip_path.name}"
+    )
     client = Scail2Client()
     result = client.inspect_masks(
-        video_path=video_path,
+        video_path=str(clip_path),
         ref_images=[ref_image],
         role_names=[role_name],
+        video_window={
+            "force_rate": max(1, int(round(track_fps or source_fps))),
+            "frame_load_cap": clip_frames,
+            "skip_first_frames": 0,
+            "select_every_nth": 1,
+        },
+        sampler_preset="fast",
         source_identity_points=[point],
         source_identity_shapes=[source_shape],
+        output_dir=output_dir,
         on_progress=add_log,
     )
     output_path = str(result.get("output_path") or "").strip()
@@ -15470,20 +15496,20 @@ def _storyboard_mode2_track_role_with_remote_sam3(
         "identity_point_distance": 0.0,
         "source_shape_overlap": None,
         "video_path": video_path,
-        "clip_path": video_path,
-        "clip_start_frame": 0,
-        "clip_start_time": 0.0,
+        "clip_path": str(clip_path),
+        "clip_start_frame": clip_start_frame,
+        "clip_start_time": clip_start_frame / source_fps,
         "text_prompt": "person",
-        "text_prompt_frame": 0,
-        "clip_prompt_frame": 0,
-        "source_fps": None,
-        "track_fps": None,
+        "text_prompt_frame": prompt_frame,
+        "clip_prompt_frame": prompt_frame,
+        "source_fps": source_fps,
+        "track_fps": track_fps,
         "prompt_point": point,
-        "candidate_time": float(anchor.get("time") or 0.0),
+        "candidate_time": anchor_time,
         "propagation_direction": "both",
         "num_frames": 0,
         "tracked_frames": 0,
-        "output_dir": str(Path(output_path).parent if output_path else Path(video_path).parent),
+        "output_dir": str(Path(output_path).parent if output_path else output_dir),
         "status": status,
         "warning": warning,
         "track_quality": {
