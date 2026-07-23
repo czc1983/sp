@@ -8201,11 +8201,13 @@
         seen.add(key);
         merged.push(frame);
       });
-      return merged.sort((left, right) => {
-        const priority = Number(left.priority || 9) - Number(right.priority || 9);
+      const sorted = merged.sort((left, right) => {
+        const priority = Number(left.priority ?? 9) - Number(right.priority ?? 9);
         if (priority) return priority;
         return Number(left.time || 0) - Number(right.time || 0);
       });
+      const recommended = sorted.filter((frame) => Number(frame.priority ?? 9) <= 1);
+      return recommended.length ? recommended : sorted.slice(0, 1);
     }
 
     function roleAnchorImageViewport(img) {
@@ -8309,8 +8311,8 @@
       const roleLabel = roleTag && roleTag !== roleName ? `${roleName} / ${roleTag}` : roleName;
       const frameOptions = frames.map((frame, index) => {
         const label = frame.priority === 0
-          ? "已保存锚点帧"
-          : (frame.priority === 1 ? "推荐锚点帧" : "补充检查帧");
+          ? "已标过，继续用这帧"
+          : (frame.priority === 1 ? "推荐画这帧" : "自动选出的可画帧");
         return `<option value="${index}"${index === selectedIndex ? " selected" : ""}>${formatNum(frame.time)}s ${escapeHtml(label)}</option>`;
       }).join("");
       box.innerHTML = `
@@ -8322,7 +8324,7 @@
             <div class="input role-anchor-locked-role" id="roleAnchorRoleLocked">${escapeHtml(roleLabel)}</div>
           </div>
           <div class="field">
-            <div class="label"><span>关键帧</span><span>先标 1 帧；不准时再补 1 帧</span></div>
+            <div class="label"><span>标注画面</span><span>通常只画这一帧</span></div>
             <select class="input" id="roleAnchorFrameSelect">
               ${frameOptions}
             </select>
@@ -8753,17 +8755,14 @@
         const viewport = roleAnchorImageViewport(img);
         const boxRect = frameBox.getBoundingClientRect();
         const markers = [];
-        roleAssets().forEach((role) => {
-          (Array.isArray(role.identity_anchors) ? role.identity_anchors : []).forEach((anchor) => {
-            if (!anchorMatchesCurrentFrame(anchor)) return;
-            const point = Array.isArray(anchor.point) ? anchor.point : [];
-            if (point.length !== 2) return;
-            const left = viewport.left - boxRect.left + Number(point[0]) * viewport.width;
-            const top = viewport.top - boxRect.top + Number(point[1]) * viewport.height;
-            const isCurrentRole = String(role.id || "") === String(selectedRoleId || "");
-            const label = isCurrentRole ? "拖" : String(role.name || role.id || "");
-            markers.push(`<div class="role-anchor-saved-marker${isCurrentRole ? " is-current" : ""}" data-drag-anchor-role="${escapeHtml(role.id || "")}" style="left:${left}px;top:${top}px;" title="${escapeHtml(role.name || role.id || "角色")}">${escapeHtml(label)}</div>`);
-          });
+        const role = selectedRoleAsset();
+        (Array.isArray(role?.identity_anchors) ? role.identity_anchors : []).forEach((anchor) => {
+          if (!anchorMatchesCurrentFrame(anchor)) return;
+          const point = Array.isArray(anchor.point) ? anchor.point : [];
+          if (point.length !== 2) return;
+          const left = viewport.left - boxRect.left + Number(point[0]) * viewport.width;
+          const top = viewport.top - boxRect.top + Number(point[1]) * viewport.height;
+          markers.push(`<div class="role-anchor-saved-marker is-current" data-drag-anchor-role="${escapeHtml(role.id || "")}" style="left:${left}px;top:${top}px;" title="${escapeHtml(role.name || role.id || "当前角色")}">拖</div>`);
         });
         holder.innerHTML = markers.join("");
       }
