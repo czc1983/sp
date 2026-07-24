@@ -18,6 +18,8 @@ from typing import Any, Optional, Callable
 _RETRYABLE_UPLOAD_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 _UPLOAD_ATTEMPTS = 4
 _UPLOAD_ERROR_BODY_LIMIT = 400
+_WAIT_TIMEOUT_SECONDS = int(os.getenv("SCAIL2_WAIT_TIMEOUT_SECONDS", "5400") or "5400")
+_WAIT_HEARTBEAT_SECONDS = int(os.getenv("SCAIL2_WAIT_HEARTBEAT_SECONDS", "60") or "60")
 _SIMPLE_VIDEO_BASE_PROMPT = (
     "a cinematic live-action scene, preserve the original action, timing, "
     "camera movement, composition and background"
@@ -242,6 +244,7 @@ class Scail2Client:
         save_debug_masks: bool = False,
         source_identity_points: list[list[float] | None] | None = None,
         source_identity_shapes: list[dict | None] | None = None,
+        output_dir: str | Path | None = None,
         on_progress: Optional[Callable[[str], None]] = None,
     ) -> dict:
         """
@@ -307,7 +310,7 @@ class Scail2Client:
         video_window = self._resolve_video_window(meta, video_window)
         if normalize_size:
             width, height = self._normalized_size(meta.width, meta.height, width, height)
-        output_dir = Path(video_path).parent.parent.parent / "04_AI输出成片"
+        output_dir = Path(output_dir) if output_dir else Path(video_path).parent.parent.parent / "04_AI输出成片"
         output_dir.mkdir(parents=True, exist_ok=True)
         log(
             f"视频参数: {meta.width}x{meta.height} {meta.fps:.2f}fps {meta.duration:.2f}s; "
@@ -2194,6 +2197,8 @@ class Scail2Client:
         log: Callable[[str], None],
     ) -> dict:
         log("等待推理完成...")
+        start_time = time.time()
+        last_wait_log = start_time
         ws_url = self._websocket_url(client_id)
         try:
             import websocket
@@ -2201,7 +2206,7 @@ class Scail2Client:
             ws = websocket.create_connection(ws_url, timeout=5)
         except Exception as exc:  # noqa: BLE001
             log(f"ComfyUI 进度通道不可用，改用轮询: {exc}")
-            return self._poll_history_until_done(task_id, log)
+            return self._poll_history_until_done(task_id, log, start_time=start_time)
 
         last_node = None
         last_percent = -1
@@ -2209,13 +2214,22 @@ class Scail2Client:
         try:
             while True:
                 now = time.time()
+                if now - start_time > _WAIT_TIMEOUT_SECONDS:
+                    raise TimeoutError(
+                        f"scail2_wait_timeout: prompt {task_id} did not finish in "
+                        f"{_WAIT_TIMEOUT_SECONDS}s"
+                    )
+                if now - last_wait_log >= _WAIT_HEARTBEAT_SECONDS:
+                    last_wait_log = now
+                    elapsed = int(now - start_time)
+                    log(f"SCAIL-2 still waiting for ComfyUI prompt {task_id} ({elapsed}s)")
                 try:
                     message = ws.recv()
                 except websocket.WebSocketTimeoutException:
                     message = None
                 except Exception as exc:  # noqa: BLE001
                     log(f"ComfyUI 进度通道中断，改用轮询: {exc}")
-                    return self._poll_history_until_done(task_id, log)
+                    return self._poll_history_until_done(task_id, log, start_time=start_time)
 
                 if message:
                     if isinstance(message, (bytes, bytearray, memoryview)):
@@ -2262,9 +2276,27 @@ class Scail2Client:
             except Exception:
                 pass
 
-    def _poll_history_until_done(self, task_id: str, log: Callable[[str], None]) -> dict:
+    def _poll_history_until_done(
+        self,
+        task_id: str,
+        log: Callable[[str], None],
+        *,
+        start_time: float | None = None,
+    ) -> dict:
+        start_time = start_time or time.time()
+        last_wait_log = start_time
         while True:
             time.sleep(10)
+            now = time.time()
+            if now - start_time > _WAIT_TIMEOUT_SECONDS:
+                raise TimeoutError(
+                    f"scail2_wait_timeout: prompt {task_id} did not finish in "
+                    f"{_WAIT_TIMEOUT_SECONDS}s"
+                )
+            if now - last_wait_log >= _WAIT_HEARTBEAT_SECONDS:
+                last_wait_log = now
+                elapsed = int(now - start_time)
+                log(f"SCAIL-2 still waiting for ComfyUI history {task_id} ({elapsed}s)")
             history = self._fetch_history(task_id)
             if task_id in history:
                 log("推理完成")
@@ -2565,15 +2597,21 @@ class Scail2Client:
         right_candidates = [other_x for point_index, (other_x, _other_y) in enumerate(points) if point_index != index and other_x > x]
         left = max(left_candidates) if left_candidates else None
         right = min(right_candidates) if right_candidates else None
-        x_min = 0.0 if left is None else (left + x) / 2.0
-        x_max = 1.0 if right is None else (x + right) / 2.0
-        if x_max - x_min < 0.18:
-            x_min = max(0.0, x - 0.18)
-            x_max = min(1.0, x + 0.18)
-        x_min = max(0.0, min(1.0, x_min - 0.02))
-        x_max = max(0.0, min(1.0, x_max + 0.02))
-        y_min = 0.02
-        y_max = 0.98
+        if len(points) == 1:
+            x_min = max(0.0, x - 0.22)
+            x_max = min(1.0, x + 0.22)
+            y_min = max(0.02, y - 0.32)
+            y_max = min(0.98, y + 0.36)
+        else:
+            x_min = 0.0 if left is None else (left + x) / 2.0
+            x_max = 1.0 if right is None else (x + right) / 2.0
+            if x_max - x_min < 0.18:
+                x_min = max(0.0, x - 0.18)
+                x_max = min(1.0, x + 0.18)
+            x_min = max(0.0, min(1.0, x_min - 0.02))
+            x_max = max(0.0, min(1.0, x_max + 0.02))
+            y_min = max(0.02, y - 0.32)
+            y_max = min(0.98, y + 0.36)
         bbox = {
             "x": int(round(x_min * width)),
             "y": int(round(y_min * height)),

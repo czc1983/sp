@@ -227,8 +227,35 @@ def analyze_pre_director(
         asset_manifest = mode2_plan.get("asset_manifest")
         if isinstance(asset_manifest, dict) and isinstance(asset_manifest.get("results"), list):
             plan["asset_manifest"] = asset_manifest
+        plan["analysis_schema_version"] = int(mode2_plan.get("analysis_schema_version") or 1)
+        for key in ("role_timeline", "prop_timeline"):
+            value = mode2_plan.get(key)
+            plan[key] = [item for item in (value or []) if isinstance(item, dict)] if isinstance(value, list) else []
+        for key in ("spatial_map", "production_notes"):
+            value = mode2_plan.get(key)
+            plan[key] = value if isinstance(value, dict) else {}
     plan["boundary_hints"] = _boundary_hints(scenes, duration)
     plan["characters"] = _collect_characters(scenes)
+    if include_asset_manifest:
+        characters_by_label = {
+            str(item.get("visual_label") or "").strip(): item
+            for item in plan["characters"]
+            if isinstance(item, dict) and str(item.get("visual_label") or "").strip()
+        }
+        raw_role_timeline = [
+            item for item in (plan.get("role_timeline") or [])
+            if isinstance(item, dict)
+        ]
+        merged_role_timeline: list[dict[str, Any]] = []
+        for item in raw_role_timeline:
+            label = str(item.get("visual_label") or item.get("identity") or "").strip()
+            merged = dict(characters_by_label.get(label, {}))
+            merged.update(item)
+            for key, fallback in characters_by_label.get(label, {}).items():
+                if key not in merged or merged.get(key) in (None, "", []):
+                    merged[key] = fallback
+            merged_role_timeline.append(merged)
+        plan["role_timeline"] = merged_role_timeline or list(plan["characters"])
     plan["key_actions"] = _collect_key_actions(scenes)
     visual_summary = "；".join(
         str(scene.get("description") or "").strip()
@@ -506,6 +533,17 @@ def _collect_characters(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "description": "",
                 "confidence": 0.0,
                 "time_ranges": [],
+                "bboxes": [],
+                "screen_positions": [],
+                "depth_positions": [],
+                "body_facing": [],
+                "head_facing": [],
+                "poses": [],
+                "actions": [],
+                "motion_directions": [],
+                "occlusions": [],
+                "contact_points": [],
+                "gaze_or_attention": [],
             })
             entry["time_ranges"].append([float(scene["start"]), float(scene["end"])])
             confidence = float(detail.get("confidence") or 0)
@@ -515,6 +553,34 @@ def _collect_characters(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             for relationship in _string_list(detail.get("relationships")):
                 if relationship not in entry["relationships"]:
                     entry["relationships"].append(relationship)
+            bbox = detail.get("bbox")
+            if isinstance(bbox, list) and len(bbox) == 4:
+                try:
+                    clean_bbox = [
+                        round(max(0.0, min(1.0, float(value))), 6)
+                        for value in bbox
+                    ]
+                    if clean_bbox[2] > clean_bbox[0] and clean_bbox[3] > clean_bbox[1] and clean_bbox not in entry["bboxes"]:
+                        entry["bboxes"].append(clean_bbox)
+                except (TypeError, ValueError):
+                    pass
+            for source_key, target_key in (
+                ("screen_position", "screen_positions"),
+                ("depth_position", "depth_positions"),
+                ("body_facing", "body_facing"),
+                ("head_facing", "head_facing"),
+                ("pose", "poses"),
+                ("action", "actions"),
+                ("motion_direction", "motion_directions"),
+                ("occlusion", "occlusions"),
+                ("gaze_or_attention", "gaze_or_attention"),
+            ):
+                text = str(detail.get(source_key) or "").strip()
+                if text and text not in entry[target_key]:
+                    entry[target_key].append(text)
+            for point in _string_list(detail.get("contact_points")):
+                if point not in entry["contact_points"]:
+                    entry["contact_points"].append(point)
             if confidence >= float(entry.get("confidence") or 0):
                 entry["role_name"] = str(detail.get("role_name") or "").strip()
                 entry["description"] = str(detail.get("description") or "").strip()

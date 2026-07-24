@@ -407,6 +407,71 @@ def cut_segment(video_path: str | Path, start: float, end: float, output_path: s
     run_command(args)
 
 
+def align_segment_to_frames(video_path: str | Path, start: float, end: float) -> tuple[float, float, int, int]:
+    meta = probe_video(video_path)
+    fps = float(meta.fps or 0.0)
+    if fps <= 0.01:
+        fps = 30.0
+    source_duration = max(0.0, float(meta.duration or 0.0))
+    safe_start = max(0.0, min(float(start), source_duration))
+    safe_end = max(safe_start + (1.0 / fps), min(float(end), source_duration or float(end)))
+    start_frame = max(0, int(round(safe_start * fps)))
+    end_frame = max(start_frame + 1, int(round(safe_end * fps)))
+    if source_duration > 0:
+        max_frame = max(1, int(math.ceil(source_duration * fps)))
+        end_frame = min(end_frame, max_frame)
+    aligned_start = start_frame / fps
+    aligned_end = end_frame / fps
+    return aligned_start, aligned_end, start_frame, end_frame
+
+
+def cut_segment_precise(
+    video_path: str | Path,
+    start: float,
+    end: float,
+    output_path: str | Path,
+    *,
+    include_audio: bool = True,
+) -> None:
+    """Cut a frame-aligned half-open segment [start_frame, end_frame)."""
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    aligned_start, aligned_end, _start_frame, _end_frame = align_segment_to_frames(video_path, start, end)
+    duration = max(0.01, aligned_end - aligned_start)
+    args = [
+        ffmpeg_path(),
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(video_path),
+        "-ss",
+        f"{aligned_start:.6f}",
+        "-t",
+        f"{duration:.6f}",
+        "-map",
+        "0:v:0?",
+    ]
+    if include_audio:
+        args.extend(["-map", "0:a:0?"])
+    args.extend([
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+    ])
+    if include_audio:
+        args.extend(["-c:a", "aac", "-b:a", "128k"])
+    else:
+        args.append("-an")
+    args.extend(["-movflags", "+faststart", str(output)])
+    run_command(args)
+
+
 def _parse_fraction(value: str) -> float:
     if not value:
         return 0.0

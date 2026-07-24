@@ -424,6 +424,44 @@
       word-break: break-all;
     }
 
+    .understanding-detail {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .understanding-detail-card {
+      border: 1px solid rgba(216, 229, 236, .14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .035);
+      padding: 8px 10px;
+      color: #d9e2e6;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .understanding-detail-card strong {
+      display: block;
+      color: #f2f6f8;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .understanding-json {
+      max-height: 260px;
+      overflow: auto;
+      margin-top: 10px;
+      border: 1px solid rgba(216, 229, 236, .14);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, .18);
+      padding: 10px;
+      color: #cfe5ff;
+      font-size: 11px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
     .understanding-empty {
       color: var(--muted);
       font-size: 12px;
@@ -720,6 +758,18 @@
     }
 
     .tiny-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .tiny-btn.primary {
+      height: 30px;
+      padding: 0 14px;
+      border-color: rgba(218, 169, 74, .78);
+      background: linear-gradient(180deg, #6c4a16, #3a2810);
+      color: #fff4d2;
+      font-weight: 800;
+    }
+    .tiny-btn.primary:hover:not(:disabled) {
+      border-color: #ffd27a;
+      background: linear-gradient(180deg, #80601f, #45300f);
+    }
     .tiny-btn.active,
     .tiny-btn.good.active {
       border-color: #7ee0a3;
@@ -1383,7 +1433,7 @@
     }
 
     .modal-box.asset-editor-modal.role-anchor-modal {
-      width: min(980px, calc(100vw - 32px));
+      width: min(1220px, calc(100vw - 32px));
     }
 
     .modal-box h4 { margin: 0 0 8px; font-size: 15px; }
@@ -1799,6 +1849,8 @@
     }
 
     .asset-action-rail {
+      position: relative;
+      z-index: 4;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -1810,6 +1862,9 @@
     }
 
     .asset-action-rail .tiny-btn {
+      position: relative;
+      z-index: 5;
+      pointer-events: auto;
       width: 100%;
       min-height: 32px;
       padding: 0 4px;
@@ -2131,6 +2186,77 @@
       display: block;
       object-fit: contain;
       background: #050607;
+    }
+
+    .asset-extra-ref-panel {
+      border: 1px solid #202a30;
+      border-radius: 7px;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+      background: #0b0d0f;
+    }
+
+    .asset-extra-ref-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #dce7eb;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .asset-extra-ref-list {
+      min-height: 54px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+      gap: 6px;
+      align-items: start;
+    }
+
+    .asset-extra-ref-thumb {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border: 1px solid #25313a;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #050607;
+    }
+
+    .asset-extra-ref-thumb img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .asset-extra-ref-thumb button {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(0,0,0,.68);
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    .asset-extra-ref-empty {
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #26313a;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 8px;
     }
 
     .asset-bg-recommend {
@@ -2634,6 +2760,74 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .role-video-side-panel {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      min-width: 0;
+      border: 1px solid #2b3338;
+      border-radius: 8px;
+      background: #0b0d0f;
+      padding: 12px;
+    }
+
+    .role-video-side-panel h5 {
+      margin: 0;
+      color: #f4d8a7;
+      font-size: 13px;
+    }
+
+    .role-video-side-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .role-video-side-actions {
+      display: grid;
+      gap: 7px;
+    }
+
+    .role-video-side-actions .tiny-btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 32px;
+    }
+
+    .role-video-anchor-list {
+      display: grid;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(216, 229, 236, .12);
+    }
+
+    .role-video-anchor-list-title {
+      color: #eaf3f7;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .role-video-anchor-list-empty {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .role-video-anchor-list button {
+      width: 100%;
+      min-height: 30px;
+      justify-content: space-between;
+      border-color: rgba(216, 229, 236, .16);
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .role-video-anchor-list button.is-active {
+      border-color: rgba(234, 184, 95, .75);
+      background: rgba(234, 184, 95, .16);
+      color: #ffe4af;
     }
 
     .role-anchor-mask-empty {
@@ -3509,6 +3703,23 @@
       box-shadow: 0 0 0 2px rgba(0, 0, 0, .45);
     }
 
+    .seedance-subclip-marker-delete {
+      display: inline-grid;
+      place-items: center;
+      width: 15px;
+      min-width: 34px;
+      height: 15px;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .62);
+      color: #fff;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      pointer-events: auto;
+    }
+
     .seedance-subclip-shapes,
     .seedance-subclip-draw-layer {
       position: absolute;
@@ -3550,6 +3761,62 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       vector-effect: non-scaling-stroke;
+    }
+
+    .subshot-ref-strip {
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid rgba(216, 229, 236, .12);
+      border-radius: 7px;
+      background: rgba(8, 12, 15, .72);
+    }
+
+    .subshot-ref-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .subshot-ref-role {
+      flex: 0 0 86px;
+      color: #d8e5ec;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .subshot-ref-options {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .subshot-ref-thumb {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 1px solid rgba(216, 229, 236, .22);
+      border-radius: 6px;
+      background: #0b1115;
+      overflow: hidden;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .subshot-ref-thumb.active {
+      border-color: #eab85f;
+      box-shadow: 0 0 0 2px rgba(234, 184, 95, .24);
+    }
+
+    .subshot-ref-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .seedance-subclip-empty {
@@ -3595,6 +3862,74 @@
 
     .seedance-subclip-role-toggle input {
       margin: 0;
+    }
+
+    .seedance-subclip-anchor-popover {
+      position: absolute;
+      z-index: 9;
+      min-width: 120px;
+      max-width: min(220px, calc(100% - 16px));
+      padding: 8px;
+      border-radius: 7px;
+      border: 1px solid rgba(234, 184, 95, .45);
+      background: rgba(9, 13, 16, .96);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
+      color: #eaf3f7;
+      font-size: 12px;
+    }
+
+    .seedance-subclip-anchor-popover strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #ffe1a3;
+      font-size: 12px;
+    }
+
+    .seedance-subclip-anchor-popover button {
+      width: 100%;
+      justify-content: flex-start;
+      margin-top: 5px;
+    }
+
+    .seedance-subclip-anchor-popover.is-point-menu {
+      min-width: 102px;
+      max-width: 128px;
+      padding: 4px;
+    }
+
+    .seedance-subclip-anchor-popover.is-point-menu button {
+      justify-content: center;
+      min-height: 24px;
+      margin-top: 3px;
+      padding: 0 6px;
+      font-size: 11px;
+    }
+
+    .seedance-subclip-point-menu-title {
+      display: block;
+      margin-bottom: 2px;
+      color: #ffe1a3;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .seedance-subclip-marker.role-video-marker {
+      flex-direction: column-reverse;
+      gap: 2px;
+    }
+
+    .seedance-subclip-marker.role-video-marker span {
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .52);
+      line-height: 1.2;
+    }
+
+    .seedance-subclip-anchor-hint {
+      color: #a9bdc6;
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .seedance-subclip-choice {
@@ -4851,6 +5186,7 @@
                   </div>
                   <div class="understanding-summary" id="fullUnderstandingSummary">待分析：开始后会整理角色名称、场景名称和镜头边界。</div>
                   <div class="understanding-list" id="fullUnderstandingCharacters"></div>
+                  <div class="understanding-detail" id="fullUnderstandingDetails"></div>
                   <div class="understanding-meta" id="fullUnderstandingMeta">来源：- · 缓存位置：-</div>
                   <details class="story-disclosure" style="margin-top:12px;">
                     <summary>接口与模型配置</summary>
@@ -4942,6 +5278,7 @@
       <section class="panel module-view" data-module-view="storyboard">
         <div class="panel-head">
           <span>分镜管理</span>
+          <button class="btn" id="openStoryboardShotCutBtn" type="button">镜头切段</button>
           <button class="btn primary" id="buildStoryboardBtn">刷新分镜计划</button>
         </div>
         <div class="panel-body">
@@ -4983,6 +5320,7 @@
               </div>
             </div>
           </div>
+          <div class="seedance-subclips" id="storyboardShotSubclips" hidden></div>
 
           <div class="field">
             <div class="label"><span>已有故事摘要</span><span id="storySource">未读取</span></div>
@@ -5028,6 +5366,7 @@
       <section class="panel module-view" data-module-view="generate">
         <div class="panel-head">
           <span>Seedance2 通道A重拍</span>
+          <button class="btn" id="openShotCutWorkbenchBtn" type="button">镜头切段</button>
           <button class="btn good" id="openTransferWorkbenchBtn" type="button">Scail2 生成</button>
           <button class="btn primary" id="batchGenerateBtn" type="button">提交通道A生成</button>
         </div>
@@ -5385,6 +5724,7 @@
       compareMode: "",
       outputLabel: "",
       sourceLabel: "",
+      cutTimes: [],
       previewRatio: "9:16",
       previewRatioManual: false,
       drawing: null,
@@ -5951,6 +6291,7 @@
       const boundaryCountEl = $("#understandingBoundaryCount");
       const summaryEl = $("#fullUnderstandingSummary");
       const charactersEl = $("#fullUnderstandingCharacters");
+      const detailsEl = $("#fullUnderstandingDetails");
       const metaEl = $("#fullUnderstandingMeta");
       if (!statusEl || !summaryEl || !charactersEl || !metaEl) return;
 
@@ -5961,6 +6302,7 @@
         if (boundaryCountEl) boundaryCountEl.textContent = "-";
         summaryEl.textContent = "当前关闭全片理解，只使用原视频、手动资产和规则分镜结果。";
         charactersEl.innerHTML = `<span class="understanding-chip">全片理解关闭</span>`;
+        if (detailsEl) detailsEl.innerHTML = "";
         metaEl.textContent = "来源：已关闭 · 缓存位置：-";
         return;
       }
@@ -5972,6 +6314,7 @@
         if (boundaryCountEl) boundaryCountEl.textContent = "-";
         summaryEl.textContent = "待分析：点击“分析分镜与候选名称”后，会整理角色名称、场景名称和镜头边界。";
         charactersEl.innerHTML = `<span class="understanding-chip">待分析</span>`;
+        if (detailsEl) detailsEl.innerHTML = "";
         metaEl.textContent = "来源：- · 缓存位置：-";
         return;
       }
@@ -5988,13 +6331,85 @@
       const roles = normalizeUnderstandingList(data.characters || data.roles || data.role_list);
       charactersEl.innerHTML = roles.length
         ? roles.slice(0, 8).map((role, index) => {
-            const label = typeof role === "string" ? role : (role.name || role.role || role.id || `角色${index + 1}`);
+            const label = typeof role === "string"
+              ? role
+              : (role.role_name || role.name || role.role || (Array.isArray(role.role_candidates) ? role.role_candidates[0] : "") || role.visual_label || role.id || `角色${index + 1}`);
             return `<span class="understanding-chip">${escapeHtml(String(label))}</span>`;
           }).join("")
         : `<span class="understanding-chip">暂无角色信息</span>`;
+      if (detailsEl) detailsEl.innerHTML = understandingDetailHtml(data);
 
       const cachePath = data.cache_path || data.cachePath || data.path || "-";
       metaEl.textContent = `状态：${understandingStatusText(data)} · 缓存位置：${cachePath}`;
+    }
+
+    function compactJsonText(value) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (_) {
+        return String(value || "");
+      }
+    }
+
+    function understandingArrayText(value, limit = 4) {
+      const arr = Array.isArray(value) ? value : [];
+      return arr.map((item) => String(item || "").trim()).filter(Boolean).slice(0, limit).join("；");
+    }
+
+    function understandingRoleLine(role, index) {
+      const name = role.role_name || role.name || understandingArrayText(role.role_candidates, 1) || role.visual_label || `角色${index + 1}`;
+      const times = Array.isArray(role.time_ranges) ? role.time_ranges.map((range) => Array.isArray(range) ? `${formatNum(range[0])}-${formatNum(range[1])}s` : "").filter(Boolean).join("，") : "";
+      const bbox = Array.isArray(role.bboxes) && role.bboxes.length ? ` 区域:${compactJsonText(role.bboxes[0])}` : "";
+      const facing = understandingArrayText([...(role.body_facing || []), ...(role.head_facing || [])], 3);
+      const actions = understandingArrayText(role.actions || role.motion_directions || [], 3);
+      const contact = understandingArrayText(role.contact_points || role.relationships || [], 3);
+      return `${name}${times ? ` @ ${times}` : ""}${bbox}${facing ? ` 朝向:${facing}` : ""}${actions ? ` 动作:${actions}` : ""}${contact ? ` 接触/关系:${contact}` : ""}`;
+    }
+
+    function understandingSceneLine(scene, index) {
+      const title = `${formatNum(scene.start)}-${formatNum(scene.end)}s`;
+      const camera = scene.camera && typeof scene.camera === "object"
+        ? [scene.camera.shot_size, scene.camera.camera_motion, scene.camera.angle].map((item) => String(item || "").trim()).filter(Boolean).join("/")
+        : "";
+      const roles = Array.isArray(scene.character_details)
+        ? scene.character_details.slice(0, 3).map((role, roleIndex) => understandingRoleLine(role, roleIndex)).join(" | ")
+        : "";
+      const relations = Array.isArray(scene.spatial_relations)
+        ? scene.spatial_relations.slice(0, 3).map((item) => item.description || `${item.subject || ""}${item.relation || ""}${item.object || ""}`).filter(Boolean).join("；")
+        : "";
+      const props = Array.isArray(scene.visible_props)
+        ? scene.visible_props.slice(0, 4).map((item) => item.name || item.description || "").filter(Boolean).join("、")
+        : "";
+      return `${title}：${scene.description || scene.key_action || `片段${index + 1}`}${camera ? `｜镜头:${camera}` : ""}${roles ? `｜人物:${roles}` : ""}${relations ? `｜关系:${relations}` : ""}${props ? `｜物品:${props}` : ""}`;
+    }
+
+    function understandingDetailHtml(data) {
+      const roleTimeline = Array.isArray(data.role_timeline) && data.role_timeline.length
+        ? data.role_timeline
+        : normalizeUnderstandingList(data.characters || data.roles || []);
+      const scenes = Array.isArray(data.scenes) ? data.scenes : [];
+      const notes = data.production_notes && typeof data.production_notes === "object" ? data.production_notes : {};
+      const spatial = data.spatial_map && typeof data.spatial_map === "object" ? data.spatial_map : {};
+      const cards = [];
+      if (roleTimeline.length) {
+        cards.push(`<div class="understanding-detail-card"><strong>角色轨迹</strong>${roleTimeline.slice(0, 8).map((role, index) => `<div>${escapeHtml(understandingRoleLine(role, index))}</div>`).join("")}</div>`);
+      }
+      if (scenes.length) {
+        cards.push(`<div class="understanding-detail-card"><strong>时间线与空间关系</strong>${scenes.slice(0, 8).map((scene, index) => `<div>${escapeHtml(understandingSceneLine(scene, index))}</div>`).join("")}</div>`);
+      }
+      if (Object.keys(spatial).length) {
+        cards.push(`<div class="understanding-detail-card"><strong>空间地图</strong><div>${escapeHtml(spatial.layout_summary || spatial.physical_scene || compactJsonText(spatial))}</div></div>`);
+      }
+      if (Object.keys(notes).length) {
+        const riskText = understandingArrayText(notes.risks || [], 8);
+        const strategy = String(notes.replacement_strategy || "").trim();
+        const anchors = Array.isArray(notes.manual_anchor_suggestions)
+          ? notes.manual_anchor_suggestions.slice(0, 5).map((item) => `${formatNum(item.time)}s ${item.role || ""} ${item.reason || ""}`.trim()).join("；")
+          : "";
+        cards.push(`<div class="understanding-detail-card"><strong>生产建议</strong>${strategy ? `<div>${escapeHtml(strategy)}</div>` : ""}${anchors ? `<div>建议标注：${escapeHtml(anchors)}</div>` : ""}${riskText ? `<div>风险：${escapeHtml(riskText)}</div>` : ""}</div>`);
+      }
+      cards.push(`<details class="story-disclosure"><summary>完整 JSON</summary><pre class="understanding-json">${escapeHtml(compactJsonText(data))}</pre></details>`);
+      return cards.join("");
     }
 
     function normalizeStoryUnderstandingOptions(raw) {
@@ -6117,7 +6532,17 @@
 
     function applyReferenceCostGuard(value) {
       const strategy = normalizeStoryReferenceStrategy(value);
-      if (strategy === "new_only") return;
+      if (strategy === "new_only") {
+        if (!storyUnderstandingOptions.use_pre_director || !storyUnderstandingOptions.force_understand) {
+          storyUnderstandingOptions = normalizeStoryUnderstandingOptions({
+            use_pre_director: true,
+            force_understand: true,
+          });
+          saveStoryUnderstandingOptions();
+          addLogs(["> 已切到分析当前原片：自动开启全片理解和重新分析"]);
+        }
+        return;
+      }
       if (storyUnderstandingOptions.use_pre_director || storyUnderstandingOptions.force_understand) {
         storyUnderstandingOptions = normalizeStoryUnderstandingOptions({
           use_pre_director: false,
@@ -6561,7 +6986,14 @@
           source_mask_paths: Array.isArray(item.source_mask_paths) ? item.source_mask_paths.map((path) => String(path || "")).filter(Boolean) : [],
           present_time_ranges: Array.isArray(item.present_time_ranges) ? item.present_time_ranges : [],
           present_shots: Array.isArray(item.present_shots) ? item.present_shots.map((shot) => String(shot || "")).filter(Boolean) : [],
+          ai_bbox: Array.isArray(item.ai_bbox) ? item.ai_bbox.map((value) => Number(value || 0)).slice(0, 4) : null,
+          ai_anchor_point: Array.isArray(item.ai_anchor_point) ? item.ai_anchor_point.map((value) => Number(value || 0)).slice(0, 2) : null,
+          ai_layout: item.ai_layout && typeof item.ai_layout === "object" ? item.ai_layout : {},
           target_image: String(item.target_image || ""),
+          seedance_reference_image: String(item.seedance_reference_image || ""),
+          extra_ref_images: Array.isArray(item.extra_ref_images) ? item.extra_ref_images.map((path) => String(path || "")).filter(Boolean) : [],
+          subject_extra_ref_images: Array.isArray(item.subject_extra_ref_images) ? item.subject_extra_ref_images.map((path) => String(path || "")).filter(Boolean) : [],
+          reference_images: Array.isArray(item.reference_images) ? item.reference_images.map((path) => String(path || "")).filter(Boolean) : [],
           target_asset: item.target_asset && typeof item.target_asset === "object" ? item.target_asset : {},
           usage: item.usage && typeof item.usage === "object" ? item.usage : {},
           seedance_policy: item.seedance_policy && typeof item.seedance_policy === "object" ? item.seedance_policy : {},
@@ -6779,6 +7211,7 @@
       if (isUnconfirmedPropCandidate(asset)) return "物品待确认";
       if (isUnusableSceneCandidate(asset)) return "场景待确认";
       if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "分轨中";
+      if (asset?.kind === "role" && asset?.identity_status === "ai_suggested") return "AI预标待确认";
       if (asset?.kind === "role" && asset?.identity_status === "tracking") return "分轨中";
       if (asset?.kind === "role" && asset?.identity_status === "tracked") return "已分轨";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") return "需要人工复查";
@@ -6806,6 +7239,7 @@
         return latest ? String(latest) : "角色身份分轨正在运行，完成后会自动刷新。";
       }
       if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "角色身份不够稳定，需要补锚点后再分轨。";
+      if (asset?.kind === "role" && asset?.identity_status === "ai_suggested") return "反推模型已给出人物大概区域，请打开身份定位核对，必要时拖动微调。";
       if (asset?.kind === "role" && asset?.identity_status === "failed") return asset.track_error || "角色分轨失败，请改用手动建资产或重跑分轨。";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") {
         const warnings = Array.isArray(asset.track_quality?.warnings) ? asset.track_quality.warnings.join("; ") : "";
@@ -7091,13 +7525,7 @@
           event.stopPropagation();
           const cardRoleId = button.closest("[data-asset-card]")?.dataset.assetCard || "";
           const roleId = button.dataset.anchorRole || cardRoleId;
-          const role = findStoryAsset(roleId);
-          if (!role || role.kind !== "role") {
-            setStoryStatus(["x 没有找到要标注的角色", "> 请刷新页面后重新点击角色卡片上的锚点。"], "bad");
-            return;
-          }
-          setStoryStatus(["> 打开角色锚点", `> ${role.name || role.id} (${role.id})`], "good");
-          openRoleAnchorEditor(role.id);
+          openAssetRoleAnchor(roleId);
         });
       });
       board.querySelectorAll("[data-track-role]").forEach((button) => {
@@ -7106,6 +7534,17 @@
           startRoleTrack([button.dataset.trackRole || ""]);
         });
       });
+      if (!board.dataset.anchorCaptureBound) {
+        board.dataset.anchorCaptureBound = "1";
+        board.addEventListener("pointerdown", (event) => {
+          const button = event.target.closest?.("[data-anchor-role]");
+          if (!button || !board.contains(button)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const cardRoleId = button.closest("[data-asset-card]")?.dataset.assetCard || "";
+          openAssetRoleAnchor(button.dataset.anchorRole || cardRoleId);
+        }, true);
+      }
       updateRoleTrackButtons();
       const totalLabel = $("#assetTotalLabel");
       if (totalLabel) totalLabel.textContent = `${storyAssets.length} \u4e2a\u8d44\u4ea7`;
@@ -7116,6 +7555,20 @@
       preview.innerHTML = buildAssetBindingPreviewHtmlV2();
       const questionCount = $("#questionCount");
       if (questionCount) questionCount.textContent = String(storyAssets.length || 0);
+    }
+
+    function openAssetRoleAnchor(roleId) {
+      const role = findStoryAsset(roleId);
+      if (!role || role.kind !== "role") {
+        setStoryStatus(["x 没有找到要标注的角色", "> 请刷新页面后重新点击角色卡片上的锚点。"], "bad");
+        return;
+      }
+      try {
+        setStoryStatus(["> 打开身份定位", `> ${role.name || role.id}`], "good");
+        openRoleVideoAnchorEditor(role.id);
+      } catch (error) {
+        setStoryStatus(["x 身份定位窗口打开失败", "> " + (error.message || error)], "bad");
+      }
     }
 
     function renderAssetCard(asset) {
@@ -7130,7 +7583,7 @@
       const actionRail = asset?.kind === "role"
         ? `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
-            <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">\u951a\u70b9</button>
+            <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">身份定位</button>
             <button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>
           </div>`
         : `<div class="asset-action-rail">
@@ -7431,6 +7884,93 @@
       if (!value || !input) return;
       input.value = value;
       if (preview) preview.innerHTML = assetPreviewHtml({ target_image: value }, "target");
+    }
+
+    function assetExtraRefList(asset) {
+      const seen = new Set();
+      const target = String(asset?.target_image || asset?.seedance_reference_image || "").trim();
+      const values = [
+        ...(Array.isArray(asset?.extra_ref_images) ? asset.extra_ref_images : []),
+        ...(Array.isArray(asset?.subject_extra_ref_images) ? asset.subject_extra_ref_images : []),
+        ...(Array.isArray(asset?.reference_images) ? asset.reference_images : []),
+      ];
+      return values
+        .map((path) => String(path || "").trim())
+        .filter((path) => {
+          if (!path || path === target || seen.has(path)) return false;
+          seen.add(path);
+          return true;
+        });
+    }
+
+    function currentAssetExtraRefs() {
+      const raw = $("#assetExtraRefsInput")?.value || "[]";
+      try {
+        const values = JSON.parse(raw);
+        return Array.isArray(values) ? values.map((path) => String(path || "").trim()).filter(Boolean) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setCurrentAssetExtraRefs(values) {
+      const clean = [];
+      const seen = new Set();
+      const target = $("#assetTargetInput")?.value.trim() || "";
+      (Array.isArray(values) ? values : []).forEach((path) => {
+        const value = String(path || "").trim();
+        if (!value || value === target || seen.has(value)) return;
+        seen.add(value);
+        clean.push(value);
+      });
+      const input = $("#assetExtraRefsInput");
+      if (input) input.value = JSON.stringify(clean);
+      renderAssetExtraRefs(clean);
+    }
+
+    function assetExtraRefsHtml(values) {
+      const refs = Array.isArray(values) ? values : [];
+      if (!refs.length) return `<div class="asset-extra-ref-empty">还没有补充角度图</div>`;
+      return refs.map((path, index) => `
+        <div class="asset-extra-ref-thumb" title="${escapeHtml(path)}">
+          <img src="${escapeHtml(mediaSrc(path, 0.1))}" alt="">
+          <button type="button" data-remove-asset-extra-ref="${index}" aria-label="删除">×</button>
+        </div>
+      `).join("");
+    }
+
+    function renderAssetExtraRefs(values = currentAssetExtraRefs()) {
+      const list = $("#assetExtraRefList");
+      if (!list) return;
+      list.innerHTML = assetExtraRefsHtml(values);
+      list.querySelectorAll("[data-remove-asset-extra-ref]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const index = Number(button.dataset.removeAssetExtraRef);
+          const refs = currentAssetExtraRefs();
+          if (Number.isInteger(index) && index >= 0) {
+            refs.splice(index, 1);
+            setCurrentAssetExtraRefs(refs);
+          }
+        });
+      });
+    }
+
+    async function pickAssetExtraRefImage(event) {
+      event?.stopPropagation?.();
+      const refs = currentAssetExtraRefs();
+      try {
+        const response = await fetch("/api/pick-path", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "image", initial: refs[refs.length - 1] || $("#assetTargetInput")?.value || "" }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "select failed");
+        if (data.path) setCurrentAssetExtraRefs([...refs, data.path]);
+      } catch (error) {
+        setStoryStatus(["x " + error.message], "bad");
+      }
     }
 
     function backgroundRecommendationPanelHtml(asset) {
@@ -8101,6 +8641,7 @@
       const targetSlotHtml = approvalRestricted
         ? `<div class="asset-editor-empty">${escapeHtml(isMixedSceneAsset(asset) ? "请先拆分场景，再分别绑定参考图。" : "请手动上传可信参考图，再确认绑定。")}</div>`
         : assetPreviewHtml(asset, "target");
+      const extraRefs = assetExtraRefList(asset);
       const overlay = document.createElement("div");
       overlay.className = "modal-overlay";
       const box = document.createElement("div");
@@ -8124,6 +8665,15 @@
               <span>右图 · 参考/替换图</span>
               <div id="assetTargetPreviewSlot">${targetSlotHtml}</div>
             </div>
+            ${asset.kind === "role" && !approvalRestricted ? `
+              <div class="asset-extra-ref-panel">
+                <div class="asset-extra-ref-head">
+                  <span>补充角度图</span>
+                  <button class="tiny-btn" id="addAssetExtraRefBtn" type="button">加参考图</button>
+                </div>
+                <div class="asset-extra-ref-list" id="assetExtraRefList">${assetExtraRefsHtml(extraRefs)}</div>
+              </div>
+            ` : ""}
             ${approvalRestricted ? "" : backgroundRecommendationPanelHtml(asset)}
             <div class="asset-editor-prompt">
               <div class="label"><span>资产提示词</span><span>用于批量绑定和生成时辅助识别</span></div>
@@ -8146,6 +8696,7 @@
           </div>
         </div>
         <input id="assetTargetInput" type="hidden" value="${escapeHtml(asset.target_image || "")}" />
+        <input id="assetExtraRefsInput" type="hidden" value="${escapeHtml(JSON.stringify(extraRefs))}" />
         <div class="asset-editor-actions">
           <button class="btn" id="closeAssetEditorBtn" type="button">取消</button>
           <button class="btn good" id="saveAssetEditorBtn" type="button">${approvalRestricted ? "保存处理方式" : "保存"}</button>
@@ -8160,6 +8711,8 @@
       });
       setAssetSceneSplitRunning(assetSceneSplitRunning);
       if (!approvalRestricted) $("#assetTargetPickZone")?.addEventListener("click", pickAssetTargetImage);
+      $("#addAssetExtraRefBtn")?.addEventListener("click", pickAssetExtraRefImage);
+      renderAssetExtraRefs(extraRefs);
       $("#assetBgRecommendBtn")?.addEventListener("click", loadBackgroundRecommendations);
       overlay.addEventListener("click", (event) => {
         if (event.target === overlay) overlay.remove();
@@ -8177,10 +8730,13 @@
         : requestedManualStatus;
       const updates = {
         target_image: approvalRestricted ? String(current.target_image || "") : ($("#assetTargetInput")?.value.trim() || ""),
+        extra_ref_images: approvalRestricted ? assetExtraRefList(current) : currentAssetExtraRefs(),
+        subject_extra_ref_images: approvalRestricted ? assetExtraRefList(current) : currentAssetExtraRefs(),
         prompt: $("#assetPromptInput")?.value.trim() || "",
         manual_asset_status: manualAssetStatus,
         manual_note: $("#assetManualNoteInput")?.value.trim() || "",
       };
+      updates.reference_images = [updates.target_image, ...updates.extra_ref_images].filter(Boolean);
       const reassignToRoleId = $("#assetWrongRoleTargetInput")?.value || "";
       if (current.kind === "role" && reassignToRoleId) {
         updates.reassign_to_role_id = reassignToRoleId;
@@ -8188,6 +8744,9 @@
         updates.reassign_time = Number(current.source_time || 0.1);
       }
       current.target_image = updates.target_image;
+      current.extra_ref_images = [...updates.extra_ref_images];
+      current.subject_extra_ref_images = [...updates.subject_extra_ref_images];
+      current.reference_images = [...updates.reference_images];
       current.prompt = updates.prompt;
       current.manual_asset_status = updates.manual_asset_status;
       current.manual_note = updates.manual_note;
@@ -8213,6 +8772,830 @@
       } catch (error) {
         setStoryStatus(["x " + error.message], "bad");
       }
+    }
+
+    function openRoleVideoAnchorEditor(assetId) {
+      const asset = findStoryAsset(assetId);
+      if (!asset || asset.kind !== "role") return;
+      const roleAssets = storyAssets.filter((item) => item && item.kind === "role");
+      let selectedRoleId = asset.id;
+      const selectedRoleAsset = () => findStoryAsset(selectedRoleId) || asset;
+      const roleButtonsHtml = (roleAssets.length ? roleAssets : [asset]).map((role) => `
+        <button class="tiny-btn" type="button" data-role-video-anchor-pick="${escapeHtml(role.id)}">
+          ${escapeHtml(role.name || role.tag || role.id || "角色")}
+        </button>
+      `).join("");
+      const rolePointButtonsHtml = (roleAssets.length ? roleAssets : [asset]).map((role) => `
+        <button class="tiny-btn" type="button" data-role-video-point-pick="${escapeHtml(role.id)}">
+          ${escapeHtml(role.name || role.tag || role.id || "角色")}
+        </button>
+      `).join("");
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const sourceInputPath = $("#videoPathInput")?.value.trim() || "";
+      const videoPath = shotVideoPath(seg) || asset.source_video_path || sourceInputPath;
+      if (!videoPath) {
+        setStoryStatus(["x 当前没有可标注的视频", "> 请先选择原视频或进入当前分镜。"], "bad");
+        return;
+      }
+      const segId = String(seg?.segment_id || "").trim();
+      const segStart = Number(seg?.start || 0);
+      const sourcePath = String(seg?.source_video_path || seg?.full_source_video_path || sourceInputPath || "").trim();
+      const isClipVideo = Boolean(
+        (seg?.preview_clip_path && videoPath === seg.preview_clip_path)
+        || (seg?.clip_output_path && videoPath === seg.clip_output_path)
+        || (sourcePath && videoPath && videoPath !== sourcePath)
+      );
+      const anchors = Array.isArray(asset.identity_anchors) ? asset.identity_anchors : [];
+      const matchedAnchor = anchors.find((anchor) => {
+        const shotId = String(anchor?.shot_id || "").trim();
+        const sourceSegmentId = String(anchor?.source_segment_id || "").trim();
+        return segId && (shotId === segId || sourceSegmentId === segId);
+      }) || anchors[0] || null;
+      function anchorClipTime(anchor, roleAsset = asset) {
+        const rawTime = Number(anchor?.time ?? roleAsset?.source_time ?? 0.1);
+        if (isClipVideo) return Math.max(0.05, rawTime - (Number.isFinite(segStart) ? segStart : 0));
+        return Math.max(0.05, rawTime);
+      }
+      let selectedPoint = Array.isArray(matchedAnchor?.point) && matchedAnchor.point.length === 2
+        ? [Number(matchedAnchor.point[0]), Number(matchedAnchor.point[1])]
+        : (Array.isArray(asset.ai_anchor_point) && asset.ai_anchor_point.length === 2
+          ? [Number(asset.ai_anchor_point[0]), Number(asset.ai_anchor_point[1])]
+          : null);
+      const pendingVideoAnchors = [];
+      const deletedVideoAnchorRefs = [];
+      const pendingVideoAnchorNameUpdates = new Map();
+      const initialAbsoluteTime = Number(matchedAnchor?.time || asset.source_time || (Number.isFinite(segStart) ? segStart + 0.2 : 0.1));
+      const initialVideoTime = isClipVideo
+        ? Math.max(0.05, initialAbsoluteTime - (Number.isFinite(segStart) ? segStart : 0))
+        : Math.max(0.05, initialAbsoluteTime);
+      selectedRoleAsset().__video_anchor_clip_time = initialVideoTime;
+
+      function pushRoleVideoPreMark(role, index, options = {}) {
+        const roleAnchors = Array.isArray(role.identity_anchors) ? role.identity_anchors : [];
+        const matchedAnchors = roleAnchors.filter((anchor) => {
+          if (!anchor || typeof anchor !== "object") return false;
+          const shotId = String(anchor?.shot_id || "").trim();
+          const sourceSegmentId = String(anchor?.source_segment_id || "").trim();
+          return segId ? (shotId === segId || sourceSegmentId === segId) : true;
+        });
+        const anchorsToLoad = matchedAnchors.length ? matchedAnchors : roleAnchors;
+        const roleId = String(role.id || "");
+        let added = 0;
+        anchorsToLoad.forEach((roleAnchor) => {
+          const point = Array.isArray(roleAnchor?.point) && roleAnchor.point.length === 2
+            ? [Number(roleAnchor.point[0]), Number(roleAnchor.point[1])]
+            : null;
+          if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+          const anchorId = String(roleAnchor?.id || "");
+          const clipTime = anchorClipTime(roleAnchor, role);
+          const duplicate = pendingVideoAnchors.some((item) => {
+            if (String(item.roleId || "") !== roleId) return false;
+            if (anchorId && String(item.anchorId || "") === anchorId) return true;
+            return Math.abs(Number(item.clipTime || 0) - clipTime) < 0.05;
+          });
+          if (!options.allowDuplicate && duplicate) return;
+          pendingVideoAnchors.push({
+            roleId,
+            anchorId,
+            roleName: String(role.name || role.tag || role.id || `角色${index + 1}`),
+            point: [Math.max(0, Math.min(1, point[0])), Math.max(0, Math.min(1, point[1]))],
+            clipTime,
+            absoluteTime: isClipVideo ? Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + clipTime) : Math.max(0, clipTime),
+            source: String(roleAnchor?.source_kind || roleAnchor?.source || "ai_pre_mark"),
+          });
+          added += 1;
+        });
+        if (!added && Array.isArray(role.ai_anchor_point) && role.ai_anchor_point.length === 2) {
+          const point = [Number(role.ai_anchor_point[0]), Number(role.ai_anchor_point[1])];
+          if (!Number.isFinite(point[0]) || !Number.isFinite(point[1])) return 0;
+          const clipTime = anchorClipTime(null, role);
+          const duplicate = pendingVideoAnchors.some((item) => (
+            String(item.roleId || "") === roleId && Math.abs(Number(item.clipTime || 0) - clipTime) < 0.05
+          ));
+          if (!options.allowDuplicate && duplicate) return 0;
+          pendingVideoAnchors.push({
+            roleId,
+            anchorId: "",
+            roleName: String(role.name || role.tag || role.id || `角色${index + 1}`),
+            point: [Math.max(0, Math.min(1, point[0])), Math.max(0, Math.min(1, point[1]))],
+            clipTime,
+            absoluteTime: isClipVideo ? Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + clipTime) : Math.max(0, clipTime),
+            source: "ai_pre_mark",
+          });
+          added += 1;
+        }
+        return added;
+      }
+
+      const selectedAssetIndex = Math.max(0, roleAssets.findIndex((role) => String(role.id || "") === String(asset.id || "")));
+      pushRoleVideoPreMark(asset, selectedAssetIndex);
+      if (pendingVideoAnchors.length) selectedPoint = null;
+
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      const box = document.createElement("div");
+      box.className = "modal-box asset-editor-modal role-anchor-modal";
+      box.innerHTML = `
+        <h4>${escapeHtml(asset.name || asset.id || "角色")} <span class="mode-pill">身份定位</span></h4>
+        <p>反推有区域时会先自动摆点。暂停到要改的帧，拖点或点人物，再选角色名；最后统一保存。</p>
+        <div class="role-anchor-media-grid" style="grid-template-columns:minmax(320px, 780px) minmax(220px, 1fr);">
+          <div class="role-anchor-panel">
+            <div class="role-anchor-panel-head"><strong>片段视频</strong><span id="roleVideoAnchorTimeText">等待视频载入</span></div>
+            <div class="seedance-subclip-player is-anchoring" id="roleVideoAnchorPlayer">
+              <video id="roleVideoAnchorVideo" controls muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(videoPath, initialVideoTime))}"></video>
+              <div class="seedance-subclip-marker" id="roleVideoAnchorMarker" data-x="${selectedPoint ? selectedPoint[0] : 0.5}" data-y="${selectedPoint ? selectedPoint[1] : 0.5}" style="--c:${escapeHtml(subclipRoleColor(0))};${selectedPoint ? "" : "display:none;"}">
+                ${escapeHtml(asset.name || "角色")}
+              </div>
+              <div id="roleVideoAnchorPendingMarkers"></div>
+              <div class="seedance-subclip-anchor-popover" id="roleVideoAnchorChooser" hidden>
+                <strong>选择角色</strong>
+                ${roleButtonsHtml}
+                <input class="input" id="roleVideoAnchorNameInput" placeholder="输入角色名，如老公/老婆/男主" value="">
+                <button class="tiny-btn good" id="roleVideoAnchorRenamePickBtn" type="button">命名并选中</button>
+                <button class="tiny-btn danger" id="deleteRoleVideoDraftPointBtn" type="button">删除这个点</button>
+              </div>
+              <div class="seedance-subclip-anchor-popover is-point-menu" id="roleVideoAnchorPointMenu" hidden>
+                <span class="seedance-subclip-point-menu-title">这个点是谁</span>
+                ${rolePointButtonsHtml}
+                <button class="tiny-btn danger" id="deleteRoleVideoPointBtn" type="button">删除这个点</button>
+              </div>
+            </div>
+          </div>
+          <div class="role-video-side-panel">
+            <h5 id="roleVideoSideTitle">点位操作</h5>
+            <p id="roleVideoSideHint">点左侧视频里的角色标签后，在这里改角色或删除。</p>
+            <div class="role-video-side-actions" id="roleVideoSideActions">
+              ${rolePointButtonsHtml}
+              <button class="tiny-btn danger" id="deleteRoleVideoPointSideBtn" type="button" disabled>删除这个点</button>
+              <button class="tiny-btn" id="loadAllRoleVideoMarksBtn" type="button">显示全部角色点</button>
+            </div>
+            <div class="role-video-anchor-list" id="roleVideoAnchorList"></div>
+          </div>
+        </div>
+        <div class="role-anchor-inline-status" id="roleVideoAnchorStatus">${pendingVideoAnchors.length ? `已载入当前角色 ${pendingVideoAnchors.length} 个定位点，可直接拖动或改名。` : "点视频中的人物，会马上留下一个定位点。"}</div>
+        <div class="asset-editor-actions">
+          <button class="btn" id="loadRoleVideoAiMarksBtn" type="button">载入当前角色预标</button>
+          <button class="btn" id="clearRoleVideoAnchorMarksBtn" type="button">清空点</button>
+          <button class="btn" id="closeRoleVideoAnchorBtn" type="button">关闭</button>
+          <button class="btn good" id="saveRoleVideoAnchorBtn" type="button">保存全部定位</button>
+        </div>
+      `;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      const video = $("#roleVideoAnchorVideo");
+      const player = $("#roleVideoAnchorPlayer");
+      const marker = $("#roleVideoAnchorMarker");
+      const chooser = $("#roleVideoAnchorChooser");
+      const pointMenu = $("#roleVideoAnchorPointMenu");
+      const pendingMarkerHolder = $("#roleVideoAnchorPendingMarkers");
+      const nameInput = $("#roleVideoAnchorNameInput");
+      const timeText = $("#roleVideoAnchorTimeText");
+      const status = $("#roleVideoAnchorStatus");
+      const sideTitle = $("#roleVideoSideTitle");
+      const sideHint = $("#roleVideoSideHint");
+      const deleteSideButton = $("#deleteRoleVideoPointSideBtn");
+      const sideAnchorList = $("#roleVideoAnchorList");
+      const roleVideoAnchorTimeEpsilon = 0.05;
+
+      function close() {
+        overlay.remove();
+      }
+
+      function currentAbsoluteTime() {
+        const current = Number(video?.currentTime || 0);
+        if (isClipVideo) return Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + current);
+        return Math.max(0, current);
+      }
+
+      function selectedAnchorAbsoluteTime() {
+        const role = selectedRoleAsset();
+        const clipTime = Number(role?.__video_anchor_clip_time);
+        if (Number.isFinite(clipTime)) {
+          if (isClipVideo) return Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + clipTime);
+          return Math.max(0, clipTime);
+        }
+        return currentAbsoluteTime();
+      }
+
+      function updateTimeText() {
+        if (!timeText) return;
+        timeText.textContent = `当前 ${formatNum(selectedAnchorAbsoluteTime())}s`;
+      }
+
+      function updateMarkerPosition() {
+        if (!video || !player || !marker) return;
+        if (!selectedPoint) {
+          marker.style.display = "none";
+          if (chooser) chooser.hidden = true;
+          return;
+        }
+        const role = selectedRoleAsset();
+        const anchorClipTime = Number(role?.__video_anchor_clip_time ?? NaN);
+        const currentClipTime = Number(video.currentTime || 0);
+        if (Number.isFinite(anchorClipTime) && Math.abs(currentClipTime - anchorClipTime) > roleVideoAnchorTimeEpsilon) {
+          marker.style.display = "none";
+          if (chooser) chooser.hidden = true;
+          return;
+        }
+        const viewport = subclipVideoViewport(video);
+        const boxRect = player.getBoundingClientRect();
+        const left = viewport.left - boxRect.left + selectedPoint[0] * viewport.width;
+        const top = viewport.top - boxRect.top + selectedPoint[1] * viewport.height;
+        marker.style.left = `${left}px`;
+        marker.style.top = `${top}px`;
+        marker.style.display = "";
+        if (chooser && !chooser.hidden) {
+          chooser.style.left = `${Math.max(8, Math.min(boxRect.width - 142, left + 14))}px`;
+          chooser.style.top = `${Math.max(8, Math.min(boxRect.height - 112, top + 14))}px`;
+        }
+        if (pointMenu && !pointMenu.hidden) positionRoleVideoPointMenu();
+      }
+
+      function renderPendingVideoAnchors() {
+        if (!pendingMarkerHolder || !video || !player) return;
+        const viewport = subclipVideoViewport(video);
+        const boxRect = player.getBoundingClientRect();
+        const currentClipTime = Number(video.currentTime || 0);
+        const closestByRole = new Map();
+        pendingVideoAnchors.forEach((anchor, index) => {
+          if (!anchor?.point || !Number.isFinite(Number(anchor.clipTime))) return;
+          const distance = Math.abs(currentClipTime - Number(anchor.clipTime));
+          if (distance > roleVideoAnchorTimeEpsilon) return;
+          const roleKey = String(anchor.roleId || `anchor_${index}`);
+          const previous = closestByRole.get(roleKey);
+          if (!previous || distance < previous.distance) closestByRole.set(roleKey, { anchor, index, distance });
+        });
+        pendingMarkerHolder.innerHTML = Array.from(closestByRole.values()).map(({ anchor, index }) => {
+          const role = findStoryAsset(anchor.roleId) || {};
+          const left = viewport.left - boxRect.left + Number(anchor.point[0]) * viewport.width;
+          const top = viewport.top - boxRect.top + Number(anchor.point[1]) * viewport.height;
+          const roleColorIndex = Math.max(0, roleAssets.findIndex((item) => String(item.id || "") === String(anchor.roleId || "")));
+          return `<div class="seedance-subclip-marker role-video-marker" data-role-video-pending-index="${index}" style="--c:${escapeHtml(subclipRoleColor(roleColorIndex))};left:${left}px;top:${top}px;">
+            <span>${escapeHtml(anchor.roleName || role.name || role.tag || role.id || "角色")}</span>
+          </div>`;
+        }).join("");
+        if (pointMenu && !pointMenu.hidden) positionRoleVideoPointMenu();
+      }
+
+      let pointMenuIndex = -1;
+
+      function hideRoleVideoPointMenu() {
+        pointMenuIndex = -1;
+        if (pointMenu) pointMenu.hidden = true;
+        renderRoleVideoSidePanel();
+      }
+
+      function positionRoleVideoPointMenu() {
+        if (!pointMenu || !player || !video || pointMenuIndex < 0) return;
+        const item = pendingVideoAnchors[pointMenuIndex];
+        if (!item?.point) {
+          hideRoleVideoPointMenu();
+          return;
+        }
+        const currentClipTime = Number(video.currentTime || 0);
+        if (Math.abs(currentClipTime - Number(item.clipTime || 0)) > roleVideoAnchorTimeEpsilon) {
+          hideRoleVideoPointMenu();
+          return;
+        }
+        const viewport = subclipVideoViewport(video);
+        const boxRect = player.getBoundingClientRect();
+        const left = viewport.left - boxRect.left + Number(item.point[0]) * viewport.width;
+        const top = viewport.top - boxRect.top + Number(item.point[1]) * viewport.height;
+        pointMenu.style.left = `${Math.max(8, Math.min(boxRect.width - 130, left + 14))}px`;
+        pointMenu.style.top = `${Math.max(8, Math.min(boxRect.height - 48, top + 14))}px`;
+      }
+
+      function showRoleVideoPointMenu(index) {
+        if (!pendingVideoAnchors[index]) return;
+        pointMenuIndex = index;
+        if (pointMenu) pointMenu.hidden = true;
+        if (chooser) chooser.hidden = true;
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = "这是已有定位点。右侧可以改角色或删除，左侧可拖动微调。";
+      }
+
+      function renderRoleVideoSidePanel() {
+        const item = pointMenuIndex >= 0 ? pendingVideoAnchors[pointMenuIndex] : null;
+        const hasDraftPoint = Boolean(selectedPoint && pointMenuIndex < 0);
+        if (sideTitle) sideTitle.textContent = item ? "这个点是谁" : (hasDraftPoint ? "新定位点" : "点位操作");
+        if (sideHint) {
+          sideHint.textContent = item
+            ? `${item.roleName || "未命名"} · ${formatNum(item.absoluteTime)}s`
+            : (hasDraftPoint
+              ? `当前 ${formatNum(selectedAnchorAbsoluteTime())}s。点下方角色名，就会把这个点加入标注。`
+              : "点左侧视频里的角色标签后，在这里改角色或删除。");
+        }
+        if (deleteSideButton) deleteSideButton.disabled = !(item || hasDraftPoint);
+        if (sideAnchorList) {
+          const rows = pendingVideoAnchors.map((anchor, index) => {
+            const label = anchor.roleName || findStoryAsset(anchor.roleId)?.name || findStoryAsset(anchor.roleId)?.tag || `定位点 ${index + 1}`;
+            const active = index === pointMenuIndex ? " is-active" : "";
+            return `<button class="tiny-btn${active}" type="button" data-role-video-anchor-list-index="${index}">
+              <span>${index + 1}. ${escapeHtml(label)}</span>
+              <span>${formatNum(anchor.absoluteTime)}s</span>
+            </button>`;
+          }).join("");
+          sideAnchorList.innerHTML = `
+            <div class="role-video-anchor-list-title">已标定位点：${pendingVideoAnchors.length} 个</div>
+            ${rows || `<div class="role-video-anchor-list-empty">还没有点。直接点左侧视频里的人物，会马上留下一个点。</div>`}
+          `;
+        }
+      }
+
+      function deletePendingVideoAnchor(index) {
+        const item = pendingVideoAnchors[index];
+        if (!item) return;
+        if (item.anchorId) deletedVideoAnchorRefs.push({ roleId: item.roleId, anchorId: item.anchorId });
+        pendingVideoAnchors.splice(index, 1);
+        selectedPoint = null;
+        hideRoleVideoPointMenu();
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = `已删除 1 个点，剩余 ${pendingVideoAnchors.length} 个。`;
+      }
+
+      function assignPendingVideoAnchorRole(index, roleId) {
+        const item = pendingVideoAnchors[index];
+        const role = findStoryAsset(roleId);
+        if (!item || !role || role.kind !== "role") return;
+        item.roleId = role.id;
+        item.roleName = String(role.name || role.tag || role.id || "角色");
+        selectedRoleId = role.id;
+        selectedPoint = null;
+        if (marker) marker.style.display = "none";
+        role.__video_anchor_clip_time = Number(item.clipTime || video?.currentTime || 0);
+        syncRoleVideoAnchorNameInput();
+        updateSelectedRoleLabel();
+        hideRoleVideoPointMenu();
+        pointMenuIndex = index;
+        renderRoleVideoSidePanel();
+        renderPendingVideoAnchors();
+        if (status) status.textContent = `已把这个点标为：${item.roleName}`;
+      }
+
+      function updateSelectedRoleLabel() {
+        const role = selectedRoleAsset();
+        if (marker) marker.textContent = role.name || role.tag || role.id || "角色";
+      }
+
+      function roleVideoAnchorIsPlaceholderName(value) {
+        const text = String(value || "").trim();
+        return !text || text.includes("待识别") || text.includes("占位") || /^角色\d+$/.test(text);
+      }
+
+      function syncRoleVideoAnchorNameInput() {
+        if (!nameInput) return;
+        const role = selectedRoleAsset();
+        const currentName = String(role.name || role.tag || "").trim();
+        nameInput.value = roleVideoAnchorIsPlaceholderName(currentName) ? "" : currentName;
+      }
+      syncRoleVideoAnchorNameInput();
+
+      function addCurrentVideoAnchorToPending() {
+        const role = selectedRoleAsset();
+        const typedName = String(nameInput?.value || "").trim();
+        if (typedName) {
+          role.name = typedName;
+          role.tag = role.tag || typedName;
+          pendingVideoAnchorNameUpdates.set(String(selectedRoleId), typedName);
+        }
+        if (!selectedPoint) {
+          if (status) status.textContent = "请先点视频中的人物。";
+          return false;
+        }
+        const clipTime = Number(role.__video_anchor_clip_time ?? video?.currentTime ?? 0);
+        pendingVideoAnchors.push({
+          roleId: selectedRoleId,
+          anchorId: "",
+          roleName: String(role.name || role.tag || selectedRoleId || "角色"),
+          point: selectedPoint.slice(0, 2),
+          clipTime,
+          absoluteTime: isClipVideo ? Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + clipTime) : Math.max(0, clipTime),
+        });
+        if (marker) marker.style.display = "none";
+        selectedPoint = null;
+        if (chooser) chooser.hidden = true;
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = `已加入 ${pendingVideoAnchors.length} 个待保存标注，可以继续点下一个人。`;
+        return true;
+      }
+
+      function setPointFromEvent(event) {
+        if (!video) return;
+        const videoRect = video.getBoundingClientRect();
+        const controlGuard = Math.max(46, Math.min(68, videoRect.height * 0.16));
+        const viewport = subclipVideoViewport(video);
+        if (
+          event.clientX < viewport.left
+          || event.clientX > viewport.left + viewport.width
+          || event.clientY < viewport.top
+          || event.clientY > viewport.top + viewport.height
+          || event.clientY > videoRect.bottom - controlGuard
+        ) {
+          if (status) status.textContent = "点到了播放器控制条或画面外，没有创建身份点。请点人物身体/头部区域。";
+          return;
+        }
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        const point = pointFromSubclipVideoClick(event, video);
+        video.pause();
+        const role = selectedRoleAsset();
+        const clipTime = Number(video.currentTime || 0);
+        role.__video_anchor_clip_time = clipTime;
+        pendingVideoAnchors.push({
+          roleId: selectedRoleId,
+          anchorId: "",
+          roleName: String(role.name || role.tag || selectedRoleId || "角色"),
+          point: point.slice(0, 2),
+          clipTime,
+          absoluteTime: isClipVideo ? Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + clipTime) : Math.max(0, clipTime),
+          source: "manual_video_anchor",
+        });
+        pointMenuIndex = pendingVideoAnchors.length - 1;
+        selectedPoint = null;
+        if (marker) marker.style.display = "none";
+        hideRoleVideoPointMenu();
+        pointMenuIndex = pendingVideoAnchors.length - 1;
+        if (chooser) chooser.hidden = true;
+        updateTimeText();
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = `已留下第 ${pendingVideoAnchors.length} 个点。右侧可改角色；继续点视频可标下一个人。`;
+      }
+
+      video?.addEventListener("loadedmetadata", () => {
+        try {
+          video.currentTime = Math.max(0, Math.min(Number(video.duration || initialVideoTime), initialVideoTime));
+        } catch (_) {}
+        updateTimeText();
+        updateMarkerPosition();
+      });
+      video?.addEventListener("timeupdate", () => {
+        updateTimeText();
+        updateMarkerPosition();
+        renderPendingVideoAnchors();
+      });
+      video?.addEventListener("loadeddata", updateMarkerPosition);
+      window.addEventListener("resize", updateMarkerPosition, { once: true });
+      video?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setPointFromEvent(event);
+      }, true);
+      video?.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }, true);
+      player?.addEventListener("click", (event) => {
+        if (event.target.closest?.("#roleVideoAnchorMarker, #roleVideoAnchorChooser, #roleVideoAnchorPendingMarkers, #roleVideoAnchorPointMenu")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        hideRoleVideoPointMenu();
+        setPointFromEvent(event);
+      });
+      chooser?.querySelectorAll("[data-role-video-anchor-pick]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const nextRoleId = button.dataset.roleVideoAnchorPick || "";
+          if (findStoryAsset(nextRoleId)?.kind === "role") selectedRoleId = nextRoleId;
+          selectedRoleAsset().__video_anchor_clip_time = Number(video?.currentTime || 0);
+          updateSelectedRoleLabel();
+          syncRoleVideoAnchorNameInput();
+          if (String(nameInput?.value || "").trim()) {
+            addCurrentVideoAnchorToPending();
+            return;
+          } else if (status) {
+            status.textContent = "这个角色还没有名字，请先输入角色名。";
+          }
+          updateMarkerPosition();
+        });
+      });
+
+      $("#roleVideoAnchorRenamePickBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const typedName = String(nameInput?.value || "").trim();
+        if (!typedName) {
+          if (status) status.textContent = "请先输入角色名。";
+          return;
+        }
+        addCurrentVideoAnchorToPending();
+      });
+      $("#deleteRoleVideoDraftPointBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        selectedPoint = null;
+        if (marker) marker.style.display = "none";
+        if (chooser) chooser.hidden = true;
+        updateTimeText();
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = "已删除当前临时点。";
+      });
+
+      let dragging = false;
+      marker?.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        marker.classList.add("dragging");
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          marker.setPointerCapture(event.pointerId);
+        } catch (_) {}
+      });
+      marker?.addEventListener("pointermove", (event) => {
+        if (!dragging) return;
+        event.preventDefault();
+        selectedPoint = pointFromSubclipVideoClick(event, video);
+        selectedRoleAsset().__video_anchor_clip_time = Number(video?.currentTime || 0);
+        updateMarkerPosition();
+      });
+      const stopDrag = (event) => {
+        if (!dragging) return;
+        dragging = false;
+        marker?.classList.remove("dragging");
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+      };
+      marker?.addEventListener("pointerup", stopDrag);
+      marker?.addEventListener("pointercancel", stopDrag);
+
+      let pendingDraggingIndex = -1;
+      let pendingDragStarted = false;
+      let pendingDragStart = null;
+      pendingMarkerHolder?.addEventListener("pointerdown", (event) => {
+        const pendingMarker = event.target.closest?.("[data-role-video-pending-index]");
+        if (!pendingMarker) return;
+        const index = Number(pendingMarker.dataset.roleVideoPendingIndex);
+        const item = pendingVideoAnchors[index];
+        if (!item || !video) return;
+        pendingDraggingIndex = index;
+        pendingDragStarted = false;
+        pendingDragStart = { x: event.clientX, y: event.clientY };
+        selectedRoleId = item.roleId;
+        selectedPoint = null;
+        if (marker) marker.style.display = "none";
+        selectedRoleAsset().__video_anchor_clip_time = Number(item.clipTime || video.currentTime || 0);
+        syncRoleVideoAnchorNameInput();
+        updateSelectedRoleLabel();
+        pendingMarker.classList.add("dragging");
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          pendingMarker.setPointerCapture(event.pointerId);
+        } catch (_) {}
+      });
+      pendingMarkerHolder?.addEventListener("pointermove", (event) => {
+        if (pendingDraggingIndex < 0 || !video) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const moved = pendingDragStart
+          ? Math.hypot(event.clientX - pendingDragStart.x, event.clientY - pendingDragStart.y)
+          : 0;
+        if (moved < 4 && !pendingDragStarted) return;
+        pendingDragStarted = true;
+        hideRoleVideoPointMenu();
+        const item = pendingVideoAnchors[pendingDraggingIndex];
+        if (!item) return;
+        const point = pointFromSubclipVideoClick(event, video);
+        item.point = point;
+        item.clipTime = Number(video.currentTime || item.clipTime || 0);
+        item.absoluteTime = isClipVideo
+          ? Math.max(0, (Number.isFinite(segStart) ? segStart : 0) + item.clipTime)
+          : Math.max(0, item.clipTime);
+        selectedPoint = null;
+        selectedRoleAsset().__video_anchor_clip_time = item.clipTime;
+        renderPendingVideoAnchors();
+      });
+      const stopPendingDrag = (event) => {
+        if (pendingDraggingIndex < 0) return;
+        const index = pendingDraggingIndex;
+        const wasDragging = pendingDragStarted;
+        pendingDraggingIndex = -1;
+        pendingDragStarted = false;
+        pendingDragStart = null;
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        renderPendingVideoAnchors();
+        if (wasDragging) {
+          pointMenuIndex = index;
+          renderRoleVideoSidePanel();
+          if (status) status.textContent = "预标点已调整，继续检查其它时间点，最后保存全部定位。";
+        } else {
+          showRoleVideoPointMenu(index);
+        }
+      };
+      pendingMarkerHolder?.addEventListener("pointerup", stopPendingDrag);
+      pendingMarkerHolder?.addEventListener("pointercancel", stopPendingDrag);
+
+      pointMenu?.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      pointMenu?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      pointMenu?.querySelectorAll("[data-role-video-point-pick]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          assignPendingVideoAnchorRole(pointMenuIndex, button.dataset.roleVideoPointPick || "");
+        });
+      });
+      $("#deleteRoleVideoPointBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deletePendingVideoAnchor(pointMenuIndex);
+      });
+      $("#roleVideoSideActions")?.querySelectorAll("[data-role-video-point-pick]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const roleId = button.dataset.roleVideoPointPick || "";
+          if (pointMenuIndex >= 0) {
+            assignPendingVideoAnchorRole(pointMenuIndex, roleId);
+            return;
+          }
+          if (!selectedPoint) {
+            if (status) status.textContent = "请先在左侧视频里点一下角色位置。";
+            return;
+          }
+          const role = findStoryAsset(roleId);
+          if (!role || role.kind !== "role") return;
+          selectedRoleId = role.id;
+          role.__video_anchor_clip_time = Number(video?.currentTime || 0);
+          updateSelectedRoleLabel();
+          syncRoleVideoAnchorNameInput();
+          const newIndex = pendingVideoAnchors.length;
+          if (addCurrentVideoAnchorToPending()) showRoleVideoPointMenu(newIndex);
+        });
+      });
+      $("#deleteRoleVideoPointSideBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (pointMenuIndex >= 0) {
+          deletePendingVideoAnchor(pointMenuIndex);
+          return;
+        }
+        if (!selectedPoint) return;
+        selectedPoint = null;
+        if (marker) marker.style.display = "none";
+        if (chooser) chooser.hidden = true;
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = "已删除当前新点。";
+      });
+      sideAnchorList?.addEventListener("click", (event) => {
+        const button = event.target.closest?.("[data-role-video-anchor-list-index]");
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const index = Number(button.dataset.roleVideoAnchorListIndex);
+        const item = pendingVideoAnchors[index];
+        if (!item || !video) return;
+        pointMenuIndex = index;
+        selectedRoleId = item.roleId;
+        selectedPoint = null;
+        selectedRoleAsset().__video_anchor_clip_time = Number(item.clipTime || 0);
+        try {
+          video.currentTime = Math.max(0, Math.min(Number(video.duration || item.clipTime || 0), Number(item.clipTime || 0)));
+        } catch (_) {}
+        if (marker) marker.style.display = "none";
+        if (chooser) chooser.hidden = true;
+        syncRoleVideoAnchorNameInput();
+        updateSelectedRoleLabel();
+        updateTimeText();
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = "已选中这个定位点。右侧可改角色或删除，左侧可拖动微调。";
+      });
+
+      $("#loadRoleVideoAiMarksBtn")?.addEventListener("click", () => {
+        let added = 0;
+        added += pushRoleVideoPreMark(asset, selectedAssetIndex);
+        selectedPoint = null;
+        if (chooser) chooser.hidden = true;
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = added
+          ? `已载入当前角色 ${added} 个预标点，可拖动微调或删除。`
+          : (pendingVideoAnchors.length
+            ? "当前角色定位点已在视频上，可直接检查、拖动、删除或保存。"
+            : "当前角色没有可载入的预标点。请先重新分析当前原片。");
+      });
+      $("#loadAllRoleVideoMarksBtn")?.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        let added = 0;
+        roleAssets.forEach((role, index) => {
+          added += pushRoleVideoPreMark(role, index);
+        });
+        selectedPoint = null;
+        if (chooser) chooser.hidden = true;
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = added
+          ? `已显示全部角色定位点，本次新增 ${added} 个。`
+          : "全部角色定位点已经在列表里了。";
+      });
+
+      $("#clearRoleVideoAnchorMarksBtn")?.addEventListener("click", () => {
+        pendingVideoAnchors.forEach((item) => {
+          if (item.anchorId) deletedVideoAnchorRefs.push({ roleId: item.roleId, anchorId: item.anchorId });
+        });
+        pendingVideoAnchors.splice(0, pendingVideoAnchors.length);
+        selectedPoint = null;
+        if (chooser) chooser.hidden = true;
+        hideRoleVideoPointMenu();
+        renderPendingVideoAnchors();
+        updateMarkerPosition();
+        renderRoleVideoSidePanel();
+        if (status) status.textContent = "已清空当前窗口里的定位点；点保存后会同步删除已保存点。";
+      });
+
+      $("#closeRoleVideoAnchorBtn")?.addEventListener("click", close);
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) close();
+      });
+      $("#saveRoleVideoAnchorBtn")?.addEventListener("click", async () => {
+        if (selectedPoint) addCurrentVideoAnchorToPending();
+        if (!pendingVideoAnchors.length && !deletedVideoAnchorRefs.length) {
+          if (status) status.textContent = "请先在视频里点人物并选择角色名；可以连续标多个。";
+          return;
+        }
+        const saveButton = $("#saveRoleVideoAnchorBtn");
+        if (saveButton) {
+          saveButton.disabled = true;
+          saveButton.textContent = "保存中...";
+        }
+        try {
+          let latestData = null;
+          for (const [roleId, roleName] of pendingVideoAnchorNameUpdates.entries()) {
+            const renameResponse = await fetch("/api/storyboard-assets/update-asset", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                project_dir: projectDir,
+                asset_id: roleId,
+                updates: {
+                  name: roleName,
+                  tag: roleName,
+                },
+              }),
+            });
+            const renameData = await renameResponse.json().catch(() => ({}));
+            if (!renameResponse.ok || renameData.error) throw new Error(renameData.error || "保存角色名失败");
+            latestData = renameData;
+          }
+          const response = await fetch("/api/storyboard-role-anchors", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_dir: projectDir,
+              deletes: deletedVideoAnchorRefs.map((item) => ({
+                role_id: item.roleId,
+                anchor_id: item.anchorId,
+              })),
+              anchors: pendingVideoAnchors.map((item) => ({
+                role_id: item.roleId,
+                anchor_id: item.anchorId,
+                time: item.absoluteTime,
+                point: item.point,
+                shot_id: segId,
+                source_segment_id: segId,
+                source_kind: "manual_video_anchor",
+                note: "asset_library_video_anchor",
+              })),
+            }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data.error) throw new Error(data.error || "保存身份定位失败");
+          latestData = data;
+          if (latestData) applyLoadedProject(latestData, { story: latestData.storyboard || {} }, { preserveStrategy: true });
+          renderStoryAssets();
+          renderSeedancePayload();
+          setStoryStatus(["> 身份定位已保存", `> ${pendingVideoAnchors.length} 个标注，删除 ${deletedVideoAnchorRefs.length} 个`], "good");
+          close();
+        } catch (error) {
+          if (status) status.textContent = error.message || String(error);
+          setStoryStatus(["x " + (error.message || error)], "bad");
+        } finally {
+          if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = "保存全部定位";
+          }
+        }
+      });
+      requestAnimationFrame(() => {
+        updateMarkerPosition();
+        renderPendingVideoAnchors();
+        renderRoleVideoSidePanel();
+      });
     }
 
     function roleAnchorFrames(asset) {
@@ -10717,6 +12100,28 @@
       return [Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, y))];
     }
 
+    function subclipActiveRoleIndices(state, clip, refCount = null) {
+      const count = Number.isFinite(Number(refCount))
+        ? Number(refCount)
+        : (Array.isArray(state?.refImages) ? state.refImages.length : 0);
+      const source = Array.isArray(clip?.active_role_indices) && clip.active_role_indices.length
+        ? clip.active_role_indices
+        : Array.from({ length: Math.max(0, count) }, (_item, index) => index);
+      return source
+        .map((value) => Number(value))
+        .filter((value, index, arr) => Number.isFinite(value) && value >= 0 && value < count && arr.indexOf(value) === index);
+    }
+
+    function subclipRoleLabel(state, roleIndex) {
+      const names = Array.isArray(state?.roleNames) ? state.roleNames : [];
+      return String(names[roleIndex] || `角色${Number(roleIndex) + 1}`);
+    }
+
+    function subclipRoleColor(roleIndex) {
+      const colors = ["#ff4b4b", "#3f7cff", "#38d17a", "#f4d64e", "#32d4d4", "#d65cff"];
+      return colors[Math.max(0, Number(roleIndex) || 0) % colors.length];
+    }
+
     function sanitizeSubclipShape(shape) {
       const rawPoints = Array.isArray(shape?.points) ? shape.points : (Array.isArray(shape) ? shape : []);
       const points = [];
@@ -10811,7 +12216,32 @@
         Math.max(0, Math.min(1, Number(point[0]) || 0)),
         Math.max(0, Math.min(1, Number(point[1]) || 0)),
       ];
+      if (!clip.source_identity_times_by_role || typeof clip.source_identity_times_by_role !== "object") {
+        clip.source_identity_times_by_role = {};
+      }
+      if (!clip.source_identity_clip_times_by_role || typeof clip.source_identity_clip_times_by_role !== "object") {
+        clip.source_identity_clip_times_by_role = {};
+      }
+      const absoluteTime = Number(options.absoluteTime);
+      const clipTime = Number(options.clipTime);
+      if (Number.isFinite(absoluteTime)) clip.source_identity_times_by_role[String(roleIndex)] = absoluteTime;
+      if (Number.isFinite(clipTime)) clip.source_identity_clip_times_by_role[String(roleIndex)] = clipTime;
       if (!options.silent) renderSeedanceReferenceSubclips();
+    }
+
+    function clearSeedanceSubclipIdentityPoint(roleIndex) {
+      const clip = selectedSeedanceSubclip();
+      if (!clip) return;
+      if (clip.source_identity_points_by_role && typeof clip.source_identity_points_by_role === "object") {
+        delete clip.source_identity_points_by_role[String(roleIndex)];
+      }
+      if (clip.source_identity_times_by_role && typeof clip.source_identity_times_by_role === "object") {
+        delete clip.source_identity_times_by_role[String(roleIndex)];
+      }
+      if (clip.source_identity_clip_times_by_role && typeof clip.source_identity_clip_times_by_role === "object") {
+        delete clip.source_identity_clip_times_by_role[String(roleIndex)];
+      }
+      renderSeedanceReferenceSubclips();
     }
 
     function setSeedanceSubclipIdentityShape(roleIndex, shape, options = {}) {
@@ -10841,6 +12271,14 @@
         const y = Number(marker.dataset.y || 0.5);
         marker.style.left = `${viewport.left - boxRect.left + x * viewport.width}px`;
         marker.style.top = `${viewport.top - boxRect.top + y * viewport.height}px`;
+      });
+      root.querySelectorAll(".seedance-subclip-anchor-popover").forEach((popover) => {
+        const x = Number(popover.dataset.x || 0.5);
+        const y = Number(popover.dataset.y || 0.5);
+        const left = viewport.left - boxRect.left + x * viewport.width;
+        const top = viewport.top - boxRect.top + y * viewport.height;
+        popover.style.left = `${Math.max(8, Math.min(boxRect.width - 128, left + 12))}px`;
+        popover.style.top = `${Math.max(8, Math.min(boxRect.height - 86, top + 12))}px`;
       });
       root.querySelectorAll(".seedance-subclip-shapes").forEach((overlay) => {
         overlay.style.left = `${viewport.left - boxRect.left}px`;
@@ -10872,9 +12310,94 @@
       }, sourceIndex);
     }
 
+    function roleReferenceOptions(asset) {
+      const values = [];
+      const add = (value) => {
+        const text = String(value || "").trim();
+        if (text && !values.includes(text)) values.push(text);
+      };
+      add(asset?.target_image);
+      add(asset?.seedance_reference_image);
+      add(asset?.target_asset?.active_image);
+      (Array.isArray(asset?.target_asset?.versions) ? asset.target_asset.versions : []).forEach(add);
+      (Array.isArray(asset?.extra_ref_images) ? asset.extra_ref_images : []).forEach(add);
+      (Array.isArray(asset?.subject_extra_ref_images) ? asset.subject_extra_ref_images : []).forEach(add);
+      (Array.isArray(asset?.reference_images) ? asset.reference_images : []).forEach(add);
+      (Array.isArray(asset?.source_crop_paths) ? asset.source_crop_paths : []).forEach(add);
+      return values;
+    }
+
+    function subshotReferencePickerHtml(state, clip) {
+      if (String(state.compareMode || "") !== "shot_cut_review") return "";
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset?.kind === "role");
+      if (!roles.length) return "";
+      const overrides = clip.role_ref_overrides && typeof clip.role_ref_overrides === "object" ? clip.role_ref_overrides : {};
+      const rows = roles.map((role) => {
+        const options = roleReferenceOptions(role);
+        if (!options.length) return "";
+        const active = String(overrides[role.id] || role.target_image || role.seedance_reference_image || options[0] || "").trim();
+        return `
+          <div class="subshot-ref-row">
+            <div class="subshot-ref-role" title="${escapeHtml(role.name || role.id)}">${escapeHtml(role.name || role.id)}</div>
+            <div class="subshot-ref-options">
+              ${options.slice(0, 12).map((path, index) => `
+                <button class="subshot-ref-thumb ${path === active ? "active" : ""}" type="button" title="${escapeHtml(index === 0 ? "主参考图" : `参考图 ${index + 1}`)}" data-subshot-role-ref="${escapeHtml(role.id)}" data-ref-path="${escapeHtml(path)}">
+                  <img src="${escapeHtml(mediaSrc(path, 0.1))}" alt="">
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).filter(Boolean).join("");
+      return rows ? `<div class="subshot-ref-strip">${rows}</div>` : "";
+    }
+
+    async function saveSubshotReferenceOverride(roleId, referencePath) {
+      const state = seedanceReferenceSubclipState;
+      const clip = state.subclips?.[state.selectedIndex] || {};
+      const projectDir = state.projectDir || $("#projectDirInput")?.value.trim() || "";
+      const segmentId = state.segmentId || String((timelineSegments[selectedTimelineIndex] || {}).segment_id || "").trim();
+      const subshotIndex = Number(clip.index || state.selectedIndex + 1);
+      if (!projectDir || !segmentId || !roleId || !referencePath || !Number.isFinite(subshotIndex)) {
+        return setSeedanceSubmitStatus(["x 子镜头参考图保存失败", "> 缺少项目、镜头或角色信息"], "bad");
+      }
+      try {
+        const response = await fetch("/api/storyboard-subshot-reference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_dir: projectDir,
+            segment_id: segmentId,
+            subshot_index: subshotIndex,
+            role_id: roleId,
+            reference_path: referencePath,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.error) throw new Error(data.error || "保存子镜头参考图失败");
+        clip.role_ref_overrides = {
+          ...(clip.role_ref_overrides && typeof clip.role_ref_overrides === "object" ? clip.role_ref_overrides : {}),
+          [roleId]: referencePath,
+        };
+        renderSeedanceReferenceSubclips(null, state.sourceVideoIndex);
+        setSeedanceSubmitStatus(["> 子镜头参考图已保存", `> ${fileName(referencePath)}`], "good");
+      } catch (error) {
+        setSeedanceSubmitStatus(["x 子镜头参考图保存失败", "> " + (error.message || error)], "bad");
+      }
+    }
+
     function renderSeedanceReferenceSubclips(result, sourceIndex = seedanceMaskVideoIndex) {
-      const root = $("#seedanceReferenceSubclips");
+      const nextCompareMode = String(result?.compare_mode || result?.compareMode || seedanceReferenceSubclipState.compareMode || "").trim();
+      const root = nextCompareMode === "shot_cut_review"
+        ? ($("#storyboardShotSubclips") || $("#seedanceReferenceSubclips"))
+        : ($("#seedanceReferenceSubclips") || $("#storyboardShotSubclips"));
+      const otherRoot = root?.id === "storyboardShotSubclips" ? $("#seedanceReferenceSubclips") : $("#storyboardShotSubclips");
       if (!root) return;
+      if (otherRoot) {
+        otherRoot.hidden = true;
+        otherRoot.innerHTML = "";
+      }
       if (result) {
         const nextSubclips = Array.isArray(result.subclips) ? result.subclips : [];
         const previousByPath = new Map((seedanceReferenceSubclipState.subclips || []).map((clip) => [seedanceSubclipPath(clip), clip]));
@@ -10886,10 +12409,17 @@
             const path = seedanceSubclipPath(clip);
             const previous = previousByPath.get(path) || {};
             return {
+              ...previous,
               ...clip,
               path,
               index: clip.index || i + 1,
               mask_path: String(clip.mask_path || previous.mask_path || clip.output_path || "").trim(),
+              active_role_indices: clip.active_role_indices || previous.active_role_indices || null,
+              identity_anchor_mode: Boolean(clip.identity_anchor_mode || previous.identity_anchor_mode),
+              source_identity_points_by_role: clip.source_identity_points_by_role || previous.source_identity_points_by_role || {},
+              source_identity_times_by_role: clip.source_identity_times_by_role || previous.source_identity_times_by_role || {},
+              source_identity_clip_times_by_role: clip.source_identity_clip_times_by_role || previous.source_identity_clip_times_by_role || {},
+              source_identity_shapes_by_role: clip.source_identity_shapes_by_role || previous.source_identity_shapes_by_role || {},
             };
           }),
           selectedIndex: Math.max(0, Math.min(seedanceReferenceSubclipState.selectedIndex || 0, nextSubclips.length - 1)),
@@ -10903,6 +12433,7 @@
           compareMode: String(result.compare_mode || result.compareMode || "").trim(),
           outputLabel: String(result.output_label || result.outputLabel || "").trim(),
           sourceLabel: String(result.source_label || result.sourceLabel || "").trim(),
+          cutTimes: Array.isArray(result.cut_times) ? result.cut_times.map(Number).filter(Number.isFinite) : [],
         };
       }
       const state = seedanceReferenceSubclipState;
@@ -10927,10 +12458,40 @@
       const readyCount = subclips.filter((item) => String(item.mask_path || item.output_path || "").trim()).length;
       const allMasksReady = subclips.length > 0 && readyCount === subclips.length;
       const isSingleCompare = String(state.compareMode || "") === "single_mask";
+      const isShotCutReview = String(state.compareMode || "") === "shot_cut_review";
       const sourceTitle = isSingleCompare ? (String(state.sourceLabel || "").trim() || "原视频") : `原子镜头 ${selectedIndex + 1} · ${range}`;
       const outputTitle = String(state.outputLabel || "").trim() || (isSingleCompare ? "生成结果" : "彩色蒙版");
       const headTitle = isSingleCompare ? `${sourceTitle} / ${outputTitle} 对比` : "子镜头控制预览";
       const headCount = isSingleCompare ? "对比预览" : `${readyCount}/${subclips.length} 已生成`;
+      const roleIndices = subclipActiveRoleIndices(state, clip, (state.refImages || []).length);
+      const anchorMode = !isSingleCompare && clip.identity_anchor_mode === true;
+      const markerHtml = roleIndices.map((roleIndex) => {
+        const point = subclipIdentityPoint(clip, roleIndex);
+        if (!point) return "";
+        return `
+          <div class="seedance-subclip-marker" data-subclip-anchor-marker="${roleIndex}" data-x="${point[0]}" data-y="${point[1]}" style="--c:${escapeHtml(subclipRoleColor(roleIndex))}">
+            ${escapeHtml(subclipRoleLabel(state, roleIndex))}
+          </div>
+        `;
+      }).join("");
+      const pendingPoint = Array.isArray(clip.pending_identity_point) ? clip.pending_identity_point : null;
+      const pendingPopoverHtml = anchorMode && pendingPoint ? `
+        <div class="seedance-subclip-anchor-popover" data-subclip-anchor-popover data-x="${pendingPoint[0]}" data-y="${pendingPoint[1]}">
+          <strong>选这个人是谁</strong>
+          ${roleIndices.map((roleIndex) => `
+            <button class="tiny-btn" type="button" data-save-subclip-anchor-role="${roleIndex}">
+              ${escapeHtml(subclipRoleLabel(state, roleIndex))}
+            </button>
+          `).join("")}
+        </div>
+      ` : "";
+      const roleAnchorSummary = roleIndices.length
+        ? roleIndices.map((roleIndex) => {
+          const hasPoint = !!subclipIdentityPoint(clip, roleIndex);
+          return `<span class="seedance-subclip-anchor-hint">${escapeHtml(subclipRoleLabel(state, roleIndex))}${hasPoint ? " 已定位" : " 未定位"}</span>`;
+        }).join("")
+        : `<span class="seedance-subclip-anchor-hint">暂无角色参考图</span>`;
+      const referencePickerHtml = subshotReferencePickerHtml(state, clip);
       root.hidden = false;
       root.innerHTML = `
         <div class="seedance-subclips-head">
@@ -10951,9 +12512,11 @@
         <div class="seedance-subclip-compare">
           <div class="seedance-subclip-pane">
             <div class="seedance-subclip-pane-title">${escapeHtml(sourceTitle)}</div>
-            <div class="seedance-subclip-player" data-subclip-source-player>
+            <div class="seedance-subclip-player${anchorMode ? " is-anchoring" : ""}" data-subclip-source-player>
+              ${path ? markerHtml + pendingPopoverHtml : ""}
               ${path ? `<video controls muted playsinline src="${escapeHtml(mediaSrc(path, 0.1))}"></video>` : `<div class="seedance-subclip-empty">暂无子镜头</div>`}
             </div>
+            ${referencePickerHtml}
           </div>
           <div class="seedance-subclip-pane">
             <div class="seedance-subclip-pane-title">${escapeHtml(outputTitle)}</div>
@@ -10962,11 +12525,19 @@
             </div>
           </div>
         </div>
-        ${isSingleCompare ? "" : `<div class="seedance-subclip-controls">
+        ${isSingleCompare ? "" : (isShotCutReview ? `<div class="seedance-subclip-controls shot-cut-actions">
+          <button class="tiny-btn primary" type="button" data-save-shot-cuts>确认保存这 ${state.subclips.length} 段</button>
+          <button class="tiny-btn" type="button" data-add-shot-cut-at-current>当前时间切一刀</button>
+          <span class="seedance-subclip-note">这里只确认镜头边界；身份定位保存后再做。</span>
+        </div>` : `<div class="seedance-subclip-controls">
           <button class="tiny-btn" type="button" data-run-current-subclip-mask>生成当前子镜头蒙版</button>
           <button class="tiny-btn" type="button" data-use-current-subclip>使用当前子镜头</button>
           <button class="tiny-btn" type="button" data-merge-subclip-masks ${allMasksReady ? "" : "disabled"}>合并已生成蒙版</button>
           ${mergedMaskPath ? `<button class="tiny-btn" type="button" data-open-merged-mask>查看完整蒙版</button>` : ""}
+        </div>`)}
+        ${isSingleCompare || isShotCutReview ? "" : `<div class="seedance-subclip-controls">
+          <button class="tiny-btn ${anchorMode ? "active" : ""}" type="button" data-toggle-subclip-identity>身份定位</button>
+          ${roleAnchorSummary}
         </div>`}
         <div class="seedance-subclip-path" title="${escapeHtml(path)}">视频: ${escapeHtml(path || "-")}</div>
         <div class="seedance-subclip-path" title="${escapeHtml(maskPath || mergedMaskPath)}">${escapeHtml(outputTitle)}: ${escapeHtml(maskPath || mergedMaskPath || "-")}</div>
@@ -10977,10 +12548,123 @@
       root.querySelectorAll("[data-subclip-ratio]").forEach((button) => {
         button.addEventListener("click", () => setSeedanceSubclipPreviewRatio(button.dataset.subclipRatio || "16:9"));
       });
+      root.querySelector("[data-add-shot-cut-at-current]")?.addEventListener("click", () => addShotCutAtCurrentTime());
+      root.querySelector("[data-save-shot-cuts]")?.addEventListener("click", () => saveCurrentShotCuts());
       root.querySelector("[data-run-current-subclip-mask]")?.addEventListener("click", () => startSeedanceSubclipMask(selectedIndex));
       root.querySelector("[data-use-current-subclip]")?.addEventListener("click", () => applySeedanceSubclipToVideoSlot(path, state.sourceVideoIndex));
       root.querySelector("[data-merge-subclip-masks]")?.addEventListener("click", mergeSeedanceSubclipMasks);
       root.querySelector("[data-open-merged-mask]")?.addEventListener("click", () => openLocalPath(mergedMaskPath));
+      root.querySelectorAll("[data-subshot-role-ref]").forEach((button) => {
+        button.addEventListener("click", () => {
+          saveSubshotReferenceOverride(button.dataset.subshotRoleRef || "", button.dataset.refPath || "");
+        });
+      });
+      const sourcePlayer = root.querySelector("[data-subclip-source-player]");
+      const sourceVideo = sourcePlayer?.querySelector("video");
+      if (sourceVideo) {
+        sourceVideo.addEventListener("loadedmetadata", () => {
+          setSeedanceSubclipPreviewRatioFromVideo(sourceVideo);
+          const restoreTime = Number(clip.preview_current_time);
+          if (Number.isFinite(restoreTime) && restoreTime > 0 && Number.isFinite(sourceVideo.duration)) {
+            try {
+              sourceVideo.currentTime = Math.max(0, Math.min(sourceVideo.duration - 0.05, restoreTime));
+            } catch (_) {}
+          }
+          updateSeedanceSubclipMarkerPositions();
+        });
+        sourceVideo.addEventListener("loadeddata", updateSeedanceSubclipMarkerPositions);
+        sourceVideo.addEventListener("pause", () => {
+          clip.preview_current_time = Number(sourceVideo.currentTime || 0);
+        });
+      }
+      root.querySelector("[data-toggle-subclip-identity]")?.addEventListener("click", () => {
+        if (!roleIndices.length) {
+          setSeedanceSubmitStatus(["x 当前片段没有可绑定的角色参考图"], "bad");
+          return;
+        }
+        if (sourceVideo) clip.preview_current_time = Number(sourceVideo.currentTime || 0);
+        clip.identity_anchor_mode = !clip.identity_anchor_mode;
+        delete clip.pending_identity_point;
+        renderSeedanceReferenceSubclips();
+        setSeedanceSubmitStatus(
+          clip.identity_anchor_mode
+            ? ["> 身份定位已开启", "> 暂停到要标的帧，在左侧视频里点人物，再选角色名。"]
+            : ["> 身份定位已关闭"],
+          clip.identity_anchor_mode ? "warn" : "good",
+        );
+      });
+      sourcePlayer?.addEventListener("click", (event) => {
+        if (!clip.identity_anchor_mode || !sourceVideo) return;
+        if (event.target.closest?.(".seedance-subclip-marker, .seedance-subclip-anchor-popover")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const point = pointFromSubclipVideoClick(event, sourceVideo);
+        const clipTime = Number(sourceVideo.currentTime || 0);
+        sourceVideo.pause();
+        clip.preview_current_time = clipTime;
+        clip.pending_identity_point = point;
+        clip.pending_identity_clip_time = clipTime;
+        clip.pending_identity_time = Number(clip.start || 0) + clipTime;
+        renderSeedanceReferenceSubclips();
+      });
+      root.querySelectorAll("[data-save-subclip-anchor-role]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const roleIndex = Number(button.dataset.saveSubclipAnchorRole);
+          const point = Array.isArray(clip.pending_identity_point) ? clip.pending_identity_point : null;
+          if (!point || !Number.isFinite(roleIndex)) return;
+          const savedTime = Number(clip.pending_identity_time || clip.start || 0);
+          setSeedanceSubclipIdentityPoint(roleIndex, point, {
+            silent: true,
+            clipTime: Number(clip.pending_identity_clip_time),
+            absoluteTime: savedTime,
+          });
+          delete clip.pending_identity_point;
+          setSeedanceSubmitStatus([
+            "> 身份定位已保存",
+            `> ${subclipRoleLabel(state, roleIndex)} @ ${formatNum(savedTime)}s`,
+          ], "good");
+          renderSeedanceReferenceSubclips();
+        });
+      });
+      root.querySelectorAll("[data-subclip-anchor-marker]").forEach((marker) => {
+        let dragging = false;
+        const roleIndex = Number(marker.dataset.subclipAnchorMarker);
+        marker.addEventListener("pointerdown", (event) => {
+          if (!sourceVideo || !Number.isFinite(roleIndex)) return;
+          dragging = true;
+          marker.classList.add("dragging");
+          event.preventDefault();
+          event.stopPropagation();
+          try {
+            marker.setPointerCapture(event.pointerId);
+          } catch (_) {}
+        });
+        marker.addEventListener("pointermove", (event) => {
+          if (!dragging || !sourceVideo) return;
+          event.preventDefault();
+          const point = pointFromSubclipVideoClick(event, sourceVideo);
+          marker.dataset.x = String(point[0]);
+          marker.dataset.y = String(point[1]);
+          setSeedanceSubclipIdentityPoint(roleIndex, point, {
+            silent: true,
+            clipTime: Number(sourceVideo.currentTime || clip.preview_current_time || 0),
+            absoluteTime: Number(clip.start || 0) + Number(sourceVideo.currentTime || clip.preview_current_time || 0),
+          });
+          updateSeedanceSubclipMarkerPositions();
+        });
+        const stopDragging = (event) => {
+          if (!dragging) return;
+          dragging = false;
+          marker.classList.remove("dragging");
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          setSeedanceSubmitStatus(["> 身份点已调整", `> ${subclipRoleLabel(state, roleIndex)}`], "good");
+        };
+        marker.addEventListener("pointerup", stopDragging);
+        marker.addEventListener("pointercancel", stopDragging);
+      });
       updateSeedanceSubclipMarkerPositions();
     }
     async function startSeedanceSubclipMask(index = seedanceReferenceSubclipState.selectedIndex) {
@@ -10995,12 +12679,20 @@
       if (!videoPath) return addLogs(["x 当前子镜头视频路径为空"]);
 
       const maskSelection = seedanceReferenceMaskSelection();
-      const refImages = (Array.isArray(state.refImages) && state.refImages.length ? state.refImages : maskSelection.refs || [])
+      const refImages = (Array.isArray(state.refImages) && state.submitRefImages.length ? state.refImages : maskSelection.refs || [])
         .map((item) => String(item || "").trim())
         .filter(Boolean)
         .slice(0, SEEDANCE_MATERIAL_LIMITS.images);
       const roleNames = (Array.isArray(state.roleNames) && state.roleNames.length ? state.roleNames : maskSelection.roleNames || [])
         .map((item, i) => String(item || `参考图${i + 1}`).trim());
+      const subclipSelection = seedanceSubclipIdentitySelection(state, clip, {
+        refs: refImages,
+        roleNames,
+        sourceIdentityPoints: maskSelection.sourceIdentityPoints || [],
+        sourceIdentityShapes: maskSelection.sourceIdentityShapes || [],
+      });
+      const submitRefImages = subclipSelection.refs.slice(0, SEEDANCE_MATERIAL_LIMITS.images);
+      const submitRoleNames = subclipSelection.roleNames.slice(0, submitRefImages.length);
       const body = {
         project_dir: state.projectDir || $("#projectDirInput")?.value.trim() || "",
         source_video_path: videoPath,
@@ -11009,10 +12701,10 @@
         subclip_index: clipIndex,
         start: Number(clip?.start || 0),
         end: Number(clip?.end || 0),
-        ref_images: refImages,
-        role_names: roleNames,
-        source_identity_points: [],
-        source_identity_shapes: [],
+        ref_images: submitRefImages,
+        role_names: submitRoleNames,
+        source_identity_points: subclipSelection.sourceIdentityPoints.slice(0, submitRefImages.length),
+        source_identity_shapes: subclipSelection.sourceIdentityShapes.slice(0, submitRefImages.length),
         sam_text: "person",
         prefer_current_shot_roles: true,
         strict_track_preflight: false,
@@ -11303,6 +12995,35 @@
         source: "seedance_draft_images",
         sourceLabel: "Seedance 草稿参考图",
         roleAssetCount: roleAssets.length,
+      };
+    }
+
+    function seedanceSubclipIdentitySelection(state, clip, fallback = {}) {
+      const refs = Array.isArray(fallback.refs) ? fallback.refs.map((item) => String(item || "").trim()).filter(Boolean) : [];
+      const roleNames = Array.isArray(fallback.roleNames) ? fallback.roleNames.map((item) => String(item || "").trim()) : [];
+      const sourceIdentityPoints = Array.isArray(fallback.sourceIdentityPoints) ? fallback.sourceIdentityPoints : [];
+      const sourceIdentityShapes = Array.isArray(fallback.sourceIdentityShapes) ? fallback.sourceIdentityShapes : [];
+      const activeIndices = subclipActiveRoleIndices(state, clip, Math.max(refs.length, roleNames.length));
+      const chosen = activeIndices.length ? activeIndices : Array.from({ length: Math.max(refs.length, roleNames.length) }, (_item, index) => index);
+      const pickedRefs = [];
+      const pickedNames = [];
+      const pickedPoints = [];
+      const pickedShapes = [];
+      chosen.forEach((roleIndex) => {
+        if (roleIndex < 0) return;
+        const ref = refs[roleIndex] || refs[pickedRefs.length] || "";
+        if (!ref) return;
+        pickedRefs.push(ref);
+        pickedNames.push(roleNames[roleIndex] || roleNames[pickedNames.length] || `角色${pickedNames.length + 1}`);
+        pickedPoints.push(subclipIdentityPoint(clip, roleIndex) || sourceIdentityPoints[roleIndex] || null);
+        pickedShapes.push(subclipIdentityShape(clip, roleIndex) || sourceIdentityShapes[roleIndex] || null);
+      });
+      return {
+        refs: pickedRefs,
+        roleNames: pickedNames,
+        sourceIdentityPoints: pickedPoints,
+        sourceIdentityShapes: pickedShapes,
+        activeRoleIndices: chosen,
       };
     }
 
@@ -11758,6 +13479,116 @@
       button.textContent = running ? "Scail2 生成中..." : "Scail2 生成";
     }
 
+    function currentShotCutPayload(cutTimes = seedanceReferenceSubclipState.cutTimes || [], save = false) {
+      if (selectedTimelineIndex < 0 && timelineSegments.length) {
+        selectTimelineSegment(0);
+      }
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      return {
+        project_dir: $("#projectDirInput")?.value.trim() || "",
+        video_path: shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "",
+        segment_id: String(seg.segment_id || "").trim(),
+        cut_times: Array.isArray(cutTimes) ? cutTimes.map(Number).filter(Number.isFinite) : [],
+        save: Boolean(save),
+      };
+    }
+
+    async function openShotCutWorkbench(cutTimes = null, options = {}) {
+      switchModuleLocal("storyboard");
+      const payload = currentShotCutPayload(
+        Array.isArray(cutTimes) ? cutTimes : seedanceReferenceSubclipState.cutTimes,
+        Boolean(options.save),
+      );
+      if (!payload.project_dir) {
+        const lines = ["x 项目目录为空", "> 请先读取或创建 Mode2 项目。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      if (!payload.video_path) {
+        const lines = ["x 当前镜头视频为空", "> 请先选择分镜。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      const intro = [
+        options.save ? "> 正在保存镜头切段..." : "> 正在分析镜头切段...",
+        `> 视频: ${fileName(payload.video_path)}`,
+      ];
+      setSeedanceSubmitStatus(intro, "warn");
+      assistantSetRunStatus([options.save ? "保存切段中" : "分析切段中", fileName(payload.video_path)], true);
+      try {
+        const response = await fetch("/api/storyboard-shot-subclips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || "镜头切段失败");
+        renderSeedanceReferenceSubclips(data, seedanceMaskVideoIndex);
+        const subclips = Array.isArray(data.subclips) ? data.subclips : [];
+        const shortCount = subclips.filter((item) => item.needs_scail2_padding).length;
+        const lines = [
+          options.save ? "> 镜头切段已保存" : "> 镜头切段候选已生成",
+          `> 子镜头: ${subclips.length} 段`,
+          shortCount ? `> ${shortCount} 段短于 2 秒，本机会补长后送 Scail2，返回后再裁回` : "",
+          data.cut_error ? `> 硬切提醒: ${data.cut_error}` : "",
+        ].filter(Boolean);
+        setSeedanceSubmitStatus(lines, shortCount ? "warn" : "good");
+        assistantSetStatus(lines, shortCount ? "warn" : "good");
+        addLogs(lines);
+      } catch (error) {
+        const lines = ["x 镜头切段失败", "> " + (error.message || error)];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        addLogs(lines);
+      } finally {
+        assistantSetRunStatus([], false);
+      }
+    }
+
+    function addShotCutAtCurrentTime() {
+      const state = seedanceReferenceSubclipState;
+      const clip = (state.subclips || [])[state.selectedIndex || 0] || {};
+      const root = ["storyboardShotSubclips", "seedanceReferenceSubclips"]
+        .map((id) => document.getElementById(id))
+        .find((el) => el && !el.hidden) || $("#seedanceReferenceSubclips");
+      const video = root?.querySelector("[data-subclip-source-player] video");
+      const base = Number(clip.start || 0);
+      const current = Number(video?.currentTime || 0);
+      const absolute = Math.max(0.05, base + current);
+      const duration = Math.max(...(state.subclips || []).map((item) => Number(item.end || 0)), absolute + 0.1);
+      const rounded = Math.round(absolute * 1000) / 1000;
+      const existing = (state.cutTimes || []).map(Number).filter(Number.isFinite);
+      const boundaries = [
+        0,
+        duration,
+        ...existing,
+        ...(state.subclips || []).flatMap((item) => [Number(item.start || 0), Number(item.end || 0)]),
+      ].filter(Number.isFinite);
+      const tooClose = boundaries.some((value) => Math.abs(value - rounded) < 0.08);
+      if (tooClose) {
+        const lines = [
+          "x 这个位置离已有切点太近",
+          `> 当前时间约 ${rounded.toFixed(2)}s，请把视频拖到更中间的位置再点“当前时间切一刀”。`,
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const cutTimes = [...existing, rounded]
+        .map(Number)
+        .filter((value) => Number.isFinite(value) && value > 0.05 && value < duration - 0.05)
+        .map((value) => Math.round(value * 1000) / 1000)
+        .sort((a, b) => a - b);
+      openShotCutWorkbench([...new Set(cutTimes)]);
+    }
+
+    function saveCurrentShotCuts() {
+      openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true });
+    }
+
     async function startMode2ServerTransfer() {
       if (currentMode2ServerTransferJobId) {
         setSeedanceSubmitStatus(["> Scail2 生成任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
@@ -11856,6 +13687,19 @@
           body: JSON.stringify(body),
         });
         const data = await response.json();
+        if ((!response.ok || data.error) && data.error === "scail2_busy" && data.active_job_id) {
+          currentMode2ServerTransferJobId = data.active_job_id;
+          const lines = [
+            "> Scail2 已有任务正在运行",
+            `> job_id: ${data.active_job_id}`,
+            "> 已接回当前任务，继续等待结果",
+          ];
+          setSeedanceSubmitStatus(lines, "warn");
+          assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${data.active_job_id}`], true);
+          addLogs(lines);
+          pollMode2ServerTransferJob(data.active_job_id, videoPath);
+          return;
+        }
         if (!response.ok || data.error) throw new Error(data.error || "Scail2 生成提交失败");
         currentMode2ServerTransferJobId = data.job_id;
         const mappingLogs = (data.mapping || []).map((item) => `> ${item.color || item.order}: ${item.role || "角色"} -> ${item.target_ref || ""}`);
@@ -12288,6 +14132,8 @@
         localStorage.setItem(MODE_KEY, "transfer");
         window.location.href = "/";
       });
+      bindClick("#openStoryboardShotCutBtn", () => openShotCutWorkbench([]));
+      bindClick("#openShotCutWorkbenchBtn", () => openShotCutWorkbench([]));
       bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
       bindClick("#openPlanBtn", () => openLocalPath(PLAN_PATH));
       bindClick("#pickVideoBtn", () => pickPath("file", "#videoPathInput"));

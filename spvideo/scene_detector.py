@@ -53,7 +53,8 @@ def detect_hard_cuts(
     scene_manager = SceneManager()
     # 真实镜头边界不能仅仅因为片段较短而合并回去。保留检测器自身的
     # 抗抖间隔，避免人物快速运动被连续误判成多个硬切。
-    scene_manager.add_detector(ContentDetector(threshold=threshold))
+    min_scene_len = max(1, int(round(float(min_scene_duration) * 10)))
+    scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=min_scene_len))
     scene_manager.detect_scenes(video)
 
     raw_scenes = scene_manager.get_scene_list()

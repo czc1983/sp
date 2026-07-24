@@ -58,6 +58,8 @@ JOBS_LOCK = threading.Lock()
 SERVER_STARTED_AT = time.time()
 RVM_MODEL_LOCK = threading.Lock()
 SAM3_TRACK_LOCK = threading.Lock()
+MODE2_SCAIL2_TRANSFER_LOCK = threading.Lock()
+MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = ""
 SEEDANCE_A_TASKS: dict[str, dict[str, Any]] = {}
 SEEDANCE_A_TASKS_LOCK = threading.Lock()
 SAM3_PROTECTION_FPS = 15.0
@@ -84,6 +86,12 @@ STORYBOARD_MODE2_JOB_ROOT = ROOT.parent / ".storyboard_mode2_jobs"
 DEFAULT_SINGLE_ROLE_TRANSFER_BACKEND = "wan22"
 DEFAULT_MULTI_ROLE_TRANSFER_BACKEND = "scail2"
 TRANSFER_BACKENDS = {"wan22", "scail2", "scail2_colored", "scail2_masked", "bernini", "runninghub_bernini"}
+
+
+def _backend_uses_scail2_worker(transfer_backend: Any) -> bool:
+    return _normalize_transfer_backend(transfer_backend) in {"scail2", "scail2_colored", "scail2_masked", "bernini"}
+
+
 STORYBOARD_STYLE_PRESETS: dict[str, dict[str, str]] = {
     "short_drama_realism": {
         "label": "短剧写实",
@@ -465,6 +473,8 @@ class JobLogHandler(logging.Handler):
             job = JOBS.get(self.job_id)
             if job is not None:
                 job.setdefault("logs", []).append(message)
+                job["updated_at"] = time.time()
+        _snapshot_running_job(self.job_id)
 
 
 def _storyboard_job_snapshot_path(job_id: str) -> Path:
@@ -478,9 +488,25 @@ def _write_storyboard_job_snapshot(job: dict[str, Any]) -> None:
         return
     snapshot = dict(job)
     snapshot.pop("_cancel", None)
+    snapshot.pop("_last_snapshot_at", None)
     path = _storyboard_job_snapshot_path(job_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+
+def _snapshot_running_job(job_id: str, *, force: bool = False) -> None:
+    snapshot = None
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            return
+        now = time.time()
+        last = float(job.get("_last_snapshot_at") or 0.0)
+        if force or now - last >= 2.0:
+            job["_last_snapshot_at"] = now
+            snapshot = dict(job)
+    if snapshot is not None:
+        _write_storyboard_job_snapshot(snapshot)
 
 
 def _load_storyboard_job_snapshot(job_id: str) -> dict[str, Any]:
@@ -807,6 +833,24 @@ class SplitterHandler(BaseHTTPRequestHandler):
             try:
                 payload = self._read_json()
                 result = _update_storyboard_mode2_role_anchor(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/storyboard-shot-subclips":
+            try:
+                payload = self._read_json()
+                result = _storyboard_mode2_shot_subclips(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/storyboard-subshot-reference":
+            try:
+                payload = self._read_json()
+                result = _update_storyboard_mode2_subshot_reference(payload)
                 self._send_json(result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
@@ -1736,6 +1780,16 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 if meta and meta.duration and meta.duration > 120:
                     self._send_json({"error": f"segment_too_long: {meta.duration:.1f}s"}, status=400)
                     return
+                if _backend_uses_scail2_worker(transfer_backend) and MODE2_SCAIL2_TRANSFER_LOCK.locked():
+                    self._send_json(
+                        {
+                            "error": "scail2_busy",
+                            "message": "Scail2 is already running. Wait for the current job to finish before submitting again.",
+                            "active_job_id": MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID,
+                        },
+                        status=409,
+                    )
+                    return
                 assets_by_id = {
                     str(asset.get("id") or ""): asset
                     for asset in (data.get("assets") or [])
@@ -1770,9 +1824,11 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         ),
                         "mark_time": pair.get("source_time"),
                         "asset_id": pair.get("asset_id"),
+                        "source_anchor_id": pair.get("source_anchor_id") or pair.get("annotation_id") or "",
                     }
                     for index, pair in enumerate(role_pairs)
                 ]
+                saved_subshot_ranges = _mode2_saved_subshot_ranges(str(root), segment_id)
                 with JOBS_LOCK:
                     JOBS[job_id] = {
                         "id": job_id,
@@ -1787,6 +1843,11 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         "logs": [
                             f"> Scail2 生成: {Path(video_path).name}",
                             f"> 当前后端: {transfer_backend}",
+                            (
+                                f"> 将按已保存子镜头逐段生成: {len(saved_subshot_ranges)} 段"
+                                if saved_subshot_ranges
+                                else "> 未找到已保存子镜头，将按当前镜头整段生成"
+                            ),
                             f"> 角色: {', '.join(str(pair.get('name') or '') for pair in role_pairs)}",
                             *[f"> 提醒: {line}" for line in pair_warnings],
                             *[f"> 分轨需复查: {line}" for line in status_warnings],
@@ -1794,6 +1855,8 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         "result": None,
                         "error": None,
                     }
+                    job_snapshot = dict(JOBS[job_id])
+                _write_storyboard_job_snapshot(job_snapshot)
                 thread = threading.Thread(
                     target=_run_transfer_job,
                     args=(
@@ -1818,6 +1881,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     "job_id": job_id,
                     "backend": transfer_backend,
                     "mapping": public_mapping,
+                    "subshot_count": len(saved_subshot_ranges),
                     "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
                 })
             except Exception as exc:  # noqa: BLE001
@@ -4629,10 +4693,134 @@ def _load_storyboard_mode2_store(root: Path) -> dict[str, Any]:
 def _write_storyboard_mode2_store(root: Path, data: dict[str, Any]) -> None:
     store_path = _storyboard_mode2_asset_store_path(root)
     store_path.parent.mkdir(parents=True, exist_ok=True)
+    _backup_storyboard_mode2_store(store_path)
     store_path.write_text(
         json.dumps(data, ensure_ascii=False, indent=2, default=str),
         encoding="utf-8",
     )
+
+
+def _backup_storyboard_mode2_store(store_path: Path) -> None:
+    if not store_path.exists() or store_path.stat().st_size <= 0:
+        return
+    backup_dir = store_path.parent / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    backup_path = backup_dir / f"storyboard_assets_{stamp}_{uuid.uuid4().hex[:6]}.json"
+    try:
+        shutil.copy2(store_path, backup_path)
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("Mode2 storyboard asset backup failed: %s", exc)
+        return
+    backups = sorted(backup_dir.glob("storyboard_assets_*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+    for stale in backups[80:]:
+        stale.unlink(missing_ok=True)
+
+
+def _merge_mode2_manual_identity_work(previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(previous, dict) or not isinstance(current, dict):
+        return current
+    previous_assets = [item for item in (previous.get("assets") or []) if isinstance(item, dict)]
+    current_assets = [item for item in (current.get("assets") or []) if isinstance(item, dict)]
+    previous_roles = [
+        item for item in previous_assets
+        if str(item.get("kind") or "") == "role"
+    ]
+    current_roles = [
+        item for item in current_assets
+        if str(item.get("kind") or "") == "role"
+    ]
+    previous_by_id = {str(item.get("id") or ""): item for item in previous_roles}
+    previous_by_name = {str(item.get("name") or "").strip(): item for item in previous_roles if str(item.get("name") or "").strip()}
+    role_id_map: dict[str, str] = {}
+
+    for role in current_roles:
+        role_id = str(role.get("id") or "")
+        matched = previous_by_id.get(role_id)
+        if matched is None:
+            matched = previous_by_name.get(str(role.get("name") or "").strip())
+        if not matched:
+            continue
+        previous_role_id = str(matched.get("id") or role_id)
+        role_id_map[previous_role_id] = role_id
+        for key in (
+            "target_image",
+            "seedance_reference_image",
+            "manual_asset_status",
+            "source_image",
+            "source_image_path",
+            "track_dir",
+            "track_summary_path",
+            "track_status",
+            "identity_status",
+            "track_note",
+        ):
+            previous_value = matched.get(key)
+            if previous_value not in (None, "", []):
+                role[key] = previous_value
+        for key in ("extra_ref_images", "subject_extra_ref_images", "reference_images"):
+            previous_value = matched.get(key)
+            if isinstance(previous_value, list) and previous_value:
+                role[key] = previous_value
+        previous_anchors = [item for item in (matched.get("identity_anchors") or []) if isinstance(item, dict)]
+        if previous_anchors:
+            role["identity_anchors"] = [
+                {
+                    **copy.deepcopy(item),
+                    "role_id": role_id,
+                    "role_name": str(role.get("name") or item.get("role_name") or role_id),
+                }
+                for item in previous_anchors
+            ]
+            role["identity_status"] = "annotated"
+            role["track_status"] = str(role.get("track_status") or "pending")
+
+    previous_annotations = [
+        item for item in (previous.get("identity_annotations") or [])
+        if isinstance(item, dict)
+    ]
+    current_annotations = [
+        item for item in (current.get("identity_annotations") or [])
+        if isinstance(item, dict)
+    ]
+    seen_annotation_ids = {str(item.get("id") or "") for item in current_annotations if str(item.get("id") or "")}
+    for item in previous_annotations:
+        previous_role_id = str(item.get("role_id") or "")
+        current_role_id = role_id_map.get(previous_role_id, previous_role_id)
+        current_role = next((role for role in current_roles if str(role.get("id") or "") == current_role_id), None)
+        if current_role is None:
+            continue
+        item_id = str(item.get("id") or "")
+        if item_id and item_id in seen_annotation_ids:
+            continue
+        anchor = copy.deepcopy(item)
+        anchor["role_id"] = current_role_id
+        anchor["role_name"] = str(current_role.get("name") or anchor.get("role_name") or current_role_id)
+        current_annotations.append(anchor)
+        if item_id:
+            seen_annotation_ids.add(item_id)
+
+    current["assets"] = current_assets
+    current["identity_annotations"] = current_annotations
+    if current_annotations or any((role.get("identity_anchors") or []) for role in current_roles):
+        current["manual_identity_preserved_at"] = time.time()
+    return current
+
+
+def _preserve_mode2_manual_identity_work(store_path: Path, current: dict[str, Any]) -> dict[str, Any]:
+    if not store_path.exists():
+        return current
+    try:
+        previous = json.loads(store_path.read_text(encoding="utf-8-sig"))
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("Mode2 manual identity preserve skipped: %s", exc)
+        return current
+    previous_video = str(previous.get("video_path") or "").strip()
+    current_video = str(current.get("video_path") or "").strip()
+    if previous_video and current_video and not _storyboard_same_source_path(previous_video, current_video):
+        current["manual_identity_preserve_skipped"] = "different_source_video"
+        return current
+    return _merge_mode2_manual_identity_work(previous, current)
 
 
 def _mode2_scene_group_shot_bindings(
@@ -6450,15 +6638,23 @@ def _audit_storyboard_mode2_assets(payload: dict[str, Any]) -> dict[str, Any]:
 def _update_storyboard_mode2_role_anchor(payload: dict[str, Any]) -> dict[str, Any]:
     project_dir = str(payload.get("project_dir") or "").strip()
     role_id = str(payload.get("role_id") or payload.get("asset_id") or "").strip()
+    anchor_payloads = payload.get("anchors")
+    delete_payloads = payload.get("deletes")
+    is_batch = isinstance(anchor_payloads, list) or isinstance(delete_payloads, list)
     if not project_dir:
         raise ValueError("missing_project_dir")
-    if not role_id:
+    if not role_id and not is_batch:
         raise ValueError("missing_role_id")
     root = _resolve_storyboard_mode2_project_dir(project_dir)
     data = _load_storyboard_mode2_store(root)
     assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
-    role = next((item for item in assets if str(item.get("id") or "") == role_id and str(item.get("kind") or "") == "role"), None)
-    if role is None:
+    roles_by_id = {
+        str(item.get("id") or ""): item
+        for item in assets
+        if str(item.get("kind") or "") == "role"
+    }
+    role = roles_by_id.get(role_id) if role_id else None
+    if role is None and not is_batch:
         raise ValueError(f"role_not_found: {role_id}")
 
     delete = bool(payload.get("delete"))
@@ -6467,6 +6663,106 @@ def _update_storyboard_mode2_role_anchor(payload: dict[str, Any]) -> dict[str, A
         item for item in (data.get("identity_annotations") or [])
         if isinstance(item, dict)
     ]
+    if is_batch:
+        touched_role_ids: set[str] = set()
+        for delete_item in (delete_payloads or []):
+            if not isinstance(delete_item, dict):
+                continue
+            delete_role_id = str(delete_item.get("role_id") or delete_item.get("roleId") or "").strip()
+            delete_anchor_id = str(delete_item.get("anchor_id") or delete_item.get("anchorId") or delete_item.get("id") or "").strip()
+            if delete_role_id:
+                touched_role_ids.add(delete_role_id)
+            if delete_anchor_id:
+                annotations = [
+                    item for item in annotations
+                    if str(item.get("id") or "") != delete_anchor_id
+                ]
+            elif delete_role_id:
+                annotations = [
+                    item for item in annotations
+                    if str(item.get("role_id") or "") != delete_role_id
+                ]
+
+        for anchor_payload in (anchor_payloads or []):
+            if not isinstance(anchor_payload, dict):
+                continue
+            item_role_id = str(anchor_payload.get("role_id") or anchor_payload.get("roleId") or "").strip()
+            item_role = roles_by_id.get(item_role_id)
+            if item_role is None:
+                raise ValueError(f"role_not_found: {item_role_id}")
+            touched_role_ids.add(item_role_id)
+            try:
+                time_seconds = max(0.0, float(anchor_payload.get("time") or anchor_payload.get("time_seconds") or item_role.get("source_time") or 0.1))
+            except (TypeError, ValueError):
+                time_seconds = 0.1
+            point = anchor_payload.get("point")
+            if not isinstance(point, (list, tuple)) or len(point) != 2:
+                raise ValueError("identity_point_required")
+            px = max(0.0, min(1.0, float(point[0])))
+            py = max(0.0, min(1.0, float(point[1])))
+            item_anchor_id = str(anchor_payload.get("anchor_id") or anchor_payload.get("anchorId") or anchor_payload.get("id") or "").strip()
+            if not item_anchor_id:
+                item_anchor_id = f"anchor_{uuid.uuid4().hex[:10]}"
+            anchor = {
+                "id": item_anchor_id,
+                "role_id": item_role_id,
+                "role_name": str(item_role.get("name") or item_role_id),
+                "time": round(time_seconds, 3),
+                "point": [round(px, 6), round(py, 6)],
+                "shot_id": str(anchor_payload.get("shot_id") or ""),
+                "source_segment_id": str(anchor_payload.get("source_segment_id") or ""),
+                "frame_path": str(anchor_payload.get("frame_path") or ""),
+                "note": str(anchor_payload.get("note") or ""),
+                "source": "manual",
+                "updated_at": time.time(),
+            }
+            source_kind = str(anchor_payload.get("source_kind") or "").strip()
+            if source_kind:
+                anchor["source_kind"] = source_kind
+            anchor_time = float(anchor.get("time") or 0.0)
+
+            def same_anchor_slot(item: dict[str, Any]) -> bool:
+                if str(item.get("role_id") or "") != item_role_id:
+                    return False
+                item_id = str(item.get("id") or "")
+                if item_id and item_id == item_anchor_id:
+                    return True
+                try:
+                    if abs(float(item.get("time") or 0.0) - anchor_time) < 0.05:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+                return False
+
+            replaced = False
+            for index, item in enumerate(annotations):
+                if same_anchor_slot(item):
+                    annotations[index] = anchor
+                    replaced = True
+                    break
+            if not replaced:
+                annotations.append(anchor)
+
+        for touched_role_id in touched_role_ids:
+            touched_role = roles_by_id.get(touched_role_id)
+            if touched_role is None:
+                continue
+            role_anchors = sorted(
+                [item for item in annotations if str(item.get("role_id") or "") == touched_role_id],
+                key=lambda item: (float(item.get("time") or 0.0), float(item.get("updated_at") or 0.0)),
+            )
+            touched_role["identity_anchors"] = role_anchors
+            touched_role["identity_status"] = "annotated" if role_anchors else "needs_anchor"
+            touched_role["track_status"] = str(touched_role.get("track_status") or "pending")
+
+        data["assets"] = assets
+        data["identity_annotations"] = annotations
+        data["role_tracks_version"] = int(data.get("role_tracks_version") or 1)
+        _write_storyboard_mode2_store(root, data)
+        result = _load_mode2_storyboard_result(root, _storyboard_mode2_asset_store_path(root))
+        result["updated_role_ids"] = sorted(touched_role_ids)
+        return result
+
     if delete:
         if not anchor_id:
             annotations = [item for item in annotations if str(item.get("role_id") or "") != role_id]
@@ -6578,10 +6874,6 @@ def _update_storyboard_mode2_role_anchor(payload: dict[str, Any]) -> dict[str, A
     data["identity_annotations"] = annotations
     data["role_tracks_version"] = int(data.get("role_tracks_version") or 1)
     _write_storyboard_mode2_store(root, data)
-    try:
-        _audit_storyboard_mode2_assets({"project_dir": str(root)})
-    except Exception as exc:  # noqa: BLE001
-        logging.warning("Mode2 asset audit skipped after role anchor update: %s", exc)
     result = _load_mode2_storyboard_result(root, _storyboard_mode2_asset_store_path(root))
     result["updated_role_id"] = role_id
     return result
@@ -7147,6 +7439,8 @@ def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
 
     updates = payload.get("updates") if isinstance(payload.get("updates"), dict) else payload
     allowed_string_fields = {
+        "name",
+        "tag",
         "target_image",
         "prompt",
         "manual_asset_status",
@@ -7156,6 +7450,35 @@ def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
     for field in allowed_string_fields:
         if field in updates:
             target[field] = str(updates.get(field) or "").strip()
+
+    allowed_list_fields = {
+        "extra_ref_images",
+        "subject_extra_ref_images",
+        "reference_images",
+    }
+    for field in allowed_list_fields:
+        if field not in updates:
+            continue
+        clean_values: list[str] = []
+        seen_values: set[str] = set()
+        for value in _string_list(updates.get(field)):
+            path_text = str(value or "").strip()
+            if not path_text:
+                continue
+            key = str(Path(path_text)).lower()
+            if key in seen_values:
+                continue
+            seen_values.add(key)
+            clean_values.append(path_text)
+        target[field] = clean_values
+
+    if "target_image" in updates or any(field in updates for field in allowed_list_fields):
+        target_image = str(target.get("target_image") or "").strip()
+        extras = _string_list(target.get("extra_ref_images"))
+        if "reference_images" not in updates:
+            target["reference_images"] = [item for item in [target_image, *extras] if item]
+        target["seedance_reference_image"] = target_image
+        target["generation_reference_image"] = target_image
 
     manual_status = str(target.get("manual_asset_status") or "").strip()
     valid_statuses = {"", "pending", "approved", "needs_replacement", "shot_reference", "ignored"}
@@ -7190,11 +7513,7 @@ def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
 
     project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
     _compile_storyboard_prompts(assets, shots, project_config=project_config)
-    store_path.parent.mkdir(parents=True, exist_ok=True)
-    store_path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
+    _write_storyboard_mode2_store(root, data)
     try:
         _audit_storyboard_mode2_assets({"project_dir": str(root)})
     except Exception as exc:  # noqa: BLE001
@@ -7765,6 +8084,12 @@ def _default_scail2_positive_prompt(role_pairs: list[dict[str, Any]]) -> str:
         "seen in reference images; do not add a theater stage, black curtain, studio backdrop, runway, "
         "dance floor, showroom, or blank/default background unless it is already present in the source video"
     )
+    reference_lock = (
+        "use reference images only as identity and appearance references; do not copy, paste, crop, overlay, "
+        "or transplant the reference photo into the video; do not inherit the reference image pose, camera angle, "
+        "background, lighting, full-body framing, portrait composition, or still-photo look; regenerate the target "
+        "person naturally inside the original source-video geometry and occlusion"
+    )
     motion_lock = (
         "strictly follow the source video motion frame by frame; keep the exact standing positions, body angles, "
         "hand positions, arm grabs, touch points, eye lines, and contact/occlusion relationships; if the source video "
@@ -7778,12 +8103,12 @@ def _default_scail2_positive_prompt(role_pairs: list[dict[str, Any]]) -> str:
             f"{count} people in the original scene, replace each tracked person with the matching reference subject, "
             "keep the original plot moment, action, body pose, camera movement, occlusion order, lighting, background, "
             "and scene composition; keep each person's gender and position; do not invent a new scene type; "
-            f"{motion_lock}; {appearance_lock}; {scene_lock}; {role_lock}"
+            f"{motion_lock}; {appearance_lock}; {reference_lock}; {scene_lock}; {role_lock}"
         )
     return (
         "one person in the original scene, replace the tracked person with the reference subject, "
         "keep the original plot moment, action, body pose, camera movement, lighting, background, and scene composition; "
-        f"do not invent a new scene type; {motion_lock}; {appearance_lock}; {scene_lock}; {role_lock}"
+        f"do not invent a new scene type; {motion_lock}; {appearance_lock}; {reference_lock}; {scene_lock}; {role_lock}"
     )
 
 
@@ -7802,6 +8127,561 @@ def _resolve_scail2_positive_prompt(value: str, role_pairs: list[dict[str, Any]]
     if all(marker in lower for marker in required_markers):
         return base
     return base.rstrip(" .") + ". " + constraints
+
+
+def _scail2_sequential_pass_prompt(
+    positive_prompt: str,
+    pair: dict[str, Any],
+    *,
+    pass_index: int,
+    total_passes: int,
+) -> str:
+    name = str(pair.get("name") or f"role {pass_index}").strip()
+    base = _resolve_scail2_positive_prompt(positive_prompt, [pair])
+    return (
+        base.rstrip(" .")
+        + ". "
+        + (
+            f"Sequential replacement pass {pass_index}/{total_passes}: replace only {name}. "
+            "Use the reference image only to identify this person's face, hair, body build, and clothing cues; "
+            "never paste the reference photo itself and never copy its pose, framing, background, or still-image lighting. "
+            "All other visible people are locked source-video content and must remain unchanged, "
+            "including identity, face, hair, clothing, body scale, pose, hands, contact, occlusion, "
+            "lighting, timing, and camera position. Do not replace, redraw, beautify, or move any "
+            "other person. Keep already replaced people unchanged from the input video."
+        )
+    )
+
+
+def _run_scail2_sequential_transfer(
+    *,
+    client,
+    video_path: str,
+    role_pairs: list[dict[str, Any]],
+    output_dir: Path,
+    video_window: dict[str, Any] | None,
+    sampler_preset: str,
+    normalize_size: bool,
+    positive_prompt: str,
+    sam_text: str,
+    add_log,
+) -> dict[str, Any]:
+    current_video_path = str(video_path)
+    pass_results: list[dict[str, Any]] = []
+    last_result: dict[str, Any] = {}
+    total = len(role_pairs)
+    add_log(f"> SCAIL-2 sequential mode: replace {total} roles one by one")
+
+    for index, pair in enumerate(role_pairs, 1):
+        role_name = str(pair.get("name") or f"role {index}").strip()
+        add_log(f"> SCAIL-2 sequential pass {index}/{total}: {role_name}")
+        result = client.transfer(
+            video_path=current_video_path,
+            ref_images=[str(pair.get("ref_image") or "")],
+            subject_extra_ref_images=[_string_list(pair.get("extra_ref_images"))],
+            role_names=[role_name],
+            video_window=video_window,
+            sampler_preset=sampler_preset,
+            normalize_size=normalize_size,
+            positive_prompt=_scail2_sequential_pass_prompt(
+                positive_prompt,
+                pair,
+                pass_index=index,
+                total_passes=total,
+            ),
+            sam_text=_resolve_scail2_sam_text(sam_text, 1),
+            save_debug_masks=True,
+            source_identity_points=[
+                pair.get("source_point") if isinstance(pair.get("source_point"), (list, tuple)) else None
+            ],
+            source_identity_shapes=[
+                pair.get("source_shape") if isinstance(pair.get("source_shape"), dict) else None
+            ],
+            output_dir=output_dir,
+            on_progress=add_log,
+        )
+        last_result = result
+        current_video_path = str(result.get("output_path") or current_video_path)
+        pass_results.append({
+            "index": index,
+            "role_name": role_name,
+            "output_path": current_video_path,
+            "prompt_id": result.get("prompt_id"),
+            "workflow_path": result.get("workflow_path"),
+            "mask_output_paths": result.get("mask_output_paths"),
+        })
+        add_log(f"> SCAIL-2 sequential pass {index}/{total} output: {current_video_path}")
+
+    final = dict(last_result)
+    final.update({
+        "output_path": current_video_path,
+        "workflow_mode": "scail2_sequential_single_role",
+        "role_names": [str(pair.get("name") or "") for pair in role_pairs],
+        "ref_images": [str(pair.get("ref_image") or "") for pair in role_pairs],
+        "sequential_passes": pass_results,
+        "sampler_preset": sampler_preset,
+    })
+    return final
+
+
+def _mode2_reselect_role_pairs_for_time_range(
+    project_dir: str,
+    segment_id: str,
+    fallback_pairs: list[dict[str, Any]],
+    *,
+    start: float,
+    end: float,
+) -> list[dict[str, Any]]:
+    if not project_dir or not fallback_pairs:
+        return fallback_pairs
+    try:
+        root = _resolve_storyboard_mode2_project_dir(project_dir)
+        data = json.loads(_storyboard_mode2_asset_store_path(root).read_text(encoding="utf-8-sig"))
+    except Exception:  # noqa: BLE001
+        return fallback_pairs
+    assets = {
+        str(asset.get("id") or ""): asset
+        for asset in (data.get("assets") or [])
+        if isinstance(asset, dict)
+    }
+    annotations = [
+        item for item in (data.get("identity_annotations") or [])
+        if isinstance(item, dict)
+    ]
+    for asset in assets.values():
+        role_id = str(asset.get("id") or "").strip()
+        for item in (asset.get("identity_anchors") or []):
+            if isinstance(item, dict):
+                anchor = dict(item)
+                anchor.setdefault("role_id", role_id)
+                annotations.append(anchor)
+    shot = {
+        "segment_id": segment_id,
+        "start": max(0.0, float(start)),
+        "end": max(float(start), float(end)),
+    }
+    selected: list[dict[str, Any]] = []
+    tolerance = 0.08
+    for pair in fallback_pairs:
+        role_id = str(pair.get("asset_id") or "").strip()
+        asset = assets.get(role_id)
+        next_pair = dict(pair)
+        if asset:
+            candidates = [
+                item for item in annotations
+                if str(item.get("role_id") or "") == role_id
+            ]
+            local_candidates: list[dict[str, Any]] = []
+            for item in candidates:
+                try:
+                    anchor_time = float(item.get("time") or item.get("source_time") or -9999.0)
+                except (TypeError, ValueError):
+                    continue
+                item_segment_id = str(item.get("shot_id") or item.get("source_segment_id") or "").strip()
+                same_segment = not item_segment_id or item_segment_id == segment_id
+                if same_segment and float(start) - tolerance <= anchor_time <= float(end) + tolerance:
+                    local_candidates.append(item)
+            if not local_candidates:
+                continue
+            preferred = _mode2_best_identity_anchor_for_shot(asset, local_candidates, shot)
+            if isinstance(preferred, dict):
+                point = preferred.get("point")
+                source_shape = _normalize_identity_shape(
+                    preferred.get("source_shape") or preferred.get("shape")
+                )
+                if isinstance(point, (list, tuple)) and len(point) == 2:
+                    next_pair["source_point"] = point
+                    try:
+                        next_pair["source_x"] = float(point[0])
+                    except (TypeError, ValueError):
+                        pass
+                next_pair["source_shape"] = source_shape
+                next_pair["source_time"] = preferred.get("time")
+                next_pair["annotation_id"] = str(preferred.get("id") or "")
+                next_pair["source_anchor_id"] = str(preferred.get("id") or "")
+            else:
+                continue
+        selected.append(next_pair)
+    return selected
+
+
+def _mode2_make_scail2_subshot_run_clip(
+    source_video: str,
+    *,
+    start: float,
+    end: float,
+    output_dir: Path,
+    index: int,
+    min_duration: float = 2.05,
+) -> dict[str, Any]:
+    from spvideo.ffmpeg_tools import concat_videos, cut_segment_precise
+
+    source = Path(source_video)
+    duration = max(0.01, float(end) - float(start))
+    stem = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in source.stem)[:60] or "clip"
+    start_ms = max(0, int(round(float(start) * 1000)))
+    end_ms = max(start_ms + 10, int(round(float(end) * 1000)))
+    work_dir = output_dir / "scail2_subshots" / stem
+    work_dir.mkdir(parents=True, exist_ok=True)
+    exact_clip = work_dir / f"{stem}_sub{index:02d}_{start_ms:08d}_{end_ms:08d}_p1.mp4"
+    if not (exact_clip.exists() and exact_clip.stat().st_size > 0):
+        cut_segment_precise(source, float(start), float(end), exact_clip)
+    run_clip = exact_clip
+    repeat_count = 1
+    padded = False
+    if duration < min_duration:
+        repeat_count = max(2, int(math.ceil(min_duration / max(0.01, duration))))
+        padded = True
+        padded_clip = work_dir / f"{exact_clip.stem}_loopx{repeat_count}.mp4"
+        if not (padded_clip.exists() and padded_clip.stat().st_size > 0):
+            concat_videos([exact_clip] * repeat_count, padded_clip, reencode_fallback=True)
+        run_clip = padded_clip
+    return {
+        "index": index,
+        "start": round(float(start), 3),
+        "end": round(float(end), 3),
+        "duration": round(duration, 3),
+        "path": str(exact_clip),
+        "run_path": str(run_clip),
+        "trim_start": 0.0,
+        "trim_end": round(duration, 3),
+        "repeat_count": repeat_count,
+        "padded": padded,
+    }
+
+
+def _mode2_trim_scail2_loop_candidates(
+    raw_output: Path,
+    *,
+    duration: float,
+    repeat_count: int,
+    output_dir: Path,
+    index: int,
+    source_stem: str,
+) -> tuple[Path, list[dict[str, Any]]]:
+    from spvideo.ffmpeg_tools import cut_segment_precise, probe_video
+
+    safe_duration = max(0.01, float(duration))
+    raw_meta = probe_video(raw_output)
+    raw_duration = max(0.0, float(raw_meta.duration or 0.0))
+    total = max(1, int(repeat_count or 1))
+    candidates: list[dict[str, Any]] = []
+    selected: Path | None = None
+    for loop_index in range(total):
+        trim_start = loop_index * safe_duration
+        trim_end = trim_start + safe_duration
+        if trim_start >= raw_duration - 0.02:
+            break
+        if trim_end > raw_duration + 0.08:
+            break
+        suffix = f"loop{loop_index + 1:02d}" if total > 1 else "main"
+        target = output_dir / f"scail2_subshot_{index:02d}_{source_stem}_{suffix}_{uuid.uuid4().hex[:8]}.mp4"
+        cut_segment_precise(raw_output, trim_start, min(trim_end, raw_duration), target)
+        if target.exists() and target.stat().st_size > 0:
+            if selected is None:
+                selected = target
+            candidates.append({
+                "loop_index": loop_index + 1,
+                "trim_start": round(trim_start, 3),
+                "trim_end": round(min(trim_end, raw_duration), 3),
+                "path": str(target),
+                "selected": loop_index == 0,
+            })
+    if selected is None:
+        fallback = output_dir / f"scail2_subshot_{index:02d}_{source_stem}_main_{uuid.uuid4().hex[:8]}.mp4"
+        cut_segment_precise(raw_output, 0.0, safe_duration, fallback)
+        selected = fallback
+        candidates.append({
+            "loop_index": 1,
+            "trim_start": 0.0,
+            "trim_end": round(safe_duration, 3),
+            "path": str(fallback),
+            "selected": True,
+        })
+    return selected, candidates
+
+
+def _mode2_saved_subshot_ranges(project_dir: str, segment_id: str) -> list[tuple[float, float]]:
+    if not project_dir or not segment_id:
+        return []
+    try:
+        root = _resolve_storyboard_mode2_project_dir(project_dir)
+        data = _load_storyboard_mode2_store(root)
+    except Exception:  # noqa: BLE001
+        return []
+    shot = next(
+        (
+            item for item in (data.get("shots") or [])
+            if isinstance(item, dict)
+            and str(item.get("segment_id") or "").strip() == str(segment_id).strip()
+        ),
+        None,
+    )
+    if not isinstance(shot, dict):
+        return []
+    subshots = [
+        item for item in (shot.get("subshots") or [])
+        if isinstance(item, dict)
+    ]
+    ranges: list[tuple[float, float]] = []
+    for item in sorted(subshots, key=lambda value: float(value.get("start") or 0.0)):
+        try:
+            start = float(item.get("start") or 0.0)
+            end = float(item.get("end") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if end > start + 0.05:
+            ranges.append((round(max(0.0, start), 3), round(max(0.0, end), 3)))
+    return ranges if len(ranges) > 1 else []
+
+
+def _mode2_subshot_ref_overrides(project_dir: str, segment_id: str, start: float, end: float) -> dict[str, str]:
+    if not project_dir or not segment_id:
+        return {}
+    try:
+        root = _resolve_storyboard_mode2_project_dir(project_dir)
+        data = _load_storyboard_mode2_store(root)
+    except Exception:  # noqa: BLE001
+        return {}
+    shot = next(
+        (
+            item for item in (data.get("shots") or [])
+            if isinstance(item, dict)
+            and str(item.get("segment_id") or "").strip() == str(segment_id).strip()
+        ),
+        None,
+    )
+    if not isinstance(shot, dict):
+        return {}
+    for item in (shot.get("subshots") or []):
+        if not isinstance(item, dict):
+            continue
+        try:
+            item_start = float(item.get("start") or 0.0)
+            item_end = float(item.get("end") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if abs(item_start - float(start)) < 0.02 and abs(item_end - float(end)) < 0.02:
+            overrides = item.get("role_ref_overrides")
+            if isinstance(overrides, dict):
+                return {
+                    str(role_id): str(path).strip()
+                    for role_id, path in overrides.items()
+                    if str(role_id).strip() and str(path).strip()
+                }
+    return {}
+
+
+def _run_scail2_hardcut_transfer(
+    *,
+    client,
+    video_path: str,
+    role_pairs: list[dict[str, Any]],
+    project_dir: str,
+    segment_id: str,
+    hard_cuts: list[tuple[float, float]],
+    output_dir: Path,
+    video_window: dict[str, Any] | None,
+    sampler_preset: str,
+    normalize_size: bool,
+    positive_prompt: str,
+    sam_text: str,
+    add_log,
+) -> dict[str, Any]:
+    from spvideo.ffmpeg_tools import concat_videos
+
+    sub_results: list[dict[str, Any]] = []
+    trimmed_outputs: list[Path] = []
+    processed_count = 0
+    skipped_count = 0
+    total = len(hard_cuts)
+    add_log(f"> SCAIL-2 hard-cut mode: local split into {total} subshots")
+    for index, (start, end) in enumerate(hard_cuts, 1):
+        sub_pairs = _mode2_reselect_role_pairs_for_time_range(
+            project_dir,
+            segment_id,
+            role_pairs,
+            start=float(start),
+            end=float(end),
+        )
+        anchor_notes = []
+        for pair in sub_pairs:
+            name = str(pair.get("name") or pair.get("asset_id") or "").strip()
+            anchor_id = str(pair.get("source_anchor_id") or pair.get("annotation_id") or "").strip()
+            source_time = pair.get("source_time")
+            if isinstance(source_time, (int, float)):
+                anchor_notes.append(f"{name}@{float(source_time):.2f}s {anchor_id}".strip())
+            else:
+                anchor_notes.append(name)
+        run_info = _mode2_make_scail2_subshot_run_clip(
+            video_path,
+            start=float(start),
+            end=float(end),
+            output_dir=output_dir,
+            index=index,
+        )
+        if not sub_pairs:
+            skipped_count += 1
+            trimmed = Path(str(run_info["path"]))
+            trimmed_outputs.append(trimmed)
+            sub_results.append({
+                "index": index,
+                "start": run_info["start"],
+                "end": run_info["end"],
+                "duration": run_info["duration"],
+                "run_path": run_info["run_path"],
+                "padded": run_info["padded"],
+                "repeat_count": run_info["repeat_count"],
+                "output_path": str(trimmed),
+                "raw_output_path": "",
+                "loop_candidates": [],
+                "anchors": [],
+                "skipped": True,
+                "skip_reason": "no_role_anchor_in_subshot",
+            })
+            add_log(
+                f"> SCAIL-2 subshot {index}/{total}: {float(start):.2f}-{float(end):.2f}s "
+                "没有本段身份锚点，保留原片，不送 Scail2"
+            )
+            continue
+        ref_overrides = _mode2_subshot_ref_overrides(project_dir, segment_id, float(start), float(end))
+        if ref_overrides:
+            for pair in sub_pairs:
+                override_path = ref_overrides.get(str(pair.get("asset_id") or ""))
+                if override_path:
+                    pair["ref_image"] = override_path
+            add_log(
+                "> 本段参考图: "
+                + " / ".join(
+                    f"{pair.get('name')}: {Path(str(pair.get('ref_image') or '')).name}"
+                    for pair in sub_pairs
+                )
+            )
+        processed_count += 1
+        pad_note = (
+            f"; loop-pad x{run_info['repeat_count']} for SCAIL2 min duration"
+            if run_info.get("padded")
+            else ""
+        )
+        add_log(
+            f"> SCAIL-2 subshot {index}/{total}: {float(start):.2f}-{float(end):.2f}s "
+            f"duration={run_info['duration']:.2f}s{pad_note}"
+        )
+        if anchor_notes:
+            add_log("> anchors: " + " / ".join(anchor_notes))
+        if len(sub_pairs) > 1:
+            add_log(f"> SCAIL-2 subshot {index}/{total}: start sequential replacement for {len(sub_pairs)} roles")
+            result = _run_scail2_sequential_transfer(
+                client=client,
+                video_path=str(run_info["run_path"]),
+                role_pairs=sub_pairs,
+                output_dir=output_dir,
+                video_window=None,
+                sampler_preset=sampler_preset,
+                normalize_size=normalize_size,
+                positive_prompt=positive_prompt,
+                sam_text=sam_text,
+                add_log=add_log,
+            )
+        else:
+            add_log(
+                f"> SCAIL-2 subshot {index}/{total}: start single-role replacement "
+                f"for {sub_pairs[0].get('name') or sub_pairs[0].get('asset_id') or 'role'}"
+            )
+            source_identity_points = [
+                sub_pairs[0].get("source_point")
+                if isinstance(sub_pairs[0].get("source_point"), (list, tuple))
+                else None
+            ]
+            source_identity_shapes = [
+                sub_pairs[0].get("source_shape")
+                if isinstance(sub_pairs[0].get("source_shape"), dict)
+                else None
+            ]
+            result = client.transfer(
+                video_path=str(run_info["run_path"]),
+                ref_images=[str(sub_pairs[0].get("ref_image") or "")],
+                subject_extra_ref_images=[_string_list(sub_pairs[0].get("extra_ref_images"))],
+                role_names=[str(sub_pairs[0].get("name") or "")],
+                video_window=None,
+                sampler_preset=sampler_preset,
+                normalize_size=normalize_size,
+                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, sub_pairs),
+                sam_text=_resolve_scail2_sam_text(sam_text, 1),
+                save_debug_masks=True,
+                source_identity_points=source_identity_points,
+                source_identity_shapes=source_identity_shapes,
+                output_dir=output_dir,
+                on_progress=add_log,
+            )
+        raw_output = Path(str(result.get("output_path") or ""))
+        if not raw_output.exists():
+            raise RuntimeError(f"scail2_subshot_output_missing: {raw_output}")
+        add_log(f"> SCAIL-2 subshot {index}/{total}: server output received: {raw_output}")
+        trimmed, loop_candidates = _mode2_trim_scail2_loop_candidates(
+            raw_output,
+            duration=float(run_info["duration"]),
+            repeat_count=int(run_info.get("repeat_count") or 1),
+            output_dir=output_dir,
+            index=index,
+            source_stem=Path(video_path).stem,
+        )
+        trimmed_outputs.append(trimmed)
+        sub_results.append({
+            "index": index,
+            "start": run_info["start"],
+            "end": run_info["end"],
+            "duration": run_info["duration"],
+            "run_path": run_info["run_path"],
+            "padded": run_info["padded"],
+            "repeat_count": run_info["repeat_count"],
+            "output_path": str(trimmed),
+            "raw_output_path": str(raw_output),
+            "loop_candidates": loop_candidates,
+            "anchors": [
+                {
+                    "role": str(pair.get("name") or ""),
+                    "asset_id": str(pair.get("asset_id") or ""),
+                    "source_time": pair.get("source_time"),
+                    "source_anchor_id": str(pair.get("source_anchor_id") or pair.get("annotation_id") or ""),
+                    "source_point": pair.get("source_point"),
+                }
+                for pair in sub_pairs
+            ],
+            "prompt_id": result.get("prompt_id"),
+            "workflow_path": result.get("workflow_path"),
+        })
+        add_log(f"> SCAIL-2 subshot {index}/{total} trimmed output: {trimmed}")
+        if len(loop_candidates) > 1:
+            add_log(
+                f"> subshot {index} loop candidates: "
+                + " / ".join(
+                    f"第{item['loop_index']}遍{'(默认)' if item.get('selected') else ''}"
+                    for item in loop_candidates
+                )
+            )
+
+    if processed_count <= 0:
+        raise RuntimeError(
+            f"no_subshot_role_anchors: {total}个子镜头都没有本段身份锚点，未送Scail2生成。"
+            "请先在子镜头时间上标身份点。"
+        )
+
+    final_path = output_dir / f"scail2_hardcut_{Path(video_path).stem}_{uuid.uuid4().hex[:8]}.mp4"
+    concat_videos(trimmed_outputs, final_path, reencode_fallback=True)
+    return {
+        "output_path": str(final_path),
+        "scail2_output_path": str(final_path),
+        "workflow_mode": "scail2_hardcut_subshots",
+        "role_names": [str(pair.get("name") or "") for pair in role_pairs],
+        "ref_images": [str(pair.get("ref_image") or "") for pair in role_pairs],
+        "sampler_preset": sampler_preset,
+        "subshot_results": sub_results,
+        "processed_subshot_count": processed_count,
+        "skipped_subshot_count": skipped_count,
+        "hard_cuts": [[round(float(start), 3), round(float(end), 3)] for start, end in hard_cuts],
+        "mask_output_paths": {},
+    }
 
 
 def _scail2_role_appearance_constraints(role_pairs: list[dict[str, Any]]) -> str:
@@ -8091,6 +8971,61 @@ def _mapping_item_distance(
     return math.hypot(left_point[0] - right_point[0], left_point[1] - right_point[1])
 
 
+def _mode2_anchor_time(anchor: dict[str, Any], default: float = 0.0) -> float:
+    try:
+        return max(0.0, float(anchor.get("time") or anchor.get("source_time") or default))
+    except (TypeError, ValueError):
+        return max(0.0, default)
+
+
+def _mode2_best_identity_anchor_for_shot(
+    role: dict[str, Any],
+    annotations: list[dict[str, Any]],
+    shot: dict[str, Any],
+) -> dict[str, Any] | None:
+    role_id = str(role.get("id") or "").strip()
+    segment_id = str(shot.get("segment_id") or "").strip()
+    try:
+        shot_start = max(0.0, float(shot.get("start") or 0.0))
+    except (TypeError, ValueError):
+        shot_start = 0.0
+    try:
+        shot_end = max(shot_start, float(shot.get("end") or shot_start))
+    except (TypeError, ValueError):
+        shot_end = shot_start
+    candidates: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for item in [*annotations, *(role.get("identity_anchors") or [])]:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("role_id") or role_id) != role_id:
+            continue
+        point = item.get("point")
+        source_shape = _normalize_identity_shape(item.get("source_shape") or item.get("shape"))
+        if not source_shape and (not isinstance(point, (list, tuple)) or len(point) != 2):
+            continue
+        item_id = str(item.get("id") or "")
+        if item_id and item_id in seen_ids:
+            continue
+        if item_id:
+            seen_ids.add(item_id)
+        candidates.append(item)
+    if not candidates:
+        return None
+
+    def score(item: dict[str, Any]) -> tuple[float, float, float]:
+        shot_id = str(item.get("shot_id") or "").strip()
+        source_segment_id = str(item.get("source_segment_id") or "").strip()
+        anchor_time = _mode2_anchor_time(item, shot_start)
+        segment_penalty = 0.0 if segment_id and (shot_id == segment_id or source_segment_id == segment_id) else 8.0
+        range_penalty = 0.0 if shot_start - 0.05 <= anchor_time <= shot_end + 0.05 else 4.0
+        time_penalty = abs(anchor_time - shot_start)
+        shape_bonus = -0.25 if _normalize_identity_shape(item.get("source_shape") or item.get("shape")) else 0.0
+        return (segment_penalty + range_penalty + time_penalty + shape_bonus, time_penalty, -float(item.get("updated_at") or 0.0))
+
+    return min(candidates, key=score)
+
+
 def _mode2_reference_mask_role_pairs_from_store(
     project_dir: str,
     segment_id: str,
@@ -8152,20 +9087,26 @@ def _mode2_reference_mask_role_pairs_from_store(
         if key in seen_paths:
             continue
         seen_paths.add(key)
+        extra_ref_images: list[str] = []
+        extra_seen: set[str] = {key}
+        for value in [
+            *_string_list(asset.get("extra_ref_images")),
+            *_string_list(asset.get("subject_extra_ref_images")),
+            *_string_list(asset.get("reference_images")),
+        ]:
+            path_text = str(value or "").strip()
+            if not path_text:
+                continue
+            path_key = str(Path(path_text)).lower()
+            if path_key in extra_seen:
+                continue
+            extra_seen.add(path_key)
+            extra_ref_images.append(path_text)
         candidates = [
             item for item in annotations
             if str(item.get("role_id") or "") == role_id
         ]
-        preferred = next(
-            (
-                item for item in candidates
-                if str(item.get("shot_id") or "") == segment_id
-                or str(item.get("source_segment_id") or "") == segment_id
-            ),
-            None,
-        )
-        if preferred is None and candidates:
-            preferred = max(candidates, key=lambda item: float(item.get("updated_at") or item.get("time") or 0.0))
+        preferred = _mode2_best_identity_anchor_for_shot(asset, candidates, shot)
         point = preferred.get("point") if isinstance(preferred, dict) else None
         source_time = preferred.get("time") if isinstance(preferred, dict) else None
         source_shape = _normalize_identity_shape(
@@ -8174,11 +9115,13 @@ def _mode2_reference_mask_role_pairs_from_store(
         role_pairs.append({
             "name": name,
             "ref_image": ref_image,
+            "extra_ref_images": extra_ref_images[:6],
             "asset_id": role_id,
             "source_point": point,
             "source_shape": source_shape,
             "source_time": source_time,
             "annotation_id": str(preferred.get("id") or "") if isinstance(preferred, dict) else "",
+            "source_anchor_id": str(preferred.get("id") or "") if isinstance(preferred, dict) else "",
         })
 
     if missing_targets:
@@ -8219,22 +9162,33 @@ def _mode2_reference_mask_subclip_dir(video_path: str) -> Path:
 def _mode2_create_reference_mask_subclips(
     video_path: str,
     hard_cuts: list[tuple[float, float]],
+    existing_subshots: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
-    from spvideo.ffmpeg_tools import cut_segment
+    from spvideo.ffmpeg_tools import cut_segment_precise
 
     source = Path(video_path)
     output_dir = _mode2_reference_mask_subclip_dir(video_path)
     output_dir.mkdir(parents=True, exist_ok=True)
     subclips: list[dict[str, Any]] = []
+    existing_by_range: dict[tuple[int, int], dict[str, Any]] = {}
+    for item in existing_subshots or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            key = (int(round(float(item.get("start") or 0.0) * 1000)), int(round(float(item.get("end") or 0.0) * 1000)))
+        except (TypeError, ValueError):
+            continue
+        existing_by_range[key] = item
     safe_stem = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in source.stem)[:60] or "clip"
     for index, (start, end) in enumerate(hard_cuts, 1):
         duration = max(0.01, end - start)
         start_ms = max(0, int(round(start * 1000)))
         end_ms = max(start_ms + 10, int(round(end * 1000)))
-        target = output_dir / f"{safe_stem}_sub{index:02d}_{start_ms:08d}_{end_ms:08d}.mp4"
-        if not (target.exists() and target.stat().st_size > 0):
-            cut_segment(source, start, end, target)
-        subclips.append({
+        previous = existing_by_range.get((start_ms, end_ms), {})
+        target = output_dir / f"{safe_stem}_sub{index:02d}_{start_ms:08d}_{end_ms:08d}_p1.mp4"
+        target.unlink(missing_ok=True)
+        cut_segment_precise(source, start, end, target)
+        subclip = {
             "index": index,
             "label": f"子镜头{index}",
             "start": round(start, 3),
@@ -8242,8 +9196,217 @@ def _mode2_create_reference_mask_subclips(
             "duration": round(duration, 3),
             "path": str(target),
             "source_video_path": str(source),
-        })
+        }
+        previous_overrides = previous.get("role_ref_overrides")
+        if isinstance(previous_overrides, dict) and previous_overrides:
+            subclip["role_ref_overrides"] = previous_overrides
+        subclips.append(subclip)
     return subclips
+
+
+def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
+    from spvideo.ffmpeg_tools import probe_video
+
+    project_dir = str(payload.get("project_dir") or "").strip()
+    video_path = str(payload.get("video_path") or payload.get("source_video_path") or "").strip()
+    segment_id = str(payload.get("segment_id") or "").strip()
+    if not project_dir:
+        raise ValueError("missing_project_dir")
+    if not video_path or not Path(video_path).exists():
+        raise ValueError("video_not_found")
+    root = _resolve_storyboard_mode2_project_dir(project_dir)
+    meta = probe_video(video_path)
+    duration = max(0.01, float(meta.duration or 0.0))
+
+    raw_cut_times = payload.get("cut_times")
+    cut_times: list[float] = []
+    if isinstance(raw_cut_times, list):
+        for value in raw_cut_times:
+            try:
+                cut_time = float(value)
+            except (TypeError, ValueError):
+                continue
+            if 0.05 < cut_time < duration - 0.05:
+                cut_times.append(round(cut_time, 3))
+    cut_times = sorted(set(cut_times))
+    source = "manual" if cut_times else "local_hardcut"
+    cut_error = ""
+    if not cut_times:
+        hard_cuts, cut_error = _mode2_reference_video_hard_cuts(video_path)
+        if hard_cuts:
+            cut_times = [round(float(end), 3) for _start, end in hard_cuts[:-1]]
+
+    points = [0.0] + cut_times + [duration]
+    ranges: list[tuple[float, float]] = []
+    for start, end in zip(points, points[1:]):
+        if end > start + 0.05:
+            ranges.append((round(start, 3), round(end, 3)))
+    if not ranges:
+        ranges = [(0.0, round(duration, 3))]
+
+    existing_subshots: list[dict[str, Any]] = []
+    if bool(payload.get("save")):
+        try:
+            existing_data = _load_storyboard_mode2_store(root)
+            existing_shot = next(
+                (
+                    item for item in (existing_data.get("shots") or [])
+                    if isinstance(item, dict)
+                    and str(item.get("segment_id") or "").strip() == segment_id
+                ),
+                None,
+            )
+            existing_subshots = [
+                item for item in ((existing_shot or {}).get("subshots") or [])
+                if isinstance(item, dict)
+            ]
+        except Exception:  # noqa: BLE001
+            existing_subshots = []
+
+    subclips = _mode2_create_reference_mask_subclips(video_path, ranges, existing_subshots=existing_subshots)
+    for item in subclips:
+        item["source"] = source
+        item["needs_scail2_padding"] = float(item.get("duration") or 0.0) < 2.05
+        if item["needs_scail2_padding"]:
+            item["scail2_repeat_count"] = max(2, int(math.ceil(2.05 / max(0.01, float(item.get("duration") or 0.01)))))
+
+    if bool(payload.get("save")):
+        data = _load_storyboard_mode2_store(root)
+        shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+        shot = next(
+            (
+                item for item in shots
+                if str(item.get("segment_id") or "").strip() == segment_id
+            ),
+            None,
+        )
+        if shot is None:
+            raise ValueError(f"shot_not_found: {segment_id}")
+        shot["subshots"] = [
+            {
+                "id": f"{segment_id or 'shot'}-{index + 1}",
+                "parent_segment_id": segment_id,
+                "index": index + 1,
+                "start": item["start"],
+                "end": item["end"],
+                "duration": item["duration"],
+                "path": item["path"],
+                "source": source,
+                "needs_scail2_padding": item.get("needs_scail2_padding", False),
+                "scail2_repeat_count": item.get("scail2_repeat_count", 1),
+                "role_ref_overrides": item.get("role_ref_overrides") or {},
+            }
+            for index, item in enumerate(subclips)
+        ]
+        shot["subshot_cut_times"] = cut_times
+        shot["subshot_status"] = "confirmed"
+        shot["subshot_updated_at"] = time.time()
+        data["shots"] = shots
+        data["shot_subclips_version"] = int(data.get("shot_subclips_version") or 0) + 1
+        _write_storyboard_mode2_store(root, data)
+
+    return {
+        "project_dir": str(root),
+        "segment_id": segment_id,
+        "source_video_path": str(Path(video_path)),
+        "duration": round(duration, 3),
+        "cut_times": cut_times,
+        "source": source,
+        "cut_error": cut_error,
+        "compare_mode": "shot_cut_review",
+        "output_label": "子镜头预览",
+        "subclips": subclips,
+    }
+
+
+def _mode2_role_reference_options(asset: dict[str, Any]) -> list[str]:
+    values: list[str] = []
+    for value in (
+        asset.get("target_image"),
+        asset.get("seedance_reference_image"),
+        asset.get("refined_image"),
+        asset.get("representative_image"),
+    ):
+        text = str(value or "").strip()
+        if text and text not in values:
+            values.append(text)
+    for key in ("extra_ref_images", "subject_extra_ref_images", "reference_images"):
+        for value in _string_list(asset.get(key)):
+            if value and value not in values:
+                values.append(value)
+    target_asset = asset.get("target_asset")
+    if isinstance(target_asset, dict):
+        for value in _string_list(target_asset.get("versions")):
+            if value and value not in values:
+                values.append(value)
+    return values
+
+
+def _update_storyboard_mode2_subshot_reference(payload: dict[str, Any]) -> dict[str, Any]:
+    project_dir = str(payload.get("project_dir") or "").strip()
+    segment_id = str(payload.get("segment_id") or "").strip()
+    role_id = str(payload.get("role_id") or "").strip()
+    reference_path = str(payload.get("reference_path") or payload.get("ref_image") or "").strip()
+    subshot_index = int(payload.get("subshot_index") or payload.get("index") or 0)
+    if not project_dir:
+        raise ValueError("missing_project_dir")
+    if not segment_id:
+        raise ValueError("missing_segment_id")
+    if not role_id:
+        raise ValueError("missing_role_id")
+    if subshot_index <= 0:
+        raise ValueError("missing_subshot_index")
+    root = _resolve_storyboard_mode2_project_dir(project_dir)
+    data = _load_storyboard_mode2_store(root)
+    assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
+    role = next(
+        (
+            item for item in assets
+            if str(item.get("id") or "") == role_id
+            and str(item.get("kind") or "") == "role"
+        ),
+        None,
+    )
+    if role is None:
+        raise ValueError(f"role_not_found: {role_id}")
+    allowed_refs = _mode2_role_reference_options(role)
+    if reference_path and reference_path not in allowed_refs:
+        raise ValueError("reference_not_in_role_library")
+    shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+    shot = next(
+        (
+            item for item in shots
+            if str(item.get("segment_id") or "").strip() == segment_id
+        ),
+        None,
+    )
+    if not isinstance(shot, dict):
+        raise ValueError(f"shot_not_found: {segment_id}")
+    subshots = [item for item in (shot.get("subshots") or []) if isinstance(item, dict)]
+    subshot = next((item for item in subshots if int(item.get("index") or 0) == subshot_index), None)
+    if not isinstance(subshot, dict):
+        raise ValueError(f"subshot_not_found: {subshot_index}")
+    overrides = subshot.get("role_ref_overrides")
+    if not isinstance(overrides, dict):
+        overrides = {}
+    if reference_path:
+        overrides[role_id] = reference_path
+    else:
+        overrides.pop(role_id, None)
+    subshot["role_ref_overrides"] = overrides
+    subshot["role_ref_updated_at"] = time.time()
+    shot["subshots"] = subshots
+    data["shots"] = shots
+    data["subshot_reference_updated_at"] = time.time()
+    _write_storyboard_mode2_store(root, data)
+    return {
+        "project_dir": str(root),
+        "segment_id": segment_id,
+        "subshot_index": subshot_index,
+        "role_id": role_id,
+        "reference_path": reference_path,
+        "subshot": subshot,
+    }
 
 
 def _run_scail2_mask_check_job(
@@ -8262,6 +9425,8 @@ def _run_scail2_mask_check_job(
             job = JOBS.get(job_id)
             if job is not None:
                 job.setdefault("logs", []).append(message)
+                job["updated_at"] = time.time()
+        _snapshot_running_job(job_id)
 
     def fail(message: str) -> None:
         snapshot = None
@@ -8819,6 +9984,16 @@ def _mapping_item_x(item: dict[str, Any] | None) -> float | None:
     return None
 
 
+def _is_noisy_scail2_log(message: str) -> bool:
+    text = str(message or "").strip()
+    return (
+        text.startswith("ComfyUI 节点:")
+        or text.startswith("ComfyUI 进度:")
+        or text.startswith("ComfyUI 进度通道")
+        or text.startswith("检查 ComfyUI 节点")
+    )
+
+
 def _run_transfer_job(
     job_id: str,
     video_path: str,
@@ -8836,10 +10011,14 @@ def _run_transfer_job(
 ) -> None:
     """后台执行单人 SCAIL2 或多人 Wan2.2 换人。"""
     def add_log(message: str) -> None:
+        if _is_noisy_scail2_log(str(message or "")):
+            return
         with JOBS_LOCK:
             job = JOBS.get(job_id)
             if job is not None:
                 job.setdefault("logs", []).append(message)
+                job["updated_at"] = time.time()
+        _snapshot_running_job(job_id)
 
     def fail(message: str) -> None:
         with JOBS_LOCK:
@@ -8848,6 +10027,8 @@ def _run_transfer_job(
                 job["status"] = "failed"
                 job["error"] = message
                 job.setdefault("logs", []).append(f"> 失败: {message}")
+                job["updated_at"] = time.time()
+        _snapshot_running_job(job_id, force=True)
 
     if not Path(video_path).exists():
         fail(f"video_not_found: {video_path}")
@@ -8874,6 +10055,8 @@ def _run_transfer_job(
     use_scail2_masked = _use_scail2_masked_transfer(transfer_backend)
     use_bernini = _use_bernini_transfer(transfer_backend)
     use_runninghub_bernini = _use_runninghub_bernini_transfer(transfer_backend)
+    uses_scail2_worker = _backend_uses_scail2_worker(transfer_backend)
+    scail2_lock_acquired = False
     backend_label = "Wan2.2 云端换人" if use_wan22 else "SCAIL-2 ComfyUI 换人"
     add_log(f"> {backend_label} ({len(ref_images)} 个目标人物)")
     for i, pair in enumerate(role_pairs):
@@ -8885,6 +10068,15 @@ def _run_transfer_job(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        if uses_scail2_worker:
+            global MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID
+            if not MODE2_SCAIL2_TRANSFER_LOCK.acquire(blocking=False):
+                active = MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID or "unknown"
+                fail(f"scail2_busy: another Scail2 job is running ({active})")
+                return
+            scail2_lock_acquired = True
+            MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = job_id
+            add_log("> Scail2 已进入单任务队列：5 段会严格按顺序一段一段跑")
         if use_wan22:
             if len(role_pairs) > 1:
                 add_log("> 正在自动建立每个角色的 SAM3 轨迹")
@@ -8910,7 +10102,46 @@ def _run_transfer_job(
                 if job is not None:
                     job["status"] = "done"
                     job["result"] = result
+                    job["updated_at"] = time.time()
                     job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
+            _snapshot_running_job(job_id, force=True)
+            return
+
+        saved_subshot_ranges = (
+            _mode2_saved_subshot_ranges(project_dir, segment_id)
+            if transfer_backend == "scail2"
+            and not any([use_scail2_colored, use_scail2_masked, use_bernini, use_runninghub_bernini])
+            else []
+        )
+        if saved_subshot_ranges:
+            from spvideo.scail2_client import Scail2Client
+
+            client = Scail2Client()
+            add_log(f"> 使用已保存镜头切段: {len(saved_subshot_ranges)} 段")
+            result = _run_scail2_hardcut_transfer(
+                client=client,
+                video_path=video_path,
+                role_pairs=role_pairs,
+                project_dir=project_dir,
+                segment_id=segment_id,
+                hard_cuts=saved_subshot_ranges,
+                output_dir=output_dir,
+                video_window=video_window,
+                sampler_preset=sampler_preset,
+                normalize_size=normalize_size,
+                positive_prompt=positive_prompt,
+                sam_text=sam_text,
+                add_log=add_log,
+            )
+            final_output_path = str(result["output_path"])
+            with JOBS_LOCK:
+                job = JOBS.get(job_id)
+                if job is not None:
+                    job["status"] = "done"
+                    job["result"] = result
+                    job["updated_at"] = time.time()
+                    job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
+            _snapshot_running_job(job_id, force=True)
             return
 
         if use_runninghub_bernini:
@@ -8979,21 +10210,36 @@ def _run_transfer_job(
             from spvideo.scail2_client import Scail2Client
 
             client = Scail2Client()
-            result = client.transfer(
-                video_path=video_path,
-                ref_images=ref_images,
-                subject_extra_ref_images=subject_extra_ref_images,
-                role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                video_window=video_window,
-                sampler_preset=sampler_preset,
-                normalize_size=normalize_size,
-                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
-                save_debug_masks=True,
-                source_identity_points=source_identity_points,
-                source_identity_shapes=source_identity_shapes,
-                on_progress=add_log,
-            )
+            if len(role_pairs) > 1:
+                result = _run_scail2_sequential_transfer(
+                    client=client,
+                    video_path=video_path,
+                    role_pairs=role_pairs,
+                    output_dir=output_dir,
+                    video_window=video_window,
+                    sampler_preset=sampler_preset,
+                    normalize_size=normalize_size,
+                    positive_prompt=positive_prompt,
+                    sam_text=sam_text,
+                    add_log=add_log,
+                )
+            else:
+                result = client.transfer(
+                    video_path=video_path,
+                    ref_images=ref_images,
+                    subject_extra_ref_images=subject_extra_ref_images,
+                    role_names=[str(pair.get("name") or "") for pair in role_pairs],
+                    video_window=video_window,
+                    sampler_preset=sampler_preset,
+                    normalize_size=normalize_size,
+                    positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
+                    sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
+                    save_debug_masks=True,
+                    source_identity_points=source_identity_points,
+                    source_identity_shapes=source_identity_shapes,
+                    output_dir=output_dir,
+                    on_progress=add_log,
+                )
             if len(ref_images) > 1 and not (result.get("mask_output_paths") or {}):
                 add_log("> SCAIL-2 normal path produced no colored masks; running mask inspection fallback")
                 mask_result = client.inspect_masks(
@@ -9103,8 +10349,12 @@ def _run_transfer_job(
                     "output_size": result.get("output_size"),
                     "sampler_preset": result.get("sampler_preset"),
                     "mask_output_paths": result.get("mask_output_paths"),
+                    "workflow_mode": result.get("workflow_mode"),
+                    "sequential_passes": result.get("sequential_passes"),
                 }
                 job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
+                job["updated_at"] = time.time()
+        _snapshot_running_job(job_id, force=True)
     except Exception as exc:  # noqa: BLE001
         error_message = str(exc) or type(exc).__name__
         trace_tail = traceback.format_exc().strip().splitlines()[-8:]
@@ -9119,6 +10369,13 @@ def _run_transfer_job(
         for line in trace_tail:
             add_log("> traceback: " + line)
         fail(error_message)
+    finally:
+        if scail2_lock_acquired:
+            MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = ""
+            try:
+                MODE2_SCAIL2_TRANSFER_LOCK.release()
+            except RuntimeError:
+                pass
 
 
 def _ensure_wan_role_tracks(
@@ -11105,6 +12362,39 @@ def _build_storyboard_assets_v2(
         key=lambda item: (character_first_segment(item), -len(item.get("segment_ids") or [])),
     )[:8]
 
+    def character_first_time_range_start(character: dict[str, Any], fallback: float) -> float:
+        ranges = character.get("time_ranges") if isinstance(character.get("time_ranges"), list) else []
+        values: list[float] = []
+        for item in ranges:
+            if not isinstance(item, (list, tuple)) or not item:
+                continue
+            try:
+                values.append(float(item[0]))
+            except (TypeError, ValueError):
+                pass
+        return max(0.1, min(values) + 0.2) if values else fallback
+
+    def character_first_bbox(character: dict[str, Any]) -> list[float] | None:
+        boxes = character.get("bboxes") if isinstance(character.get("bboxes"), list) else []
+        for raw in boxes:
+            if not isinstance(raw, list) or len(raw) != 4:
+                continue
+            try:
+                box = [max(0.0, min(1.0, float(value))) for value in raw]
+            except (TypeError, ValueError):
+                continue
+            if box[2] > box[0] and box[3] > box[1]:
+                return [round(value, 6) for value in box]
+        return None
+
+    def bbox_center_point(bbox: list[float] | None) -> list[float] | None:
+        if not bbox:
+            return None
+        return [
+            round(max(0.0, min(1.0, (bbox[0] + bbox[2]) / 2.0)), 6),
+            round(max(0.0, min(1.0, (bbox[1] + bbox[3]) / 2.0)), 6),
+        ]
+
     role_specs: list[dict[str, Any]] = []
     for index, character in enumerate(story_characters, 1):
         candidate_names = [
@@ -11113,6 +12403,7 @@ def _build_storyboard_assets_v2(
             *[str(value or "").strip() for value in (character.get("role_candidates") or [])],
         ]
         name = next((value for value in candidate_names if value), f"角色{index}")
+        bbox = character_first_bbox(character)
         role_specs.append({
             "name": name,
             "tag": str(character.get("visual_label") or "").strip() or "待命名",
@@ -11122,6 +12413,22 @@ def _build_storyboard_assets_v2(
                 for value in (character.get("segment_ids") or [])
                 if str(value or "").strip()
             ],
+            "source_time_hint": character_first_time_range_start(character, first_time + index * 0.4),
+            "ai_bbox": bbox,
+            "ai_anchor_point": bbox_center_point(bbox),
+            "ai_layout": {
+                "screen_positions": character.get("screen_positions") or [],
+                "depth_positions": character.get("depth_positions") or [],
+                "body_facing": character.get("body_facing") or [],
+                "head_facing": character.get("head_facing") or [],
+                "poses": character.get("poses") or [],
+                "actions": character.get("actions") or [],
+                "motion_directions": character.get("motion_directions") or [],
+                "occlusions": character.get("occlusions") or [],
+                "contact_points": character.get("contact_points") or [],
+                "gaze_or_attention": character.get("gaze_or_attention") or [],
+                "relationships": character.get("relationships") or [],
+            },
         })
     if not role_specs:
         role_specs.append({
@@ -11135,14 +12442,46 @@ def _build_storyboard_assets_v2(
 
     assets: list[dict[str, Any]] = []
     for index, role in enumerate(role_specs):
+        source_time = round(first_source_time(
+            role["source_segment_ids"],
+            float(role.get("source_time_hint") or (first_time + index * 0.4)),
+        ), 3)
+        identity_anchors = []
+        if role.get("ai_anchor_point"):
+            identity_anchors.append({
+                "id": f"ai_anchor_{index + 1}",
+                "role_id": f"role_{index + 1}",
+                "role_name": role["name"],
+                "time": source_time,
+                "point": role["ai_anchor_point"],
+                "source_shape": {
+                    "type": "bbox",
+                    "points": [
+                        [role["ai_bbox"][0], role["ai_bbox"][1]],
+                        [role["ai_bbox"][2], role["ai_bbox"][1]],
+                        [role["ai_bbox"][2], role["ai_bbox"][3]],
+                        [role["ai_bbox"][0], role["ai_bbox"][3]],
+                    ],
+                },
+                "bbox": role["ai_bbox"],
+                "source": "ai_pre_director",
+                "source_kind": "ai_bbox_suggestion",
+                "note": "反推模型预标区域，人工可调整。",
+                "updated_at": time.time(),
+            })
         assets.append({
             "id": f"role_{index + 1}",
             "kind": "role",
             "name": role["name"],
             "tag": role["tag"],
             "source_video_path": video_path,
-            "source_time": round(first_source_time(role["source_segment_ids"], first_time + index * 0.4), 3),
+            "source_time": source_time,
             "source_segment_ids": role["source_segment_ids"],
+            "ai_bbox": role.get("ai_bbox"),
+            "ai_anchor_point": role.get("ai_anchor_point"),
+            "ai_layout": role.get("ai_layout") or {},
+            "identity_anchors": identity_anchors,
+            "identity_status": "ai_suggested" if identity_anchors else "needs_anchor",
             "target_image": "",
             "prompt": (
                 "写实短剧角色设定图，正面清晰，年龄、脸型、发型、身材比例、服装轮廓稳定，"
@@ -11152,6 +12491,8 @@ def _build_storyboard_assets_v2(
             "status": str(role.get("status") or "pending"),
             "placeholder": bool(role.get("placeholder")),
             "selection_reason": str(role.get("description") or ""),
+            "track_status": "needs_manual_review" if identity_anchors else "needs_anchor",
+            "track_note": "已由反推模型预标人物区域，请打开身份定位核对并微调。" if identity_anchors else "",
         })
 
     scene_groups: dict[str, dict[str, Any]] = {}
@@ -13266,6 +14607,25 @@ def _storyboard_mode2_understanding_view(
             item for item in (plan.get("scenes") or [])
             if isinstance(item, dict)
         ],
+        "analysis_schema_version": int(plan.get("analysis_schema_version") or 1),
+        "role_timeline": [
+            item for item in (plan.get("role_timeline") or [])
+            if isinstance(item, dict)
+        ],
+        "prop_timeline": [
+            item for item in (plan.get("prop_timeline") or [])
+            if isinstance(item, dict)
+        ],
+        "spatial_map": (
+            plan.get("spatial_map")
+            if isinstance(plan.get("spatial_map"), dict)
+            else {}
+        ),
+        "production_notes": (
+            plan.get("production_notes")
+            if isinstance(plan.get("production_notes"), dict)
+            else {}
+        ),
         "boundary_hints": [
             item for item in (plan.get("boundary_hints") or [])
             if isinstance(item, dict)
@@ -13570,6 +14930,7 @@ def _load_or_run_storyboard_mode2_understanding(
             if (
                 isinstance(cached, dict)
                 and str(cached.get("status") or "") == "ready"
+                and int(cached.get("analysis_schema_version") or 1) >= 2
                 and _storyboard_same_source_path(cached.get("source_path"), video_path)
             ):
                 add_log(f"> Mode2 understanding cache hit: {cache_path}")
@@ -14372,6 +15733,17 @@ def _storyboard_auto_director_with_understanding(
             "description": str(character.get("description") or "").strip(),
             "confidence": character.get("confidence", 0.0),
             "time_ranges": character.get("time_ranges") or [],
+            "bboxes": character.get("bboxes") or [],
+            "screen_positions": _string_list(character.get("screen_positions")),
+            "depth_positions": _string_list(character.get("depth_positions")),
+            "body_facing": _string_list(character.get("body_facing")),
+            "head_facing": _string_list(character.get("head_facing")),
+            "poses": _string_list(character.get("poses")),
+            "actions": _string_list(character.get("actions")),
+            "motion_directions": _string_list(character.get("motion_directions")),
+            "occlusions": _string_list(character.get("occlusions")),
+            "contact_points": _string_list(character.get("contact_points")),
+            "gaze_or_attention": _string_list(character.get("gaze_or_attention")),
             "segment_ids": _storyboard_character_segment_ids(character, reference_segments),
             "source": "mode2_pre_director",
         })
@@ -14837,6 +16209,12 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
         }
         _refresh_mode2_structured_fields(mode2_project_dir, storyboard_asset_store)
         storyboard_asset_store_path.parent.mkdir(parents=True, exist_ok=True)
+        _backup_storyboard_mode2_store(storyboard_asset_store_path)
+        storyboard_asset_store = _preserve_mode2_manual_identity_work(
+            storyboard_asset_store_path,
+            storyboard_asset_store,
+        )
+        _refresh_mode2_structured_fields(mode2_project_dir, storyboard_asset_store)
         storyboard_asset_store_path.write_text(
             json.dumps(storyboard_asset_store, ensure_ascii=False, indent=2, default=str),
             encoding="utf-8",
