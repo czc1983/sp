@@ -5008,10 +5008,8 @@
   <div class="app">
     <header class="topbar">
       <div class="brand">SP 分镜重生工作台</div>
-      <div class="mode-pill">模式 2 · 独立新路线</div>
+      <div class="mode-pill">单一工作流 · 分镜重生</div>
       <div class="top-actions">
-        <button class="btn" id="modeBtn">切换模式</button>
-        <button class="btn" id="backOldBtn">回到模式 1</button>
         <button class="btn top-icon-btn" id="openGlobalSettingsBtn" type="button" title="设置" aria-label="设置">⚙</button>
         <button class="btn warn" id="openPlanBtn">工作记录</button>
       </div>
@@ -5227,8 +5225,8 @@
                     <p>核对人物、动作、场景和提示词。</p>
                   </div>
                   <div class="route-step">
-                    <strong>4. 生成视频</strong>
-                    <p>按确认后的分镜提交生成。</p>
+                    <strong>4. 自动选路线</strong>
+                    <p>单人镜头走 Scail2，多人或粘连镜头走 Seedance。</p>
                   </div>
                 </div>
               </details>
@@ -5365,7 +5363,7 @@
 
       <section class="panel module-view" data-module-view="generate">
         <div class="panel-head">
-          <span>Seedance2 通道A重拍</span>
+          <span>视频生成</span>
           <button class="btn" id="openShotCutWorkbenchBtn" type="button">镜头切段</button>
           <button class="btn good" id="openTransferWorkbenchBtn" type="button">Scail2 生成</button>
           <button class="btn primary" id="batchGenerateBtn" type="button">提交通道A生成</button>
@@ -5513,20 +5511,20 @@
           </div>
 
           <div class="empty">
-            这里是 Mode2 第 4 步视频生成区。当前先支持把选中的镜头提交给通道A生成，完成后回填到右侧新视频预览。
+            这里是视频生成区。系统固定判定路线：单人干净镜头走 Scail2，多人、粘连或只有别人手脚参与的镜头走 Seedance。
           </div>
           <div class="route" style="margin-top:12px;">
             <div class="route-step">
-              <strong>待定 1：生成模型</strong>
-              <p>可继续接 RunningHub、Wan、Kling、Bernini 或其他视频生成模型。</p>
+              <strong>单人镜头</strong>
+              <p>只有一个可替换角色、没有别人手脚和粘连风险时，使用 Scail2。</p>
             </div>
             <div class="route-step">
-              <strong>待定 2：角色一致性</strong>
-              <p>确认主图、服装图、脸部特写如何进入每个镜头，避免人物漂移。</p>
+              <strong>多人/粘连镜头</strong>
+              <p>两人以上、亲密接触、遮挡、只出现别人手脚时，使用 Seedance。</p>
             </div>
             <div class="route-step">
-              <strong>待定 3：剪辑回填</strong>
-              <p>生成后按镜头编号合并，保留剧情节奏，后续再处理音频和字幕。</p>
+              <strong>分镜切割</strong>
+              <p>切镜时优先把单人与多人风险镜头拆开，方便系统自动选路线。</p>
             </div>
           </div>
         </div>
@@ -5603,8 +5601,8 @@
       { value: "remake", label: "风格重拍", note: "保留剧情节点和角色关系，允许更明显的镜头重构。" },
     ];
     const STORY_MASK_SOURCE_OPTIONS = [
-      { value: "remote_sam3_color", label: "服务器彩色蒙版", note: "在 SCAIL-2/ComfyUI 服务器生成彩色人物蒙版。" },
-      { value: "local_sam3", label: "本机 SAM3 蒙版", note: "可用时使用本机 SAM3 身份点蒙版。" },
+      { value: "remote_sam3_color", label: "服务器身份辅助", note: "仅用于资产库身份标注/检查，不作为生成路线前置。" },
+      { value: "local_sam3", label: "本机身份辅助", note: "仅用于资产库身份标注/检查，不作为生成路线前置。" },
     ];
     const STORY_REBUILD_GOALS = [
       {
@@ -5637,22 +5635,16 @@
     ];
     const STORY_GENERATION_ROUTES = [
       {
-        value: "white_mask_route",
-        label: "白膜路线",
-        button: "1 白膜路线",
-        note: "默认路线。先做白膜/彩色蒙版检查，再点 Scail2 生成；这里需要锚点和分轨。",
-      },
-      {
-        value: "seedance_direct",
-        label: "Seedance直出",
-        button: "2 Seedance直出",
-        note: "备用路线。直接用原视频和参考图提交通道A，不需要白膜、锚点、分轨或 SAM3。",
+        value: "auto_fixed_route",
+        label: "自动路线",
+        button: "自动路线",
+        note: "固定规则：单人干净镜头走 Scail2；多人、粘连、只有别人手脚参与的镜头走 Seedance。",
       },
     ];
     const STORY_RATIO_OPTIONS = ["9:16", ...SEEDANCE_A_RATIOS.filter((value) => value !== "9:16")];
     const STORY_REBUILD_DEFAULT = STORY_REBUILD_GOALS[0].value;
     let storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
-    let storyGenerationRoute = normalizeStoryGenerationRoute(localStorage.getItem(STORY_GENERATION_ROUTE_KEY));
+    let storyGenerationRoute = "auto_fixed_route";
     let storyProjectConfig = {
       rebuild_goal: STORY_REBUILD_DEFAULT,
       style_preset: STORY_STYLE_PRESETS[1].value,
@@ -5831,12 +5823,101 @@
       return STORY_GENERATION_ROUTES.find((item) => item.value === route) || STORY_GENERATION_ROUTES[0];
     }
 
+    function shotRouteRiskText(seg = {}) {
+      const fields = [
+        seg.route_reason,
+        seg.generation_route_reason,
+        seg.risk_notes,
+        seg.risk_note,
+        seg.risks,
+        seg.description,
+        seg.key_action,
+        seg.prompt,
+        seg.compiled_prompt,
+      ];
+      return fields.map((value) => {
+        if (Array.isArray(value)) return value.join(" ");
+        if (value && typeof value === "object") return JSON.stringify(value);
+        return String(value || "");
+      }).join(" ");
+    }
+
+    function shotHasMultiOrContactRisk(seg = {}) {
+      const text = shotRouteRiskText(seg);
+      return /(多人|两人|雙人|粘连|粘在|串人|遮挡|接触|拥抱|亲吻|搂|抱住|压住|别人.{0,8}(手|脚|腿|胳膊|手臂)|他人.{0,8}(手|脚|腿|胳膊|手臂)|另一.{0,8}(手|脚|腿|胳膊|手臂)|只露.{0,8}(手|脚|腿|胳膊|手臂)|partial.*(hand|foot|leg|arm)|occlusion|contact|embrace|kiss)/i.test(text);
+    }
+
+    function generationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
+      const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
+      const fallbackRoleCount = roles.length || Number(seg?.role_count || 0);
+      const rawPersonCount = Number(seg?.person_count);
+      const fallbackPersonCount = Number.isFinite(rawPersonCount) ? rawPersonCount : null;
+      const fallbackHasRisk = shotHasMultiOrContactRisk(seg);
+      const storedRoute = String(seg?.generation_backend || seg?.generation_route || "").trim().toLowerCase();
+      if (storedRoute === "scail2" || storedRoute === "seedance") {
+        const roleCount = Number(seg?.route_role_count ?? fallbackRoleCount);
+        const personCountValue = Number(seg?.route_person_count ?? seg?.person_count);
+        const personCount = Number.isFinite(personCountValue) ? personCountValue : fallbackPersonCount;
+        const hasRisk = Boolean(seg?.route_contact_risk) || fallbackHasRisk;
+        if (storedRoute === "scail2" && (roleCount !== 1 || personCount !== 1 || hasRisk)) {
+          return {
+            backend: "seedance",
+            label: "Seedance",
+            action: "点提交通道A生成",
+            roleCount,
+            personCount,
+            reason: hasRisk
+              ? "检测到多人/粘连/别人手脚或遮挡风险。"
+              : personCount !== 1
+                ? `当前镜头 person_count=${personCount === null ? "未知" : personCount}，不能确认是单人干净镜头。`
+                : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
+          };
+        }
+        const reason = String(seg?.generation_route_reason || seg?.route_reason || "").trim()
+          || (storedRoute === "scail2" ? "当前镜头按单人干净镜头处理。" : "当前镜头按多人/粘连风险镜头处理。");
+        return {
+          backend: storedRoute,
+          label: storedRoute === "scail2" ? "单人 Scail2" : "Seedance",
+          action: storedRoute === "scail2" ? "点 Scail2 生成" : "点提交通道A生成",
+          roleCount,
+          personCount,
+          reason,
+        };
+      }
+      const roleCount = fallbackRoleCount;
+      const personCount = fallbackPersonCount;
+      const hasRisk = fallbackHasRisk;
+      const scail2Allowed = roleCount === 1 && personCount === 1 && !hasRisk;
+      if (scail2Allowed) {
+        return {
+          backend: "scail2",
+          label: "单人 Scail2",
+          action: "点 Scail2 生成",
+          roleCount,
+          personCount,
+          reason: "当前镜头按单人干净镜头处理。",
+        };
+      }
+      return {
+        backend: "seedance",
+        label: "Seedance",
+        action: "点提交通道A生成",
+        roleCount,
+        personCount,
+        reason: hasRisk
+          ? "检测到多人/粘连/别人手脚或遮挡风险。"
+          : personCount !== 1
+            ? `当前镜头 person_count=${personCount === null ? "未知" : personCount}，不能确认是单人干净镜头。`
+          : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
+      };
+    }
+
     function isWhiteMaskRoute(route = storyGenerationRoute) {
-      return normalizeStoryGenerationRoute(route) === "white_mask_route";
+      return false;
     }
 
     function isSeedanceDirectRoute(route = storyGenerationRoute) {
-      return normalizeStoryGenerationRoute(route) === "seedance_direct";
+      return generationRouteForShot().backend === "seedance";
     }
 
     function assistantSetStatus(lines, tone = "info") {
@@ -5862,48 +5943,40 @@
     function renderAssistantRouteCard() {
       const box = $("#assistantRouteCard");
       if (!box) return;
-      const meta = storyGenerationRouteMeta();
+      const decision = generationRouteForShot();
       box.innerHTML = `
         <div class="assistant-route-current">
-          <strong>当前路线</strong>
-          <span>${escapeHtml(meta.label)}</span>
+          <strong>当前生成路线</strong>
+          <span>${escapeHtml(decision.label)}</span>
         </div>
-        <p class="assistant-route-note">${escapeHtml(meta.note)}</p>
-        <div class="assistant-route-actions">
-          ${STORY_GENERATION_ROUTES.map((route) => `
-            <button class="assistant-route-btn${route.value === storyGenerationRoute ? " active" : ""}" type="button" data-story-generation-route="${escapeHtml(route.value)}">
-              ${escapeHtml(route.button)}
-            </button>
-          `).join("")}
-        </div>
+        <p class="assistant-route-note">${escapeHtml(decision.reason)} ${escapeHtml(decision.action)}。</p>
       `;
-      box.querySelectorAll("[data-story-generation-route]").forEach((button) => {
-        button.addEventListener("click", () => setStoryGenerationRoute(button.dataset.storyGenerationRoute || ""));
-      });
       updateGenerationRouteUi();
     }
 
     function updateGenerationRouteUi() {
       const submitBtn = $("#batchGenerateBtn");
       const transferBtn = $("#openTransferWorkbenchBtn");
+      const decision = generationRouteForShot();
       if (submitBtn) {
-        submitBtn.classList.toggle("primary", isSeedanceDirectRoute());
-        submitBtn.classList.toggle("warn", isWhiteMaskRoute());
-        submitBtn.textContent = isSeedanceDirectRoute() ? "提交通道A生成" : "白膜路线不提交A";
+        submitBtn.classList.toggle("primary", decision.backend === "seedance");
+        submitBtn.classList.toggle("warn", decision.backend !== "seedance");
+        submitBtn.textContent = decision.backend === "seedance" ? "提交通道A生成" : "单人镜头走 Scail2";
       }
       if (transferBtn) {
-        transferBtn.hidden = !isWhiteMaskRoute();
+        transferBtn.hidden = false;
+        transferBtn.textContent = "单人 Scail2 生成";
       }
     }
 
     function setStoryGenerationRoute(route) {
-      storyGenerationRoute = normalizeStoryGenerationRoute(route);
+      storyGenerationRoute = "auto_fixed_route";
       localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
       renderAssistantRouteCard();
       updateGenerationRouteUi();
       renderSeedancePayload();
-      const meta = storyGenerationRouteMeta();
-      assistantSetStatus([`已切换：${meta.label}`, meta.note], "good");
+      const decision = generationRouteForShot();
+      assistantSetStatus([`当前镜头：${decision.label}`, decision.reason], "good");
     }
 
     function assistantWorkflowState() {
@@ -5931,7 +6004,7 @@
     function initAssistantRoutePanel() {
       renderAssistantRouteCard();
       $("#assistantGuideVideoBtn")?.addEventListener("click", assistantGuideVideo);
-      assistantSetStatus(["当前默认走白膜路线。", "Seedance直出是备用路线，不会要求白膜/分轨/锚点。"]);
+      assistantSetStatus(["固定自动路线。", "单人干净镜头走 Scail2；多人、粘连、别人手脚参与的镜头走 Seedance。"]);
     }
 
     async function assistantGuideVideo() {
@@ -5960,13 +6033,14 @@
       if (selectedTimelineIndex < 0 && timelineSegments.length) {
         selectTimelineSegment(0);
       }
-      if (isSeedanceDirectRoute()) {
+      const decision = generationRouteForShot(timelineSegments[selectedTimelineIndex] || {});
+      if (decision.backend === "seedance") {
         switchModule("generate");
         useCurrentShotAsSeedanceVideo();
         useCurrentShotPromptInSeedance();
         assistantSetStatus([
-          "Seedance直出已准备。",
-          "这条路线跳过白膜、分轨、锚点和 SAM3。",
+          "Seedance 已准备。",
+          decision.reason,
           "确认草稿后可以点“提交通道A生成”。",
         ], "good");
         return;
@@ -5975,9 +6049,9 @@
       useCurrentShotAsSeedanceVideo();
       useCurrentShotPromptInSeedance();
       assistantSetStatus([
-        "白膜路线已准备当前镜头。",
-        "下一步：点参考视频下面的“白膜”。",
-        "白膜通过后点“Scail2 生成”；不要点通道A提交。",
+        "单人 Scail2 已准备当前镜头。",
+        decision.reason,
+        "下一步：点“单人 Scail2 生成”。",
       ], "good");
     }
 
@@ -7210,13 +7284,13 @@
       if (isPlaceholderAsset(asset)) return "待识别";
       if (isUnconfirmedPropCandidate(asset)) return "物品待确认";
       if (isUnusableSceneCandidate(asset)) return "场景待确认";
-      if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "分轨中";
+      if (asset?.kind === "role" && isRoleTrackRunning(asset)) return "身份辅助中";
       if (asset?.kind === "role" && asset?.identity_status === "ai_suggested") return "AI预标待确认";
-      if (asset?.kind === "role" && asset?.identity_status === "tracking") return "分轨中";
-      if (asset?.kind === "role" && asset?.identity_status === "tracked") return "已分轨";
+      if (asset?.kind === "role" && asset?.identity_status === "tracking") return "身份辅助中";
+      if (asset?.kind === "role" && asset?.identity_status === "tracked") return "身份已辅助";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") return "需要人工复查";
       if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "需要锚点";
-      if (asset?.kind === "role" && asset?.identity_status === "failed") return "分轨失败";
+      if (asset?.kind === "role" && asset?.identity_status === "failed") return "身份辅助失败";
       if (asset?.refinement_status === "running") return "提纯中";
       if (asset?.refinement_status === "failed") return "提纯失败";
       if (asset?.refinement_status === "needs_manual_review") return "提纯待复查";
@@ -7236,15 +7310,15 @@
       if (hasRefinementProvenanceIssue(asset)) return "自动图和原片来源可能不一致，请人工确认，必要时手动换图。";
       if (asset?.kind === "role" && isRoleTrackRunning(asset)) {
         const latest = [...roleTrackLatestLogs].reverse().find((line) => /进度|SAM3|ComfyUI|推理|分轨|Track/i.test(String(line || "")));
-        return latest ? String(latest) : "角色身份分轨正在运行，完成后会自动刷新。";
+        return latest ? String(latest) : "角色身份辅助正在运行，完成后会自动刷新。";
       }
-      if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "角色身份不够稳定，需要补锚点后再分轨。";
+      if (asset?.kind === "role" && asset?.identity_status === "needs_anchor") return "角色身份不够稳定，需要补身份定位。";
       if (asset?.kind === "role" && asset?.identity_status === "ai_suggested") return "反推模型已给出人物大概区域，请打开身份定位核对，必要时拖动微调。";
-      if (asset?.kind === "role" && asset?.identity_status === "failed") return asset.track_error || "角色分轨失败，请改用手动建资产或重跑分轨。";
+      if (asset?.kind === "role" && asset?.identity_status === "failed") return asset.track_error || "角色身份辅助失败，请改用手动建资产或重新定位。";
       if (asset?.kind === "role" && asset?.identity_status === "needs_review") {
         const warnings = Array.isArray(asset.track_quality?.warnings) ? asset.track_quality.warnings.join("; ") : "";
         if (asset.refinement_warning) return asset.refinement_warning;
-        return warnings ? ("角色分轨需要复查: " + warnings) : "角色分轨需要人工复查。";
+        return warnings ? ("身份定位需要复查: " + warnings) : "身份定位需要人工复查。";
       }
       if (asset?.manual_asset_status === "needs_replacement") return asset.manual_note || "需要重新上传参考图。";
       if (asset?.manual_asset_status === "shot_reference") return asset.manual_note || "仅作为镜头参考，不作为独立资产。";
@@ -7256,15 +7330,7 @@
     }
 
     function updateRoleTrackButtons() {
-      document.querySelectorAll("[data-track-role]").forEach((button) => {
-        const roleId = String(button.dataset.trackRole || "");
-        const running = isRoleTrackRunning(roleId);
-        button.disabled = running;
-        button.textContent = running ? "分轨中..." : "识别轨道";
-        button.title = running
-          ? "角色分轨正在运行，完成后会自动刷新资产详情"
-          : "提交这个角色的身份分轨任务";
-      });
+      // Identity track generation is no longer exposed in the fixed Mode2 workflow.
     }
 
     function assetDisplayInfo(asset) {
@@ -7422,18 +7488,7 @@
     }
 
     function assetTrackPreviewHtml(asset) {
-      const trackPath = String(asset?.track_path || asset?.mask_path || asset?.refined_mask_image || "").trim();
-      if (!trackPath || !isVideoMediaPath(trackPath)) return "";
-      const label = String(asset?.track_status || asset?.identity_status || "").trim();
-      return `
-        <div class="asset-track-preview">
-          <div class="asset-track-preview-head">
-            <span>分轨结果</span>
-            ${label ? `<small title="${escapeHtml(label)}">${escapeHtml(label)}</small>` : ""}
-          </div>
-          <video controls muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(trackPath, 0.1))}"></video>
-        </div>
-      `;
+      return "";
     }
 
     function buildAssetBindingTextV2() {
@@ -7528,12 +7583,6 @@
           openAssetRoleAnchor(roleId);
         });
       });
-      board.querySelectorAll("[data-track-role]").forEach((button) => {
-        button.addEventListener("click", (event) => {
-          event.stopPropagation();
-          startRoleTrack([button.dataset.trackRole || ""]);
-        });
-      });
       if (!board.dataset.anchorCaptureBound) {
         board.dataset.anchorCaptureBound = "1";
         board.addEventListener("pointerdown", (event) => {
@@ -7584,7 +7633,6 @@
         ? `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
             <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">身份定位</button>
-            <button class="tiny-btn" type="button" data-track-role="${escapeHtml(id)}">\u8bc6\u522b\u8f68\u9053</button>
           </div>`
         : `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">${escapeHtml(editLabel)}</button>
@@ -11329,7 +11377,7 @@
       selectedTimelineIndex = -1;
       const strip = $("#timelineStrip");
       if (!timelineSegments.length) {
-        strip.innerHTML = `<div class="empty" style="min-width:260px;">没有读取到旧切片。后续可以给模式 2 增加独立切片入口。</div>`;
+        strip.innerHTML = `<div class="empty" style="min-width:260px;">还没有分镜。请先分析原视频或载入项目。</div>`;
         selectTimelineSegment(-1);
         return;
       }
@@ -11382,6 +11430,7 @@
         $("#timelineGeneratedInfo").textContent = "生成后会在这里和原片逐镜头对比。";
         const promptDraft = $("#promptDraft");
         if (promptDraft) promptDraft.value = "";
+        renderAssistantRouteCard();
         return;
       }
 
@@ -11411,9 +11460,7 @@
       }
       const promptDraft = $("#promptDraft");
       if (promptDraft) promptDraft.value = buildPromptDraft(seg, index);
-      if (isWhiteMaskRoute()) {
-        syncSeedanceDraftImagesFromCurrentShot(seg);
-      }
+      renderAssistantRouteCard();
 
       document.querySelector(`.timeline-card[data-index="${index}"]`)?.scrollIntoView({
         behavior: "smooth",
@@ -11432,7 +11479,7 @@
       const body = $("#storyboardBody");
       const sample = segments.slice(0, 24);
       if (!sample.length) {
-        body.innerHTML = `<tr><td colspan="5"><div class="empty">没有读取到旧切片。可以先回模式 1 做切片，或后续在模式 2 使用独立切片入口。</div></td></tr>`;
+        body.innerHTML = `<tr><td colspan="5"><div class="empty">还没有分镜。请先分析原视频或载入项目。</div></td></tr>`;
         return;
       }
       body.innerHTML = sample.map((seg) => `
@@ -11669,18 +11716,13 @@
       const box = document.createElement("div");
       box.className = "modal-box";
       box.innerHTML = `
-        <h4>切换工作模式</h4>
-        <p>当前页面是模式 2 独立新路线；模式 1 仍保留在旧工作台。</p>
+        <h4>分镜重生工作台</h4>
+        <p>当前项目只保留这一种工作流：资产库、分镜、身份标注和视频生成都在这里完成。</p>
         <div class="mode-grid">
-          <button class="mode-card" type="button" data-mode="transfer">
-            <span>模式 1</span>
-            <strong>人物替换</strong>
-            <span>回到旧工作台，继续使用切片、演员标注、SCAIL2/Wan2.2 流程。</span>
-          </button>
           <button class="mode-card" type="button" data-mode="story_generate">
-            <span>模式 2</span>
+            <span>当前工作流</span>
             <strong>分镜重生</strong>
-            <span>留在当前页面，做原视频反推、手动资产、分镜和视频生成。</span>
+            <span>单人镜头走 Scail2，多人或粘连镜头走 Seedance。</span>
           </button>
         </div>
       `;
@@ -11690,11 +11732,7 @@
         card.addEventListener("click", () => {
           const mode = card.dataset.mode || "story_generate";
           localStorage.setItem(MODE_KEY, mode);
-          if (mode === "transfer") {
-            window.location.href = "/";
-          } else {
-            overlay.remove();
-          }
+          overlay.remove();
         });
       });
       overlay.addEventListener("click", (event) => {
@@ -11821,7 +11859,6 @@
               <div class="slot-path" title="${pathText}">${pathText || "未选择素材"}</div>
               <div class="slot-actions">
                 <button class="tiny-btn" type="button" data-pick-slot="${id}">选择</button>
-                ${kind === "videos" ? `<button class="tiny-btn" type="button" data-reference-mask="${index}">彩色蒙版</button><button class="tiny-btn" type="button" data-reference-white-mask="${index}">白膜</button>` : ""}
                 <button class="tiny-btn" type="button" data-remove-slot="${kind}:${index}">移除</button>
               </div>
             </div>
@@ -11853,12 +11890,6 @@
           renderSeedanceMaterialSlots(slotKind);
           renderSeedancePayload();
         });
-      });
-      root.querySelectorAll("[data-reference-mask]").forEach((button) => {
-        button.addEventListener("click", () => startSeedanceReferenceMask(Number(button.dataset.referenceMask)));
-      });
-      root.querySelectorAll("[data-reference-white-mask]").forEach((button) => {
-        button.addEventListener("click", () => startSeedanceReferenceWhiteMask(Number(button.dataset.referenceWhiteMask)));
       });
       root.querySelectorAll("[data-reference-identity-clean]").forEach((button) => {
         button.addEventListener("click", () => startSeedanceReferenceIdentityClean(Number(button.dataset.referenceIdentityClean)));
@@ -12530,10 +12561,7 @@
           <button class="tiny-btn" type="button" data-add-shot-cut-at-current>当前时间切一刀</button>
           <span class="seedance-subclip-note">这里只确认镜头边界；身份定位保存后再做。</span>
         </div>` : `<div class="seedance-subclip-controls">
-          <button class="tiny-btn" type="button" data-run-current-subclip-mask>生成当前子镜头蒙版</button>
           <button class="tiny-btn" type="button" data-use-current-subclip>使用当前子镜头</button>
-          <button class="tiny-btn" type="button" data-merge-subclip-masks ${allMasksReady ? "" : "disabled"}>合并已生成蒙版</button>
-          ${mergedMaskPath ? `<button class="tiny-btn" type="button" data-open-merged-mask>查看完整蒙版</button>` : ""}
         </div>`)}
         ${isSingleCompare || isShotCutReview ? "" : `<div class="seedance-subclip-controls">
           <button class="tiny-btn ${anchorMode ? "active" : ""}" type="button" data-toggle-subclip-identity>身份定位</button>
@@ -12550,10 +12578,7 @@
       });
       root.querySelector("[data-add-shot-cut-at-current]")?.addEventListener("click", () => addShotCutAtCurrentTime());
       root.querySelector("[data-save-shot-cuts]")?.addEventListener("click", () => saveCurrentShotCuts());
-      root.querySelector("[data-run-current-subclip-mask]")?.addEventListener("click", () => startSeedanceSubclipMask(selectedIndex));
       root.querySelector("[data-use-current-subclip]")?.addEventListener("click", () => applySeedanceSubclipToVideoSlot(path, state.sourceVideoIndex));
-      root.querySelector("[data-merge-subclip-masks]")?.addEventListener("click", mergeSeedanceSubclipMasks);
-      root.querySelector("[data-open-merged-mask]")?.addEventListener("click", () => openLocalPath(mergedMaskPath));
       root.querySelectorAll("[data-subshot-role-ref]").forEach((button) => {
         button.addEventListener("click", () => {
           saveSubshotReferenceOverride(button.dataset.subshotRoleRef || "", button.dataset.refPath || "");
@@ -13594,16 +13619,17 @@
         setSeedanceSubmitStatus(["> Scail2 生成任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
         return;
       }
-      if (!isWhiteMaskRoute()) {
-        const lines = ["> 当前不是白膜路线", "> 只有白膜路线才走 Scail2 生成。"];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines, "warn");
-        return;
-      }
       if (selectedTimelineIndex < 0 && timelineSegments.length) {
         selectTimelineSegment(0);
       }
       const seg = timelineSegments[selectedTimelineIndex] || {};
+      const decision = generationRouteForShot(seg);
+      if (decision.backend !== "scail2") {
+        const lines = ["> 当前镜头固定走 Seedance", `> ${decision.reason}`, "> 请点“提交通道A生成”。"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return;
+      }
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
       const segmentId = String(seg.segment_id || "").trim();
@@ -13628,37 +13654,17 @@
         assistantSetStatus(lines, "bad");
         return;
       }
-      const reviewRoleAssets = readyRoles
-        .filter((asset) => !["ready", "tracked"].includes(String(asset.track_status || asset.identity_status || "").trim()));
-      const reviewRoles = reviewRoleAssets
-        .map((asset) => asset.name || asset.id)
-        .slice(0, 4);
-      if (reviewRoles.length) {
-        const primaryReviewRole = reviewRoleAssets[0] || {};
-        const reviewRoleIds = reviewRoleAssets.map((asset) => String(asset.id || "").trim()).filter(Boolean);
-        const lines = [
-          "x 分轨还没通过，已阻止 Scail2 生成",
-          `> 需要复查：${reviewRoles.join("、")}`,
-          "> 先点“查看分轨”确认彩色蒙版锁对人，或回资产库重画锚点。",
-        ];
-        setSeedanceSubmitStatus(lines, "bad", [
-          { label: "查看分轨", action: "view_track", roleId: primaryReviewRole.id },
-          { label: "打开锚点", action: "open_anchor", roleId: primaryReviewRole.id },
-          { label: "重新分轨", action: "run_track", roleIds: reviewRoleIds },
-        ]);
-        assistantSetStatus([
-          "先别生成，当前分轨会换错人。",
-          `需要复查：${reviewRoles.join("、")}`,
-          "请查看分轨或重画锚点后再点 Scail2 生成。",
-        ], "bad");
-        addLogs(lines);
+      if (readyRoles.length !== 1) {
+        const lines = ["> 当前不是单人 Scail2 镜头", `> 已检测到 ${readyRoles.length} 个可替换角色`, "> 请改用“提交通道A生成”。"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
         return;
       }
       const body = {
         project_dir: projectDir,
         video_path: videoPath,
         segment_id: segmentId,
-        role_ids: readyRoles.map((asset) => asset.id).filter(Boolean),
+        role_ids: readyRoles.slice(0, 1).map((asset) => asset.id).filter(Boolean),
         transfer_backend: "scail2",
         normalize_size: true,
         sampler_preset: "balanced",
@@ -13674,7 +13680,6 @@
         "> 正在提交 Scail2 生成...",
         `> 视频: ${fileName(videoPath)}`,
         `> 角色: ${readyRoles.map((asset) => asset.name || asset.id).join(", ")}`,
-        reviewRoles.length ? `> 注意: ${reviewRoles.join(", ")} 的分轨状态需要复查，先按现有锚点/轨迹试跑。` : "",
       ].filter(Boolean);
       setSeedanceSubmitStatus(intro, "warn");
       assistantSetRunStatus(["Scail2 生成提交中", fileName(videoPath)], true);
@@ -13873,6 +13878,24 @@
         setSeedanceSubmitStatus(["> 通道A生成任务正在运行", "> 请等待当前任务结束"], "warn");
         return;
       }
+      if (selectedTimelineIndex < 0 && timelineSegments.length) {
+        selectTimelineSegment(0);
+      }
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const decision = generationRouteForShot(seg);
+      if (decision.backend !== "seedance") {
+        const lines = [
+          "x 当前镜头固定走 Scail2",
+          `> ${decision.reason}`,
+          "> 请点“单人 Scail2 生成”。",
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines.slice(1), "warn");
+        return addLogs(lines);
+      }
+      syncSeedanceDraftImagesFromCurrentShot(seg);
+      useCurrentShotAsSeedanceVideo();
+      useCurrentShotPromptInSeedance();
       pullSeedanceControls();
       pullSeedanceMaterialSlots("images");
       pullSeedanceMaterialSlots("videos");
@@ -13881,18 +13904,6 @@
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = $("#videoPathInput")?.value.trim() || "";
       const draft = buildSeedancePayload();
-      const seg = timelineSegments[selectedTimelineIndex] || {};
-      if (!isSeedanceDirectRoute()) {
-        const meta = storyGenerationRouteMeta();
-        const lines = [
-          `x 当前是${meta.label}，不提交通道A`,
-          "> 白膜路线要先生成白膜/彩色蒙版检查，再点“Scail2 生成”。",
-          "> 如果你要走 Seedance 直出，请先在右侧切到“2 Seedance直出”。",
-        ];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines.slice(1), "warn");
-        return addLogs(lines);
-      }
       if (!draft.payload?.prompt) {
         const lines = ["x Seedance 提示词为空", "> 请先刷新任务草稿，或补完整当前镜头提示词"];
         setSeedanceSubmitStatus(lines, "bad");
@@ -14127,11 +14138,6 @@
     }
 
     function bindBaseUiEvents() {
-      bindClick("#modeBtn", openModeModal);
-      bindClick("#backOldBtn", () => {
-        localStorage.setItem(MODE_KEY, "transfer");
-        window.location.href = "/";
-      });
       bindClick("#openStoryboardShotCutBtn", () => openShotCutWorkbench([]));
       bindClick("#openShotCutWorkbenchBtn", () => openShotCutWorkbench([]));
       bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);

@@ -52,7 +52,7 @@ from spvideo.auto_director import (
 
 
 ROOT = Path(__file__).resolve().parent
-INDEX = ROOT / "splitter_dashboard.html"
+INDEX = ROOT / "story_generate_dashboard.html"
 JOBS: dict[str, dict[str, Any]] = {}
 JOBS_LOCK = threading.Lock()
 SERVER_STARTED_AT = time.time()
@@ -536,6 +536,11 @@ class SplitterHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/":
             self._send_file(INDEX)
+            return
+        if parsed.path == "/splitter_dashboard.html":
+            self.send_response(302)
+            self.send_header("Location", "/story_generate_dashboard.html")
+            self.end_headers()
             return
         if parsed.path == "/media":
             query = parse_qs(parsed.query)
@@ -1765,6 +1770,24 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     [],
                     prefer_current_shot_roles=True,
                 )
+                assets = [asset for asset in (data.get("assets") or []) if isinstance(asset, dict)]
+                shots = [shot for shot in (data.get("shots") or []) if isinstance(shot, dict)]
+                current_shot = next(
+                    (shot for shot in shots if str(shot.get("segment_id") or "").strip() == segment_id),
+                    None,
+                )
+                if _backend_uses_scail2_worker(transfer_backend):
+                    route_ok, route_reason, route_meta = _mode2_scail2_route_check(current_shot, assets)
+                    if not route_ok:
+                        self._send_json(
+                            {
+                                "error": "multi_person_seedance_required",
+                                "message": route_reason,
+                                **route_meta,
+                            },
+                            status=400,
+                        )
+                        return
                 role_ids = _string_list(payload.get("role_ids"))
                 if role_ids:
                     role_id_set = set(role_ids)
@@ -1774,6 +1797,16 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     ]
                 if not role_pairs:
                     self._send_json({"error": "mode2_role_pairs_required"}, status=400)
+                    return
+                if _backend_uses_scail2_worker(transfer_backend) and len(role_pairs) != 1:
+                    self._send_json(
+                        {
+                            "error": "multi_person_seedance_required",
+                            "message": "Mode2 Scail2 only accepts one clean role. Multi-person or contact shots must use Seedance.",
+                            "role_count": len(role_pairs),
+                        },
+                        status=400,
+                    )
                     return
                 from spvideo.ffmpeg_tools import probe_video
                 meta = probe_video(Path(video_path)) if Path(video_path).exists() else None
@@ -1792,8 +1825,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     return
                 assets_by_id = {
                     str(asset.get("id") or ""): asset
-                    for asset in (data.get("assets") or [])
-                    if isinstance(asset, dict)
+                    for asset in assets
                 }
                 status_warnings: list[str] = []
                 for pair in role_pairs:
@@ -4463,6 +4495,7 @@ def _refresh_mode2_structured_fields(root: Path, data: dict[str, Any]) -> dict[s
     assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
     shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
     _attach_storyboard_asset_usage(assets, shots)
+    _mode2_apply_generation_routes(shots, assets)
     project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
     _compile_storyboard_prompts(assets, shots, project_config=project_config)
     mask_summary = _mode2_mask_candidate_summary(root, data)
@@ -4475,6 +4508,126 @@ def _refresh_mode2_structured_fields(root: Path, data: dict[str, Any]) -> dict[s
     data["assets"] = assets
     data["shots"] = shots
     return data
+
+
+_MODE2_SEEDANCE_RISK_RE = re.compile(
+    r"多人|两人|雙人|粘连|粘在|串人|遮挡|接触|亲密|拥抱|亲吻|搂|抱住|压住|"
+    r"别人.{0,10}(手|脚|腿|胳膊|手臂|身体)|他人.{0,10}(手|脚|腿|胳膊|手臂|身体)|"
+    r"另一.{0,10}(手|脚|腿|胳膊|手臂|身体)|只露.{0,10}(手|脚|腿|胳膊|手臂)|"
+    r"partial.{0,20}(hand|foot|leg|arm|body)|occlusion|contact|embrace|kiss",
+    re.IGNORECASE,
+)
+
+
+def _mode2_shot_route_text(shot: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key in (
+        "description",
+        "key_action",
+        "prompt",
+        "compiled_prompt",
+        "risk_note",
+        "risk_notes",
+        "route_reason",
+        "generation_route_reason",
+    ):
+        value = shot.get(key)
+        if isinstance(value, (list, tuple)):
+            parts.extend(str(item) for item in value)
+        elif isinstance(value, dict):
+            parts.append(json.dumps(value, ensure_ascii=False, default=str))
+        elif value:
+            parts.append(str(value))
+    for scene in shot.get("semantic_scenes") or []:
+        if isinstance(scene, dict):
+            parts.append(json.dumps(scene, ensure_ascii=False, default=str))
+    semantic_scene = shot.get("semantic_scene")
+    if isinstance(semantic_scene, dict):
+        parts.append(json.dumps(semantic_scene, ensure_ascii=False, default=str))
+    return " ".join(parts)
+
+
+def _mode2_shot_role_count(shot: dict[str, Any], assets: list[dict[str, Any]]) -> int:
+    shot_id = str(shot.get("segment_id") or "").strip()
+    if not shot_id:
+        return 0
+    assets_by_id = {str(asset.get("id") or "").strip(): asset for asset in assets if isinstance(asset, dict)}
+    explicit_ids = _string_list(shot.get("role_ids"))
+    explicit_ids.extend(_string_list(shot.get("role_asset_ids")))
+    explicit_ids.extend(_string_list(shot.get("asset_ids")))
+    explicit_role_ids = {
+        asset_id
+        for asset_id in explicit_ids
+        if str((assets_by_id.get(asset_id) or {}).get("kind") or "") == "role"
+    }
+    count = 0
+    counted_ids: set[str] = set()
+    for asset in assets:
+        asset_id = str(asset.get("id") or "").strip()
+        if str(asset.get("kind") or "") != "role":
+            continue
+        used_shots = {str(value or "").strip() for value in (asset.get("used_shots") or [])}
+        present_shots = {str(value or "").strip() for value in (asset.get("present_shots") or [])}
+        if asset_id in explicit_role_ids or shot_id in used_shots or shot_id in present_shots:
+            count += 1
+            if asset_id:
+                counted_ids.add(asset_id)
+    count += len(explicit_role_ids - counted_ids)
+    return count
+
+
+def _mode2_apply_generation_routes(shots: list[dict[str, Any]], assets: list[dict[str, Any]]) -> None:
+    for shot in shots:
+        role_count = _mode2_shot_role_count(shot, assets)
+        person_count = _safe_int(shot.get("person_count"), -1)
+        risk_text = _mode2_shot_route_text(shot)
+        has_contact_risk = bool(_MODE2_SEEDANCE_RISK_RE.search(risk_text))
+        if role_count == 1 and person_count == 1 and not has_contact_risk:
+            route = "scail2"
+            reason = "单人干净镜头：1 个角色，person_count=1，无多人/粘连/别人手脚风险。"
+        else:
+            route = "seedance"
+            if has_contact_risk:
+                reason = "检测到多人、粘连、遮挡或别人手脚风险。"
+            elif role_count != 1:
+                reason = f"当前镜头绑定 {role_count} 个角色，不是单人 Scail2 镜头。"
+            elif person_count != 1:
+                reason = f"当前镜头 person_count={person_count}，不能确认是单人干净镜头。"
+            else:
+                reason = "当前镜头不满足单人 Scail2 条件。"
+        shot["generation_route"] = route
+        shot["generation_backend"] = route
+        shot["generation_route_reason"] = reason
+        shot["route_role_count"] = role_count
+        shot["route_person_count"] = person_count
+        shot["route_contact_risk"] = has_contact_risk
+
+
+def _mode2_scail2_route_check(
+    shot: dict[str, Any] | None,
+    assets: list[dict[str, Any]],
+) -> tuple[bool, str, dict[str, Any]]:
+    if not isinstance(shot, dict):
+        return False, "没有找到当前分镜，不能走单人 Scail2。", {
+            "role_count": 0,
+            "person_count": -1,
+            "contact_risk": False,
+        }
+    role_count = _mode2_shot_role_count(shot, assets)
+    person_count = _safe_int(shot.get("person_count"), -1)
+    has_contact_risk = bool(_MODE2_SEEDANCE_RISK_RE.search(_mode2_shot_route_text(shot)))
+    meta = {
+        "role_count": role_count,
+        "person_count": person_count,
+        "contact_risk": has_contact_risk,
+    }
+    if role_count == 1 and person_count == 1 and not has_contact_risk:
+        return True, "单人干净镜头，可以走 Scail2。", meta
+    if has_contact_risk:
+        return False, "检测到多人、粘连、遮挡或别人手脚风险，必须走 Seedance。", meta
+    if role_count != 1:
+        return False, f"当前分镜绑定 {role_count} 个角色，必须走 Seedance。", meta
+    return False, f"当前分镜 person_count={person_count}，不能确认是单人干净镜头，必须走 Seedance。", meta
 
 
 def _mode2_shot_preview_clip_dir(root: Path) -> Path:
@@ -5118,7 +5271,7 @@ def _assistant_chat(payload: dict[str, Any]) -> dict[str, Any]:
                     "你是 SP 短剧视频工作台里的视频制作向导。回答要短，最多 3 条，每条尽量一句话。"
                     "不要让用户到处找；能用助手动作完成的，就说“点助手里的按钮”。"
                     "如果有截图，必须按截图上真实存在的按钮名和页面内容回答；不要编造右侧资产详情面板。"
-                    "当前资产卡常见按钮是“换图”“描点”“识别轨道”。"
+                    "当前资产卡常见按钮是“换图”“身份定位”。"
                     "优先给一个最该做的下一步；不知道就说需要先看日志或让用户贴截图。"
                 ),
             },
