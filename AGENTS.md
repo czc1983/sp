@@ -27,3 +27,13 @@ Large Mode 2 frontend files are high-risk change targets, especially `web_ui/sto
 - If a UI change affects layout, routes, assistant guidance, or generation flow, keep a screenshot or clear visual verification note.
 - Do not claim a page is fixed only because it loads. Confirm the expected UI state and workflow are still present.
 - Do not let multiple agents edit the same large HTML file in parallel.
+
+## Windows Path Safety
+
+Chinese and other non-ASCII Windows paths are fragile when passed through PowerShell here-strings, terminal output, or copied logs.
+
+- Do not hand-type non-ASCII paths inside inline Python launched from PowerShell.
+- Prefer resolving files by ASCII filename, hash, or JSON key inside Python.
+- Use `scripts/safe_path.py` before uploading or processing user files whose paths may contain non-ASCII characters.
+- Read large project JSON in Python with `encoding="utf-8"` instead of PowerShell `ConvertFrom-Json` when encoding risk exists.
+- Before calling ComfyUI, ffmpeg, or SCAIL2 with a user file, assert the resolved `Path(...).exists()` and log the ASCII-escaped JSON path.

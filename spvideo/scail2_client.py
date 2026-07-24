@@ -395,6 +395,8 @@ class Scail2Client:
                 output_dir=output_dir,
                 log=log,
             )
+        elif seed_items and has_shape_seed:
+            log("SAM3 initial mask seed: use drawn shape to locate the replacement subject")
         elif seed_items:
             log("SAM3 首帧种子: 正式换人已启用人工身份点/手绘区域")
 
@@ -426,6 +428,13 @@ class Scail2Client:
         )
         if seed_items and has_shape_seed:
             log("SAM3 身份选择: 手绘圈仅用于指定人物身份，正式生成不再把圈当 initial_mask")
+            self._add_sam3_mixed_initial_mask_seed(
+                wf,
+                seed_items,
+                width=width,
+                height=height,
+                output_dir=output_dir,
+            )
             if seed_points:
                 log("SAM3 身份选择: 保留身份点供服务器候选人物排序/检查")
         elif seed_points:
@@ -5955,6 +5964,7 @@ class Scail2Client:
         """替换工作流中的动态参数"""
         wf = copy.deepcopy(wf)
         subject_count = len(subject_names)
+        driving_indices_explicit = driving_object_indices is not None
         normalized_driving_indices = list(driving_object_indices or range(subject_count))
         if len(normalized_driving_indices) != subject_count:
             normalized_driving_indices = list(range(subject_count))
@@ -6104,10 +6114,10 @@ class Scail2Client:
 
             if node.get("class_type") == "SCAIL2ColoredMaskV2":
                 node["inputs"]["replacement_mode"] = False
-                if subject_count > 1 and "object_indices" in node.get("inputs", {}):
+                if (subject_count > 1 or driving_indices_explicit) and "object_indices" in node.get("inputs", {}):
                     node["inputs"]["object_indices"] = ",".join(map(str, normalized_driving_indices))
             if node.get("class_type") == "SCAIL2ColoredMask":
-                if subject_count > 1 and "object_indices" in node.get("inputs", {}):
+                if (subject_count > 1 or driving_indices_explicit) and "object_indices" in node.get("inputs", {}):
                     node["inputs"]["object_indices"] = ",".join(map(str, normalized_driving_indices))
 
             # 正向提示词
