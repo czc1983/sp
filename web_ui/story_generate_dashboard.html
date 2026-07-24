@@ -5269,7 +5269,7 @@
             </div>
           </details>
           <div class="asset-board" id="assetBoard"></div>
-          <div class="asset-binding-preview" id="assetBindingPreview">暂无资产详情。请先点击“手动建资产”，或载入已有 Mode2 项目。</div>
+          <div class="asset-binding-preview" id="assetBindingPreview">暂无资产详情。请先点击“手动建资产”，或载入已有分镜项目。</div>
         </div>
       </section>
 
@@ -5322,7 +5322,7 @@
 
           <div class="field">
             <div class="label"><span>已有故事摘要</span><span id="storySource">未读取</span></div>
-            <div class="story-box" id="storySummary">先读取项目或分析原视频，这里会显示已有故事和镜头摘要，作为 Mode2 的上层输入。</div>
+            <div class="story-box" id="storySummary">先读取项目或分析原视频，这里会显示已有故事和镜头摘要，作为当前工作流的上层输入。</div>
           </div>
 
           <div class="field shot-prompt-card">
@@ -5374,7 +5374,7 @@
             <button class="seedance-copy-status-btn" id="copySeedanceStatusBtn" type="button">复制日志</button>
           </div>
           <div class="seedance-key-help">
-            <strong>Mode2 专用通道A</strong>
+            <strong>分镜重生通道A</strong>
             <span>这里优先使用本页填写的中转 URL 和 API Key，不再读取外部项目配置。</span>
           </div>
           <div class="seedance-relay-grid">
@@ -5551,7 +5551,7 @@
     <footer class="footer">
       <span>模式: <strong>分镜重生</strong></span>
       <span>代码: <strong>story_generate_dashboard.html</strong></span>
-      <span>界面：<strong>模式 2 · 手动资产流程</strong></span>
+      <span>界面：<strong>分镜重生 · 手动资产流程</strong></span>
       <span>状态: <strong>Seedance 通道A已接入草稿提交</strong></span>
     </footer>
   </div>
@@ -5559,7 +5559,6 @@
   <script>
     const $ = (selector) => document.querySelector(selector);
     const PLAN_PATH = "E:\\sp\\计划.md";
-    const MODE_KEY = "sp_workflow_mode";
     const SEEDANCE_A_DRAFT_KEY = "sp_story_seedance_channel_a_draft";
     const SEEDANCE_A_RELAY_CONFIG_KEY = "sp_story_seedance_channel_a_relay";
     const PRE_DIRECTOR_CONFIG_KEY = "sp_story_pre_director_config";
@@ -5844,7 +5843,7 @@
 
     function shotHasMultiOrContactRisk(seg = {}) {
       const text = shotRouteRiskText(seg);
-      return /(多人|两人|雙人|粘连|粘在|串人|遮挡|接触|拥抱|亲吻|搂|抱住|压住|别人.{0,8}(手|脚|腿|胳膊|手臂)|他人.{0,8}(手|脚|腿|胳膊|手臂)|另一.{0,8}(手|脚|腿|胳膊|手臂)|只露.{0,8}(手|脚|腿|胳膊|手臂)|partial.*(hand|foot|leg|arm)|occlusion|contact|embrace|kiss)/i.test(text);
+      return /(多人|两人|雙人|粘连|粘在|串人|遮挡|接触|拥抱|亲吻|搂|抱住|压住|别人.{0,8}(手|脚|腿|胳膊|手臂)|他人.{0,8}(手|脚|腿|胳膊|手臂)|另一.{0,8}(手|脚|腿|胳膊|手臂)|只露.{0,8}(手|脚|腿|胳膊|手臂)|partial.*(hand|foot|leg|arm|body)|another.{0,20}(hand|foot|leg|arm|body)|other.{0,20}(hand|foot|leg|arm|body)|occlusion|contact|embrace|kiss)/i.test(text);
     }
 
     function generationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
@@ -6109,7 +6108,7 @@
       localStorage.setItem(SEEDANCE_A_RELAY_CONFIG_KEY, JSON.stringify(relay));
       if (!options.silent) {
         setSeedanceSubmitStatus([
-          "> Mode2 channel A config saved",
+          "> 分镜重生通道A配置已保存",
           `> base URL: ${relay.base_url}`,
           relay.api_key ? "> API Key: set" : "> API Key: empty",
         ], relay.api_key ? "good" : "warn");
@@ -6869,7 +6868,7 @@
       $("#sceneCount").textContent = sceneCountLabelFromResult(storyboard, story);
       $("#questionCount").textContent = String((autoDirector.questions || []).length || 0);
       $("#storySource").textContent = storyboard.source || story.source || story.status || "storyboard_draft";
-      $("#storySummary").textContent = storyboard.summary || story.summary || story.story_summary || "旧项目没有读取到故事摘要。模式 2 后续需要重新反推。";
+      $("#storySummary").textContent = storyboard.summary || story.summary || story.story_summary || "项目没有读取到故事摘要，后续需要重新反推。";
       storyAssets = normalizeStoryAssets(result.assets || []);
       renderStoryAssets();
       renderTimeline(segments);
@@ -7564,7 +7563,7 @@
       renderAssetUnderstandingBanner();
       const visibleAssets = storyAssets.filter((asset) => !assetHiddenFromMainBoard(asset));
       if (!visibleAssets.length) {
-        board.innerHTML = `<div class="empty">暂无资产。请点击“手动建资产”，或载入已有 Mode2 项目。</div>`;
+        board.innerHTML = `<div class="empty">暂无资产。请点击“手动建资产”，或载入已有分镜项目。</div>`;
       } else {
         board.innerHTML = visibleAssets.map((asset) => renderAssetCard(asset)).join("");
       }
@@ -10355,9 +10354,7 @@
       async function loadRoleMaskCandidates() {
         if (closed) return;
         const frame = currentFrame();
-        const serial = ++maskRequestSerial;
-        const projectDir = $("#projectDirInput")?.value.trim() || "";
-        const videoPath = String(asset.source_video_path || $("#videoPathInput")?.value.trim() || "").trim();
+        ++maskRequestSerial;
         activeOriginalFramePath = String(frame.path || "");
         maskCandidates = null;
         maskErrorText = "";
@@ -10367,77 +10364,22 @@
         const maskImg = $("#roleAnchorMaskImg");
         const originalImg = $("#roleAnchorFrameImg");
         const savedMaskHolder = $("#roleAnchorMaskSavedMarkers");
-        if (status) status.textContent = "正在读取";
+        if (status) status.textContent = "手动定位";
         if (empty) {
           empty.hidden = false;
-          empty.textContent = "正在生成彩色人物蒙版...";
+          empty.textContent = "已关闭机器分割候选。请在左侧原图圈选人物并保存身份定位。";
         }
         if (maskImg) {
           maskImg.hidden = true;
           maskImg.removeAttribute("src");
         }
+        if (activeOriginalFramePath && originalImg) {
+          originalImg.src = mediaSrc(activeOriginalFramePath, frame.time || 0.1);
+        }
         if (savedMaskHolder) savedMaskHolder.innerHTML = "";
         renderRoleMaskObjects();
-
-        function maskCandidateSourceLabel(data) {
-          const source = String(data?.candidate_source || "");
-          const cached = !!data?.cached;
-          const fallback = !!data?.fallback_used;
-          if (source === "remote_sam3_color") return cached ? "服务器缓存" : "服务器已生成";
-          if (source === "local_sam3") return fallback ? (cached ? "服务器失败·本机缓存" : "服务器失败·本机生成") : (cached ? "本机缓存" : "本机已生成");
-          return cached ? "已读取缓存" : "已生成";
-        }
-
-        try {
-          const payload = {
-            project_dir: projectDir,
-            video_path: videoPath,
-            frame_path: frame.path,
-            time: Number(frame.time || asset.source_time || 0.1),
-            asset_id: asset.id,
-          };
-          const response = await fetch("/api/storyboard-role-mask-candidates", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const data = await response.json().catch(() => ({}));
-          if (closed || serial !== maskRequestSerial) return;
-          if (!response.ok || data.ok === false) {
-            throw new Error(data.error || data.message || "彩色蒙版接口不可用");
-          }
-          maskCandidates = data;
-          activeOriginalFramePath = String(data.original_frame || frame.path || "");
-          const maskPath = String(data.colored_mask || data.overlay_image || "");
-          if (activeOriginalFramePath && originalImg) {
-            originalImg.src = mediaSrc(activeOriginalFramePath, frame.time || 0.1);
-          }
-          if (maskPath && maskImg) {
-            maskImg.src = mediaSrc(maskPath, frame.time || 0.1);
-            maskImg.hidden = false;
-            if (empty) empty.hidden = true;
-            if (status) status.textContent = maskCandidateSourceLabel(data);
-          } else {
-            if (empty) {
-              empty.hidden = false;
-              empty.textContent = "没有返回彩色蒙版图，可以在左侧原图手动画圈。";
-            }
-            if (status) status.textContent = "无蒙版";
-          }
-          renderRoleMaskObjects();
-          updateSelectionMarkers();
-          requestAnimationFrame(renderRoleAnchorSavedMarkers);
-        } catch (error) {
-          if (closed || serial !== maskRequestSerial) return;
-          maskErrorText = error.message || "未知错误";
-          if (status) status.textContent = "读取失败";
-          if (empty) {
-            empty.hidden = false;
-            empty.textContent = "彩色蒙版读取失败，可以在左侧原图手动标注。";
-          }
-          renderRoleMaskObjects();
-          setStoryStatus(["x 彩色人物蒙版读取失败", `> ${maskErrorText}`, "> 仍可在左侧原图手动标注"], "warn");
-        }
+        updateSelectionMarkers();
+        requestAnimationFrame(renderRoleAnchorSavedMarkers);
       }
 
       function closeRoleAnchorEditorModal() {
@@ -10713,7 +10655,7 @@
         ? roleIds.map((id) => String(id || "").trim()).filter(Boolean)
         : [];
       if (!projectDir) {
-        const lines = ["x 请先分析原视频/资产与分镜", "> 角色分轨需要 Mode2 项目的 storyboard_assets.json"];
+        const lines = ["x 请先分析原视频/资产与分镜", "> 身份辅助需要当前分镜项目的 storyboard_assets.json"];
         setStoryStatus(lines, "bad");
         return setLogs(lines);
       }
@@ -10850,7 +10792,7 @@
         applyLoadedProject(data, { story: data.storyboard || {} }, { preserveStrategy: Boolean(options.preserveStrategy) });
         return data;
       } catch (error) {
-        if (!options.silent) addLogs(["> 刷新 Mode2 资产表失败: " + error.message]);
+        if (!options.silent) addLogs(["> 刷新资产表失败: " + error.message]);
         return null;
       }
     }
@@ -10861,7 +10803,7 @@
       const data = await refreshStoryAssetsFromBackend({ silent: true, preserveStrategy: true });
       if (!data || !Array.isArray(data.assets) || !data.assets.length) return;
       setStoryStatus([
-        "> 已自动恢复上次 Mode2 项目缓存",
+        "> 已自动恢复上次分镜项目缓存",
         `> 资产: ${data.assets.length}`,
         "> 只读取本地 storyboard_assets.json，没有重新分析，也没有调用模型",
       ], "good");
@@ -10913,7 +10855,7 @@
         modalStatus.textContent = message;
       };
       if (!projectDir) {
-        const message = "请先分析或载入 Mode2 项目，再拆分混合场景";
+        const message = "请先分析或载入分镜项目，再拆分混合场景";
         setModalStatus(message, "bad");
         return setStoryStatus(["x " + message], "bad");
       }
@@ -10966,12 +10908,12 @@
       if (assetOrganizeRunning) return;
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       if (!projectDir) {
-        const lines = ["x 请先分析原视频/资产与分镜，或载入 Mode2 项目", "> 整理资产库需要 project_dir 和 storyboard_assets.json"];
+        const lines = ["x 请先分析原视频/资产与分镜，或载入分镜项目", "> 整理资产库需要 project_dir 和 storyboard_assets.json"];
         setStoryStatus(lines, "bad");
         return setLogs(lines);
       }
       const started = [
-        "> 正在整理 Mode2 资产库...",
+        "> 正在整理资产库...",
         `> project_dir: ${projectDir}`,
         "> 只整理原片身份、目标替换图绑定和 Seedance 参考用途，不会直接生成视频",
       ];
@@ -10997,7 +10939,7 @@
         }
         const summary = data.asset_organize || data.organize || data.summary || {};
         const lines = [
-          "> Mode2 资产库整理完成",
+          "> 资产库整理完成",
           `> 资产: ${storyAssets.length}`,
           summary.roles !== undefined ? `> roles=${summary.roles} scenes=${summary.scenes || 0} props=${summary.props || 0}` : "",
           "> 已刷新资产详情；体检/分轨提醒不会阻断 Seedance，缺少参考图时再补",
@@ -11021,14 +10963,14 @@
       }
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       if (!projectDir) {
-        const lines = ["x 请先分析原视频/资产与分镜，或载入 Mode2 项目", "> 资产体检需要 storyboard_assets.json"];
+        const lines = ["x 请先分析原视频/资产与分镜，或载入分镜项目", "> 资产体检需要 storyboard_assets.json"];
         if (!options.silent) {
           setStoryStatus(lines, "bad");
           setLogs(lines);
         }
         return null;
       }
-      const started = ["> 正在体检 Mode2 资产...", `> project_dir: ${projectDir}`];
+      const started = ["> 正在体检资产...", `> project_dir: ${projectDir}`];
       if (!options.silent) {
         setStoryStatus(started, "warn");
         setLogs(started);
@@ -11049,7 +10991,7 @@
         }
         const summary = data.asset_audit || {};
         const lines = [
-          "> Mode2 资产体检完成",
+          "> 资产体检完成",
           `> total=${summary.total || storyAssets.length} blocked=${summary.blocked || 0} warning=${summary.warning || 0} ok=${summary.ok || 0}`,
           summary.blocked ? "> 有体检提醒：用于整理资产库和批量绑定，不会单独阻断 Seedance；生成前重点检查替换图" : "> 没有发现需要提醒的资产问题",
         ];
@@ -11086,12 +11028,12 @@
         ? assetIds.map((id) => String(id || "").trim()).filter(Boolean)
         : [];
       if (!projectDir) {
-        const lines = ["x 请先分析原视频/资产与分镜", "> 资产提纯需要 Mode2 项目的 storyboard_assets.json"];
+        const lines = ["x 请先分析原视频/资产与分镜", "> 资产提纯需要当前分镜项目的 storyboard_assets.json"];
         setStoryStatus(lines, "bad");
         return setLogs(lines);
       }
       const lines = [
-        selectedAssetIds.length ? "> 正在提交单个资产提纯任务..." : "> 正在提交 Mode2 资产提纯任务...",
+        selectedAssetIds.length ? "> 正在提交单个资产提纯任务..." : "> 正在提交资产提纯任务...",
         `> project_dir: ${projectDir}`,
         selectedAssetIds.length ? `> asset_id: ${selectedAssetIds.join(", ")}` : `> 资产: ${storyAssets.length}`,
         force ? "> 强制重跑已有提纯结果" : "> 已提纯资产会自动跳过；按 Shift 点击可强制重跑",
@@ -11109,7 +11051,7 @@
         if (!response.ok) throw new Error(data.error || "提交资产提纯失败");
         currentAssetRefineJobId = data.job_id;
         showStoryJobId(data.job_id);
-        setStoryStatus(["> Mode2 资产提纯任务已提交", `> job_id: ${data.job_id}`, "> 会逐个处理人物、场景和物体资产"], "warn");
+        setStoryStatus(["> 资产提纯任务已提交", `> job_id: ${data.job_id}`, "> 会逐个处理人物、场景和物体资产"], "warn");
         assetRefinePollTimer = setInterval(pollAssetRefineJob, 1200);
         pollAssetRefineJob();
       } catch (error) {
@@ -11136,7 +11078,7 @@
           applyLoadedProject(result, { story: result.storyboard || {} });
           const summary = result.refinement || {};
           setStoryStatus([
-            "> Mode2 资产提纯完成",
+            "> 资产提纯完成",
             `> job_id: ${currentAssetRefineJobId}`,
             `> ready=${summary.ready || 0} failed=${summary.failed || 0} manual=${summary.needs_manual_review || 0} skipped=${summary.skipped || 0}`,
             "> 已刷新资产详情",
@@ -11148,14 +11090,14 @@
           setAssetRefineRunning(false);
           await refreshStoryAssetsFromBackend();
           setStoryStatus([
-            "x Mode2 资产提纯任务失败",
+            "x 资产提纯任务失败",
             `> job_id: ${currentAssetRefineJobId}`,
             `> ${job.error || job.status}`,
             "> 如果前面已有成功项，页面已尝试刷新资产表",
           ], "bad");
         } else {
           setStoryStatus([
-            "> Mode2 资产提纯运行中",
+            "> 资产提纯运行中",
             `> job_id: ${currentAssetRefineJobId}`,
             ...logs.slice(-3),
           ], "warn");
@@ -11702,42 +11644,12 @@
     function buildStoryboardPlaceholder() {
       setLogs([
         "> 分镜重生流程还没有接模型",
-        "> 下一步不是修旧链路，而是做新的 Mode2 模块:",
+        "> 下一步不是修旧链路，而是做当前分镜重生模块:",
         "> 1. 读取 pre_director / manifest / 代表帧",
         "> 2. 逐镜头反推人物、动作、情绪和镜头语言",
         "> 3. 生成每个镜头的视频提示词",
         "> 4. 再接入新视频模型批量生成",
       ]);
-    }
-
-    function openModeModal() {
-      const overlay = document.createElement("div");
-      overlay.className = "modal-overlay";
-      const box = document.createElement("div");
-      box.className = "modal-box";
-      box.innerHTML = `
-        <h4>分镜重生工作台</h4>
-        <p>当前项目只保留这一种工作流：资产库、分镜、身份标注和视频生成都在这里完成。</p>
-        <div class="mode-grid">
-          <button class="mode-card" type="button" data-mode="story_generate">
-            <span>当前工作流</span>
-            <strong>分镜重生</strong>
-            <span>单人镜头走 Scail2，多人或粘连镜头走 Seedance。</span>
-          </button>
-        </div>
-      `;
-      overlay.appendChild(box);
-      document.body.appendChild(overlay);
-      box.querySelectorAll(".mode-card").forEach((card) => {
-        card.addEventListener("click", () => {
-          const mode = card.dataset.mode || "story_generate";
-          localStorage.setItem(MODE_KEY, mode);
-          overlay.remove();
-        });
-      });
-      overlay.addEventListener("click", (event) => {
-        if (event.target === overlay) overlay.remove();
-      });
     }
 
     function formatNum(value) {
@@ -13525,7 +13437,7 @@
         Boolean(options.save),
       );
       if (!payload.project_dir) {
-        const lines = ["x 项目目录为空", "> 请先读取或创建 Mode2 项目。"];
+        const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
         return;
@@ -13637,7 +13549,7 @@
       const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
       const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
       if (!projectDir) {
-        const lines = ["x 项目目录为空", "> 请先读取或创建 Mode2 项目。"];
+        const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
         return;
@@ -14174,7 +14086,6 @@
       showFrontendBootError("运行时错误", event.error || event.message);
     });
 
-    runBootStep("保存模式", () => localStorage.setItem(MODE_KEY, "story_generate"));
     runBootStep("恢复输入", restoreInputs);
     runBootStep("绑定基础按钮", bindBaseUiEvents);
     runBootStep("初始化旧项目策略", initStoryReferenceStrategy);

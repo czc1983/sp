@@ -639,6 +639,14 @@ class SplitterHandler(BaseHTTPRequestHandler):
             return
 
         file_path = (ROOT / unquote(parsed.path.lstrip("/"))).resolve()
+        if file_path.name == "splitter_dashboard.html":
+            self.send_response(302)
+            self.send_header("Location", "/story_generate_dashboard.html")
+            self.end_headers()
+            return
+        if file_path.parent == ROOT and file_path.name != "story_generate_dashboard.html":
+            self._send_json({"error": "not_found"}, status=404)
+            return
         if ROOT in file_path.parents or file_path == ROOT:
             self._send_file(file_path)
             return
@@ -655,6 +663,28 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 job["status"] = "cancelled"
                 job.setdefault("logs", []).append("> 用户已取消")
             self._send_json({"cancelled": True, "job_id": job_id})
+            return
+
+        legacy_mode1_paths = {
+            "/api/split",
+            "/api/transfer-segment",
+            "/api/scail2-mask-check",
+            "/api/assets/sam3-track",
+            "/api/storyboard-role-mask-candidates",
+            "/api/storyboard-role-tracks/run",
+            "/api/storyboard-reference-mask",
+            "/api/storyboard-reference-mask/merge",
+            "/api/storyboard-reference-white-mask",
+            "/api/storyboard-reference-expression-mask",
+        }
+        if parsed.path in legacy_mode1_paths:
+            self._send_json(
+                {
+                    "error": "legacy_mode1_removed",
+                    "message": "Mode1/SAM3/white-mask/color-mask generation has been removed from the fixed Mode2 workflow.",
+                },
+                status=410,
+            )
             return
 
         if parsed.path.rstrip("/") == "/api/assets/delete-character":
@@ -4514,7 +4544,8 @@ _MODE2_SEEDANCE_RISK_RE = re.compile(
     r"多人|两人|雙人|粘连|粘在|串人|遮挡|接触|亲密|拥抱|亲吻|搂|抱住|压住|"
     r"别人.{0,10}(手|脚|腿|胳膊|手臂|身体)|他人.{0,10}(手|脚|腿|胳膊|手臂|身体)|"
     r"另一.{0,10}(手|脚|腿|胳膊|手臂|身体)|只露.{0,10}(手|脚|腿|胳膊|手臂)|"
-    r"partial.{0,20}(hand|foot|leg|arm|body)|occlusion|contact|embrace|kiss",
+    r"partial.{0,20}(hand|foot|leg|arm|body)|another.{0,20}(hand|foot|leg|arm|body)|"
+    r"other.{0,20}(hand|foot|leg|arm|body)|occlusion|contact|embrace|kiss",
     re.IGNORECASE,
 )
 
