@@ -1370,6 +1370,215 @@
       }
     }
 
+    /* Final compact workstation overrides. Keep tools wired, remove developer clutter from the visible workflow. */
+    .content {
+      height: calc(100vh - 58px);
+      min-height: 0;
+    }
+
+    .panel.module-view.active,
+    .assistant-panel {
+      max-height: calc(100vh - 88px);
+      min-height: 0;
+    }
+
+    .panel-body,
+    .story-input-panel > .panel-body,
+    .module-view[data-module-view="storyboard"] > .panel-body,
+    .module-view[data-module-view="generate"] > .panel-body {
+      overflow: hidden !important;
+    }
+
+    .story-input-panel > .panel-head::after {
+      content: "" !important;
+    }
+
+    .story-workspace {
+      height: 100%;
+      padding: 14px 26px 16px !important;
+      gap: 12px !important;
+      align-content: start;
+    }
+
+    .story-hero,
+    .story-disclosures,
+    .understanding-options,
+    .understanding-meta,
+    .story-summary-field,
+    .shot-prompt-card,
+    #copyShotPromptBtn,
+    #useShotPromptBtn {
+      display: none !important;
+    }
+
+    .story-core-grid {
+      grid-template-columns: minmax(0, .92fr) minmax(260px, .65fr) !important;
+      gap: 28px !important;
+    }
+
+    .story-source-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .story-section,
+    .story-config-section {
+      padding-top: 10px !important;
+    }
+
+    .story-section-head {
+      margin-bottom: 8px !important;
+    }
+
+    .story-video-preview,
+    .story-video-preview video {
+      min-height: 108px !important;
+      height: 108px !important;
+    }
+
+    .story-config-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .story-action-section {
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) minmax(280px, .55fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .story-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, .72fr);
+      gap: 10px;
+    }
+
+    .story-status {
+      max-height: 64px;
+      overflow: hidden;
+      padding: 9px 12px !important;
+    }
+
+    section[data-module-view="assets"] > .panel-body {
+      display: block !important;
+      padding: 14px 16px !important;
+      overflow: hidden !important;
+    }
+
+    #assetBoard.asset-board {
+      height: 100%;
+      max-height: calc(100vh - 168px);
+      overflow: hidden !important;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 300px)) !important;
+      gap: 12px !important;
+    }
+
+    .asset-card {
+      max-height: calc((100vh - 188px) / 2);
+    }
+
+    .asset-card-body,
+    .asset-card-body.has-refined {
+      height: clamp(130px, 16vh, 166px) !important;
+    }
+
+    .asset-action-rail {
+      padding: 7px 10px !important;
+    }
+
+    .module-view[data-module-view="generate"] > .panel-body {
+      padding: 10px 12px !important;
+    }
+
+    .seedance-workbench {
+      height: 100%;
+      max-height: calc(100vh - 158px);
+      grid-template-columns: minmax(280px, 390px) minmax(0, 1fr) !important;
+      gap: 12px !important;
+      overflow: hidden !important;
+    }
+
+    .seedance-materials {
+      gap: 8px !important;
+      overflow: hidden !important;
+      max-height: none !important;
+    }
+
+    .material-group {
+      padding: 8px !important;
+    }
+
+    .material-group-title {
+      min-height: 26px;
+      margin-bottom: 6px !important;
+    }
+
+    .seedance-materials [id$="Slots"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+    }
+
+    .slot-row {
+      padding: 6px !important;
+      min-height: 0;
+    }
+
+    .slot-preview {
+      height: clamp(62px, 8vh, 86px) !important;
+    }
+
+    .slot-preview-empty {
+      font-size: 0 !important;
+    }
+
+    .slot-preview-empty::after {
+      content: "未选择";
+      font-size: 11px;
+    }
+
+    .slot-actions .tiny-btn {
+      height: 26px !important;
+      padding: 0 8px !important;
+      font-size: 11px !important;
+    }
+
+    .seedance-card-head {
+      min-height: 34px !important;
+      padding: 7px 10px !important;
+    }
+
+    .seedance-card-body {
+      padding: 9px !important;
+    }
+
+    .seedance-prompt-field {
+      flex: 1 1 auto !important;
+    }
+
+    #seedancePromptInput {
+      height: clamp(126px, 24vh, 220px) !important;
+      min-height: 0 !important;
+      resize: none !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .stats {
+      display: none !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .compare-stage {
+      height: clamp(260px, 44vh, 420px) !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .timeline-strip {
+      height: 116px !important;
+      min-height: 116px !important;
+    }
+
+    .shot-table td,
+    .shot-table th {
+      padding: 6px !important;
+    }
+
     @media (max-width: 760px) {
       .app {
         grid-template-columns: 1fr;
@@ -1699,11 +1908,11 @@
     }
 
     .asset-card-head {
-      height: 38px;
+      height: 40px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 10px;
+      gap: 6px;
+      padding: 0 12px;
       border-bottom: 1px solid #263038;
       background: #15191d;
     }
@@ -1711,10 +1920,18 @@
     .asset-card-name {
       min-width: 0;
       color: #f3f7f9;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 900;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .asset-card-subtitle {
+      margin-left: auto;
+      color: #7f929c;
+      font-size: 11px;
+      font-weight: 800;
       white-space: nowrap;
     }
 
@@ -1831,14 +2048,14 @@
     .asset-card-body {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      height: 150px;
+      height: 166px;
       min-height: 0;
       cursor: pointer;
     }
 
     .asset-card-main {
       display: grid;
-      grid-template-columns: 58px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       min-height: 0;
       border-bottom: 1px solid #263038;
       background: #0c1013;
@@ -1852,12 +2069,12 @@
       position: relative;
       z-index: 4;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 8px;
       align-items: stretch;
-      justify-content: center;
-      padding: 8px 6px;
-      border-right: 1px solid #263038;
+      justify-content: flex-end;
+      padding: 8px 10px;
+      border-top: 1px solid #263038;
       background: #0b0f12;
     }
 
@@ -1865,16 +2082,16 @@
       position: relative;
       z-index: 5;
       pointer-events: auto;
-      width: 100%;
+      width: auto;
       min-height: 32px;
-      padding: 0 4px;
+      padding: 0 12px;
       justify-content: center;
       font-size: 11px;
     }
 
     .asset-card-body.has-refined {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      height: 150px;
+      height: 166px;
       min-height: 0;
     }
 
@@ -3257,8 +3474,8 @@
       gap: 10px;
       align-content: start;
       min-height: 0;
-      overflow: auto;
-      padding-right: 4px;
+      overflow: visible;
+      padding-right: 0;
     }
 
     .material-group {
@@ -3328,6 +3545,10 @@
       border: 1px solid #2d3940;
       border-radius: 8px;
       background: #12191d;
+    }
+
+    .seedance-pose-options[hidden] {
+      display: none !important;
     }
 
     .seedance-pose-toggle {
@@ -3568,6 +3789,54 @@
     }
 
     .assistant-run-status[hidden] { display: none; }
+
+    .assistant-log-stream {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      margin-top: 10px;
+      overflow: auto;
+    }
+
+    .assistant-log-stream[hidden] {
+      display: none;
+    }
+
+    .assistant-log-entry {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 9px;
+      background: #0a0c0d;
+      padding: 8px 10px;
+      color: #cfdbe0;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .assistant-log-entry[data-tone="warn"] {
+      border-color: rgba(234, 184, 95, .28);
+      background: rgba(234, 184, 95, .07);
+      color: #f0d29a;
+    }
+
+    .assistant-log-entry[data-tone="bad"] {
+      border-color: rgba(214, 82, 92, .32);
+      background: rgba(214, 82, 92, .08);
+      color: #ffc3c9;
+    }
+
+    .assistant-log-entry[data-tone="good"] {
+      border-color: rgba(81, 167, 111, .3);
+      background: rgba(81, 167, 111, .08);
+      color: #d7f3df;
+    }
+
+    .assistant-log-entry time {
+      display: block;
+      margin-bottom: 3px;
+      color: #78909b;
+      font-size: 10px;
+    }
 
     .assistant-pulse-dot {
       width: 9px;
@@ -4010,7 +4279,7 @@
       flex: 1;
       flex-direction: column;
       gap: 10px;
-      overflow: auto;
+      overflow: visible;
     }
 
     .seedance-prompt-field {
@@ -4322,6 +4591,42 @@
       padding: 0 8px;
     }
 
+    .story-video-picker {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .story-video-preview {
+      min-height: 126px;
+      border: 1px solid #303d44;
+      border-radius: 8px;
+      background: #090d0f;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+    }
+
+    .story-video-preview video {
+      width: 100%;
+      height: 126px;
+      object-fit: contain;
+      background: #050708;
+      display: block;
+    }
+
+    .story-video-empty {
+      color: #82919a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .story-video-picker .btn {
+      min-width: 68px;
+      height: auto;
+    }
+
     .story-strategy-row {
       display: grid;
       grid-template-columns: 1fr;
@@ -4406,8 +4711,7 @@
       font-weight: 800;
     }
 
-    .story-actions #loadProjectBtn,
-    .story-actions #copyStoryJobBtn { flex: 0 0 auto; }
+    .story-actions #loadProjectBtn { flex: 0 0 auto; }
 
     .story-status {
       min-height: 42px;
@@ -4908,6 +5212,95 @@
       display: none !important;
     }
 
+    .source-path-hidden,
+    #storyStatus,
+    .storyboard-queue-field,
+    .seedance-status-wrap,
+    .topbar > .mode-pill,
+    .assistant-head > .mode-pill,
+    .slot-row .input,
+    .slot-path,
+    .asset-card-foot,
+    .asset-warning,
+    .story-disclosures,
+    .story-reference-note,
+    .story-config-note,
+    .shot-prompt-card,
+    .story-summary-field,
+    .seedance-note,
+    .seedance-task-grid,
+    .seedance-draft-card,
+    .seedance-key-help,
+    .seedance-relay-grid,
+    #previewSeedancePayloadBtn,
+    #saveSeedanceDraftBtn {
+      display: none !important;
+    }
+
+    .seedance-materials {
+      overflow: visible !important;
+      max-height: none !important;
+    }
+
+    .seedance-materials [id$="Slots"] {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+      gap: 8px;
+    }
+
+    .slot-row {
+      grid-template-columns: 1fr !important;
+      gap: 6px !important;
+      margin-top: 0 !important;
+      padding: 8px !important;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background: #090d0f;
+    }
+
+    .slot-index {
+      position: absolute;
+      z-index: 1;
+      width: 28px !important;
+      height: 28px !important;
+      margin: 6px;
+      border-radius: 7px !important;
+      background: rgba(16, 26, 30, .88);
+      font-size: 12px !important;
+    }
+
+    .slot-main {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 7px !important;
+    }
+
+    .slot-preview {
+      width: 100% !important;
+      height: 116px !important;
+      border-radius: 7px !important;
+    }
+
+    .slot-preview img,
+    .slot-preview video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+
+    .slot-actions {
+      grid-column: auto !important;
+      justify-content: center;
+      flex-wrap: nowrap !important;
+    }
+
+    .seedance-workbench,
+    .module-view[data-module-view="generate"] > .panel-body,
+    .seedance-draft-card .seedance-card-body {
+      overflow: visible !important;
+      height: auto !important;
+    }
+
     .settings-overlay {
       position: fixed;
       inset: 0;
@@ -5002,6 +5395,827 @@
 
       .module-step { min-height: 60px; }
     }
+
+    /* Final visible-workflow cleanup. This block intentionally wins over older layout rules above. */
+    .content {
+      height: calc(100vh - 58px) !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+
+    .panel.module-view.active,
+    .assistant-panel {
+      max-height: calc(100vh - 88px) !important;
+      min-height: 0 !important;
+    }
+
+    .panel-body,
+    .story-input-panel > .panel-body,
+    .module-view[data-module-view="storyboard"] > .panel-body,
+    .module-view[data-module-view="generate"] > .panel-body {
+      overflow: hidden !important;
+    }
+
+    .story-input-panel > .panel-head::after {
+      content: "" !important;
+    }
+
+    .story-workspace {
+      height: 100% !important;
+      padding: 14px 26px 16px !important;
+      gap: 12px !important;
+      align-content: start !important;
+    }
+
+    .story-hero,
+    .story-disclosures,
+    .understanding-options,
+    .understanding-meta,
+    .story-summary-field,
+    .shot-prompt-card,
+    #copyShotPromptBtn,
+    #useShotPromptBtn {
+      display: none !important;
+    }
+
+    .story-core-grid {
+      grid-template-columns: minmax(0, .92fr) minmax(260px, .65fr) !important;
+      gap: 28px !important;
+    }
+
+    .story-source-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .story-section,
+    .story-config-section {
+      padding-top: 10px !important;
+    }
+
+    .story-section-head {
+      margin-bottom: 8px !important;
+    }
+
+    .story-video-preview,
+    .story-video-preview video {
+      min-height: 108px !important;
+      height: 108px !important;
+    }
+
+    .story-config-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .story-action-section {
+      display: grid !important;
+      grid-template-columns: minmax(0, .85fr) minmax(280px, .55fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .story-actions {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .story-status {
+      max-height: 64px;
+      overflow: hidden !important;
+      padding: 9px 12px !important;
+    }
+
+    section[data-module-view="assets"] > .panel-body {
+      display: block !important;
+      padding: 14px 16px !important;
+      overflow: hidden !important;
+    }
+
+    #assetBoard.asset-board {
+      height: 100% !important;
+      max-height: calc(100vh - 168px) !important;
+      overflow: hidden !important;
+      grid-template-columns: repeat(auto-fill, minmax(206px, 224px)) !important;
+      gap: 12px !important;
+      justify-content: start !important;
+      align-content: start !important;
+    }
+
+    #assetBoard.asset-board > .asset-card {
+      width: 100% !important;
+      max-width: 224px !important;
+      max-height: none !important;
+    }
+
+    #assetBoard .asset-card-body,
+    #assetBoard .asset-card-body.has-refined {
+      width: 100% !important;
+      height: auto !important;
+      aspect-ratio: 1 / 1 !important;
+      grid-template-columns: 1fr !important;
+    }
+
+    #assetBoard .asset-card-body .asset-media-secondary,
+    #assetBoard .asset-track-preview {
+      display: none !important;
+    }
+
+    #assetBoard .asset-card-head {
+      height: 34px !important;
+      min-height: 34px !important;
+      padding: 0 9px !important;
+    }
+
+    #assetBoard .asset-card-name {
+      font-size: 13px !important;
+    }
+
+    #assetBoard .asset-card-subtitle {
+      display: none !important;
+    }
+
+    #assetBoard .asset-action-rail {
+      padding: 6px !important;
+      justify-content: center !important;
+      gap: 6px !important;
+    }
+
+    #assetBoard .asset-action-rail .tiny-btn {
+      min-height: 26px !important;
+      padding: 0 8px !important;
+      font-size: 11px !important;
+    }
+
+    .module-view[data-module-view="generate"] > .panel-body {
+      padding: 10px 12px !important;
+    }
+
+    .seedance-workbench {
+      height: 100% !important;
+      max-height: calc(100vh - 158px) !important;
+      grid-template-columns: minmax(280px, 390px) minmax(0, 1fr) !important;
+      gap: 12px !important;
+      overflow: hidden !important;
+    }
+
+    .seedance-materials {
+      gap: 8px !important;
+      overflow: hidden !important;
+      max-height: none !important;
+    }
+
+    .material-group {
+      padding: 8px !important;
+    }
+
+    .material-group-title {
+      min-height: 26px;
+      margin-bottom: 6px !important;
+    }
+
+    .seedance-materials [id$="Slots"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+    }
+
+    .slot-row {
+      padding: 6px !important;
+      min-height: 0 !important;
+    }
+
+    .slot-preview {
+      height: clamp(62px, 8vh, 86px) !important;
+    }
+
+    .slot-preview-empty {
+      font-size: 0 !important;
+    }
+
+    .slot-preview-empty::after {
+      content: "未选择";
+      font-size: 11px;
+    }
+
+    .slot-actions .tiny-btn {
+      height: 26px !important;
+      padding: 0 8px !important;
+      font-size: 11px !important;
+    }
+
+    .seedance-card-head {
+      min-height: 34px !important;
+      padding: 7px 10px !important;
+    }
+
+    .seedance-card-body {
+      padding: 9px !important;
+    }
+
+    .seedance-prompt-field {
+      flex: 1 1 auto !important;
+    }
+
+    #seedancePromptInput {
+      height: clamp(126px, 24vh, 220px) !important;
+      min-height: 0 !important;
+      resize: none !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .stats {
+      display: none !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .compare-stage {
+      height: clamp(260px, 44vh, 420px) !important;
+    }
+
+    .module-view[data-module-view="storyboard"] .timeline-strip {
+      height: 116px !important;
+      min-height: 116px !important;
+    }
+
+    .shot-table td,
+    .shot-table th {
+      padding: 6px !important;
+    }
+
+    .report-overlay {
+      justify-content: center !important;
+      align-items: center !important;
+      padding: 28px !important;
+    }
+
+    .report-modal {
+      width: min(820px, calc(100vw - 64px)) !important;
+      max-height: min(760px, calc(100vh - 64px)) !important;
+    }
+
+    .report-modal-body {
+      overflow: auto;
+      max-height: calc(100vh - 150px);
+    }
+
+    .module-nav {
+      padding: 12px 8px !important;
+    }
+
+    .module-track {
+      gap: 8px !important;
+      grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    .module-track::before {
+      display: none !important;
+    }
+
+    .module-step {
+      min-height: 0 !important;
+      display: grid !important;
+      grid-template-columns: 30px minmax(0, 1fr);
+      align-content: center !important;
+      align-items: center !important;
+      justify-items: stretch !important;
+      gap: 8px !important;
+      padding: 8px 8px !important;
+      border: 1px solid transparent !important;
+      border-radius: 9px !important;
+      background: transparent !important;
+      text-align: left !important;
+    }
+
+    .module-step.active {
+      border-color: rgba(143,199,255,.24) !important;
+      background: #11161a !important;
+      box-shadow: inset 3px 0 0 #8fc7ff;
+    }
+
+    .module-dot {
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 8px !important;
+      border-color: rgba(255,255,255,.12) !important;
+      background: #0b0f12 !important;
+      color: #8fa1ab !important;
+      box-shadow: none !important;
+      font-size: 12px !important;
+    }
+
+    .module-step.active .module-dot {
+      border-color: rgba(143,199,255,.45) !important;
+      background: #17344f !important;
+      color: #f4fbff !important;
+      box-shadow: none !important;
+    }
+
+    .module-title {
+      max-width: none !important;
+      white-space: nowrap !important;
+      text-align: left !important;
+      color: #8fa1ab;
+      font-size: 12px !important;
+    }
+
+    .app {
+      grid-template-columns: 84px minmax(0, 1fr) !important;
+    }
+
+    .module-nav {
+      margin: 14px 0 14px 10px !important;
+      padding: 12px 6px !important;
+      width: 70px !important;
+      border-radius: 10px !important;
+      background: #050607 !important;
+    }
+
+    .module-track {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      align-items: stretch !important;
+      gap: 6px !important;
+      height: auto !important;
+    }
+
+    .module-settings {
+      margin-top: auto !important;
+      padding-top: 10px !important;
+      display: grid !important;
+      justify-items: stretch !important;
+    }
+
+    .module-settings-btn {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 58px !important;
+      padding: 9px 4px !important;
+      display: grid !important;
+      gap: 5px !important;
+      place-items: center !important;
+      border-radius: 9px !important;
+      border-color: rgba(255,255,255,.12) !important;
+      background: #0b0f12 !important;
+      color: #9bb1bd !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+    }
+
+    .module-settings-btn:hover {
+      border-color: rgba(143,199,255,.34) !important;
+      color: #cdeaff !important;
+      background: #11161a !important;
+    }
+
+    .module-step {
+      grid-template-columns: 1fr !important;
+      width: 100% !important;
+      padding: 9px 8px !important;
+      min-height: 58px !important;
+      border-radius: 7px !important;
+      place-items: center !important;
+      text-align: center !important;
+      gap: 5px !important;
+    }
+
+    .module-dot {
+      display: none !important;
+    }
+
+    .module-icon {
+      width: 20px !important;
+      height: 20px !important;
+      display: grid !important;
+      place-items: center !important;
+      color: #7f98a8 !important;
+    }
+
+    .module-icon svg {
+      width: 20px !important;
+      height: 20px !important;
+      display: block !important;
+      stroke: currentColor !important;
+      stroke-width: 2 !important;
+      stroke-linecap: round !important;
+      stroke-linejoin: round !important;
+      fill: none !important;
+    }
+
+    .module-title {
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      text-align: center !important;
+    }
+
+    .module-step.active {
+      background: #11161a !important;
+      border-color: rgba(255,255,255,.1) !important;
+      box-shadow: inset 3px 0 0 #8fc7ff !important;
+    }
+
+    .module-step.active .module-icon {
+      color: #cdeaff !important;
+    }
+
+    .story-core-grid {
+      grid-template-columns: 1fr !important;
+      align-items: start !important;
+    }
+
+    .story-video-picker {
+      grid-template-columns: 148px 72px !important;
+      align-items: stretch !important;
+      justify-content: start !important;
+    }
+
+    .story-video-preview,
+    .story-video-preview video {
+      width: 148px !important;
+      height: 148px !important;
+      min-height: 148px !important;
+      aspect-ratio: 1 / 1 !important;
+    }
+
+    .story-video-picker .btn {
+      width: 72px !important;
+      min-width: 72px !important;
+      height: 148px !important;
+    }
+
+    .story-config-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+    }
+
+    .story-actions {
+      width: min(470px, 100%) !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+      margin-top: 14px !important;
+    }
+
+    .story-report-action {
+      width: min(230px, 100%) !important;
+      margin-top: 10px !important;
+    }
+
+    .story-report-action .btn {
+      width: 100% !important;
+      min-height: 38px !important;
+    }
+
+    :root {
+      --bg: #080808 !important;
+      --panel: #111111 !important;
+      --panel2: #181818 !important;
+      --line: #303030 !important;
+      --text: #f2f2f2 !important;
+      --muted: #9b9b9b !important;
+      --soft: #d0d0d0 !important;
+      --accent: #bdbdbd !important;
+      --good: #bdbdbd !important;
+      --warn: #bdbdbd !important;
+      --bad: #bdbdbd !important;
+      --ink: #050505 !important;
+    }
+
+    body,
+    .app,
+    .content,
+    .panel-body,
+    .assistant-body,
+    .module-view[data-module-view="generate"] > .panel-body {
+      background: #050505 !important;
+      color: #f2f2f2 !important;
+    }
+
+    .topbar,
+    .panel-head,
+    .assistant-head,
+    .settings-modal-head {
+      background: #0d0d0d !important;
+      border-color: #2a2a2a !important;
+      color: #f4f4f4 !important;
+    }
+
+    .panel,
+    .assistant-panel,
+    .settings-modal,
+    .report-modal,
+    .asset-card,
+    .seedance-card,
+    .material-group,
+    .timeline-main,
+    .compare-pane,
+    .story-reference-note,
+    .empty,
+    .assistant-route-card,
+    .assistant-guide-card,
+    .assistant-guide-status,
+    .assistant-run-status,
+    .assistant-log-entry,
+    .story-status,
+    .seedance-submit-status,
+    .field,
+    .slot-row {
+      background: #101010 !important;
+      border-color: #303030 !important;
+      color: #e8e8e8 !important;
+      box-shadow: none !important;
+    }
+
+    .mode-pill,
+    .btn,
+    .btn.primary,
+    .btn.good,
+    .btn.warn,
+    .tiny-btn,
+    .tiny-btn.good,
+    .tiny-btn.warn,
+    .assistant-guide-btn,
+    .assistant-route-btn,
+    .seedance-copy-status-btn {
+      background: #181818 !important;
+      border-color: #3a3a3a !important;
+      color: #eeeeee !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+
+    .btn:hover:not(:disabled),
+    .tiny-btn:hover:not(:disabled),
+    .assistant-guide-btn:hover,
+    .assistant-route-btn:hover,
+    .module-step:hover,
+    .module-settings-btn:hover {
+      background: #242424 !important;
+      border-color: #5a5a5a !important;
+      color: #ffffff !important;
+    }
+
+    .input,
+    .textarea,
+    select.input,
+    .seedance-pose-select,
+    .assistant-composer textarea {
+      background: #0b0b0b !important;
+      border-color: #3a3a3a !important;
+      color: #f2f2f2 !important;
+      box-shadow: none !important;
+    }
+
+    .input:focus,
+    .textarea:focus,
+    select.input:focus,
+    .assistant-composer textarea:focus {
+      border-color: #777777 !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.08) !important;
+    }
+
+    .module-nav {
+      width: 76px !important;
+      margin: 14px 0 14px 10px !important;
+      padding: 12px 7px !important;
+      background: #050505 !important;
+      border-color: #242424 !important;
+      overflow: visible !important;
+    }
+
+    .app {
+      grid-template-columns: 96px minmax(0, 1fr) !important;
+    }
+
+    .module-step,
+    .module-settings-btn {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 58px !important;
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      place-items: center !important;
+      gap: 5px !important;
+      padding: 8px 4px !important;
+      border: 1px solid transparent !important;
+      border-radius: 8px !important;
+      background: transparent !important;
+      color: #b8b8b8 !important;
+      text-align: center !important;
+      overflow: visible !important;
+      cursor: pointer !important;
+    }
+
+    .module-step.active {
+      background: #171717 !important;
+      border-color: #5a5a5a !important;
+      box-shadow: inset 3px 0 0 #d6d6d6 !important;
+      color: #ffffff !important;
+    }
+
+    .module-icon,
+    .module-step.active .module-icon,
+    .assistant-head::before {
+      color: #d8d8d8 !important;
+      border-color: #555555 !important;
+      background: #151515 !important;
+    }
+
+    .module-settings {
+      width: 100% !important;
+      justify-items: stretch !important;
+      overflow: visible !important;
+    }
+
+    .module-settings-btn .module-title,
+    .module-title {
+      width: 100% !important;
+      max-width: none !important;
+      display: block !important;
+      color: currentColor !important;
+      white-space: nowrap !important;
+      text-align: center !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      letter-spacing: 0 !important;
+    }
+
+    .module-track {
+      width: 100% !important;
+      height: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 6px !important;
+    }
+
+    .module-step[data-module="settings"] {
+      margin-top: auto !important;
+    }
+
+    .settings-page {
+      overflow: hidden !important;
+      display: grid !important;
+      grid-template-rows: auto auto 1fr !important;
+      gap: 14px !important;
+    }
+
+    .settings-page-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 980px;
+    }
+
+    .settings-page .field {
+      min-height: 82px;
+      padding: 12px;
+    }
+
+    .settings-page-note {
+      max-width: 980px;
+      color: #a8a8a8;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .settings-page-actions {
+      align-self: start;
+    }
+
+    .assistant-panel {
+      min-width: 360px !important;
+      background: #050505 !important;
+    }
+
+    .assistant-body {
+      display: grid !important;
+      grid-template-rows: auto auto auto minmax(120px, 1fr) auto !important;
+      overflow: hidden !important;
+      gap: 10px !important;
+    }
+
+    .assistant-route-current span,
+    .assistant-route-note,
+    .assistant-log-entry time,
+    .label span:last-child,
+    .muted,
+    .hint {
+      color: #a8a8a8 !important;
+    }
+
+    .assistant-guide-status {
+      min-height: 72px !important;
+      max-height: 120px !important;
+      overflow: auto !important;
+      border-radius: 10px !important;
+    }
+
+    .assistant-log-stream {
+      max-height: 150px !important;
+    }
+
+    .assistant-log-entry[data-tone="warn"],
+    .assistant-log-entry[data-tone="bad"],
+    .assistant-log-entry[data-tone="good"],
+    .assistant-guide-status[data-tone="warn"],
+    .assistant-guide-status[data-tone="bad"],
+    .assistant-guide-status[data-tone="good"],
+    .story-status.warn,
+    .story-status.bad,
+    .story-status.good,
+    .seedance-submit-status.warn,
+    .seedance-submit-status.bad,
+    .seedance-submit-status.good {
+      background: #111111 !important;
+      border-color: #4a4a4a !important;
+      color: #eeeeee !important;
+    }
+
+    .assistant-pulse-dot {
+      background: #d0d0d0 !important;
+      box-shadow: 0 0 0 rgba(255,255,255,.28) !important;
+    }
+
+    @keyframes assistantPulse {
+      0% { box-shadow: 0 0 0 0 rgba(255,255,255,.24); }
+      70% { box-shadow: 0 0 0 9px rgba(255,255,255,0); }
+      100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+    }
+
+    .assistant-chat-list {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .assistant-chat-message {
+      width: fit-content;
+      max-width: min(92%, 520px);
+      border: 1px solid #303030;
+      border-radius: 10px;
+      background: #111111;
+      color: #eeeeee;
+      padding: 9px 10px;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-line;
+    }
+
+    .assistant-chat-message.user {
+      align-self: flex-end;
+      background: #202020;
+      border-color: #4a4a4a;
+      color: #ffffff;
+    }
+
+    .assistant-chat-message.assistant {
+      align-self: flex-start;
+    }
+
+    .assistant-composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 64px;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #242424;
+    }
+
+    .assistant-composer textarea {
+      width: 100%;
+      min-height: 54px;
+      max-height: 112px;
+      resize: vertical;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      padding: 9px 10px;
+      line-height: 1.45;
+    }
+
+    .assistant-composer button {
+      min-height: 54px;
+      border: 1px solid #3a3a3a;
+      border-radius: 10px;
+      background: #181818;
+      color: #f2f2f2;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .assistant-composer button:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    [style*="color: #"],
+    [style*="background: #"],
+    [style*="border-color: #"] {
+      color: inherit;
+    }
   </style>
 </head>
 <body>
@@ -5009,31 +6223,23 @@
     <header class="topbar">
       <div class="brand">SP 分镜重生工作台</div>
       <div class="mode-pill">单一工作流 · 分镜重生</div>
-      <div class="top-actions">
-        <button class="btn top-icon-btn" id="openGlobalSettingsBtn" type="button" title="设置" aria-label="设置">⚙</button>
-        <button class="btn warn" id="openPlanBtn">工作记录</button>
-      </div>
     </header>
 
-    <div class="settings-overlay" id="globalSettingsOverlay" aria-hidden="true">
-      <div class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="globalSettingsTitle">
+    <div class="settings-overlay report-overlay" id="videoAnalysisReportOverlay" aria-hidden="true">
+      <div class="settings-modal report-modal" role="dialog" aria-modal="true" aria-labelledby="videoAnalysisReportTitle">
         <div class="settings-modal-head">
-          <span id="globalSettingsTitle">全局设置</span>
-          <button class="tiny-btn" id="closeGlobalSettingsBtn" type="button">关闭</button>
+          <span id="videoAnalysisReportTitle">视频分析报告</span>
+          <button class="tiny-btn" id="closeVideoAnalysisReportBtn" type="button">关闭</button>
         </div>
-        <div class="settings-modal-body">
-          <div class="field">
-            <div class="label"><span>通道A中转 URL</span><span>NewAPI / Seedance 地址</span></div>
-            <input class="input" id="settingsSeedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
+        <div class="settings-modal-body report-modal-body">
+          <div class="understanding-grid">
+            <div class="understanding-metric"><strong id="reportCharacterCount">-</strong><span>角色名称</span></div>
+            <div class="understanding-metric"><strong id="reportSceneCount">-</strong><span>场景名称</span></div>
+            <div class="understanding-metric"><strong id="reportBoundaryCount">-</strong><span>镜头边界</span></div>
           </div>
-          <div class="field">
-            <div class="label"><span>通道A API Key</span><span>只保存在当前浏览器</span></div>
-            <input class="input" id="settingsSeedanceRelayApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
-          </div>
-        </div>
-        <div class="settings-modal-actions">
-          <button class="btn" id="cancelGlobalSettingsBtn" type="button">取消</button>
-          <button class="btn good" id="saveGlobalSettingsBtn" type="button">保存设置</button>
+          <div class="understanding-summary" id="reportUnderstandingSummary">暂无分析报告。</div>
+          <div class="understanding-list" id="reportUnderstandingCharacters"></div>
+          <div class="understanding-detail" id="reportUnderstandingDetails"></div>
         </div>
       </div>
     </div>
@@ -5041,20 +6247,34 @@
     <nav class="module-nav">
       <div class="module-track">
         <button class="module-step active" type="button" data-module="story">
-          <span class="module-dot">01</span>
-          <span class="module-title">原片输入</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M15 10l4.6-2.7a1 1 0 0 1 1.4.9v7.6a1 1 0 0 1-1.4.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>
+          </span>
+          <span class="module-title">原片</span>
         </button>
         <button class="module-step" type="button" data-module="assets">
-          <span class="module-dot">02</span>
-          <span class="module-title">资产详情</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+          </span>
+          <span class="module-title">资产</span>
         </button>
         <button class="module-step" type="button" data-module="storyboard">
-          <span class="module-dot">03</span>
-          <span class="module-title">分镜管理</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 11h16"></path><path d="M8 4l-4 7"></path><path d="M14 4l-4 7"></path><path d="M20 4l-4 7"></path><rect x="3" y="4" width="18" height="16" rx="2"></rect></svg>
+          </span>
+          <span class="module-title">分镜</span>
         </button>
         <button class="module-step" type="button" data-module="generate">
-          <span class="module-dot">04</span>
-          <span class="module-title">视频生成</span>
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M10 9l5 3-5 3z"></path></svg>
+          </span>
+          <span class="module-title">视频</span>
+        </button>
+        <button class="module-step" type="button" data-module="settings" id="openGlobalSettingsBtn" title="设置" aria-label="设置">
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7.1 4l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 20 7.1l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+          </span>
+          <span class="module-title">设置</span>
         </button>
       </div>
     </nav>
@@ -5067,53 +6287,51 @@
             <header class="story-hero">
               <div>
                 <h1>准备原片</h1>
-                <p>反推只用于整理分镜、镜头边界和名称候选。角色、场景和物品图片仍由你在资产库中手动建立。</p>
               </div>
-              <div class="story-hero-note">当前流程<br />原片分析 → 手动资产 → 分镜管理</div>
             </header>
 
             <div class="story-core-grid">
               <section class="story-section">
                 <div class="story-section-head">
                   <strong>输入文件</strong>
-                  <span>路径会自动截短显示，鼠标停留可查看完整内容</span>
                 </div>
                 <div class="story-source-grid">
                   <div class="story-field">
-                    <div class="label"><span>原视频</span><span>镜头、动作和光影参考</span></div>
-                    <div class="story-path-row">
-                      <input class="input" id="videoPathInput" placeholder="选择或粘贴原视频路径" />
+                    <div class="label"><span>原视频</span></div>
+                    <div class="story-video-picker">
+                      <input id="videoPathInput" type="hidden" />
+                      <div class="story-video-preview" id="sourceVideoPreviewBox">
+                        <video id="sourceVideoPreview" controls muted playsinline preload="metadata" hidden></video>
+                        <div class="story-video-empty" id="sourceVideoEmpty">尚未选择原视频</div>
+                      </div>
                       <button class="btn" id="pickVideoBtn" type="button">选择</button>
-                    </div>
-                  </div>
-                  <div class="story-field">
-                    <div class="label"><span>项目目录</span><span id="projectDirHint">可选：旧结果只作参考</span></div>
-                    <div class="story-path-row">
-                      <input class="input" id="projectDirInput" placeholder="选择或粘贴项目目录" />
-                      <button class="btn" id="pickProjectBtn" type="button">选择</button>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section class="story-section">
+              <section class="story-section story-primary-actions">
                 <div class="story-section-head">
-                  <strong>项目策略</strong>
-                  <span>决定是否读取旧项目</span>
+                  <strong>开始处理</strong>
                 </div>
-                <div class="story-strategy-row">
-                  <select class="input" id="storyReferenceStrategySelect" aria-label="旧项目策略"></select>
-                  <div class="story-reference-note" id="storyReferenceNote">当前默认：只按新视频生成，忽略旧项目目录</div>
+                <div class="story-actions">
+                  <button class="btn primary" id="reverseStoryboardBtn" type="button">分析分镜与候选名称</button>
+                  <button class="btn good" id="loadProjectBtn" type="button">读取旧项目</button>
                 </div>
               </section>
+
             </div>
 
             <section class="story-config-section">
               <div class="story-section-head">
                 <strong>项目参数</strong>
-                <span>这些设置会带入分镜提示词和视频生成草稿</span>
               </div>
               <div class="story-config-grid">
+                <div class="field">
+                  <div class="label"><span>项目策略</span><span>分析方式</span></div>
+                  <select class="input" id="storyReferenceStrategySelect" aria-label="项目策略"></select>
+                  <div class="story-reference-note" id="storyReferenceNote">当前默认：只按新视频生成，忽略旧项目目录</div>
+                </div>
                 <div class="field">
                   <div class="label"><span>重制目标</span><span>用于当前任务</span></div>
                   <select class="input" id="storyRebuildGoalSelect"></select>
@@ -5130,25 +6348,12 @@
                   <div class="label"><span>输出比例</span><span>同步到生成草稿</span></div>
                   <select class="input" id="storyRatioSelect"></select>
                 </div>
-                <div class="field">
-                  <div class="label"><span>镜头约束</span><span>控制重拍自由度</span></div>
-                  <select class="input" id="storyMotionSelect"></select>
-                </div>
-                <div class="field">
-                  <div class="label"><span>蒙版来源</span><span>本地或远程</span></div>
-                  <select class="input" id="storyMaskSourceSelect"></select>
-                </div>
               </div>
-              <div class="story-config-note" id="storyConfigNote">当前默认：短剧写实 · 中文 · 9:16 · 动作锁定</div>
-            </section>
-
-            <section class="story-action-section">
-              <div class="story-actions">
-                <button class="btn primary" id="reverseStoryboardBtn" type="button">分析分镜与候选名称</button>
-                <button class="btn good" id="loadProjectBtn" type="button">读取旧项目</button>
-                <button class="btn" id="copyStoryJobBtn" type="button" style="display:none;">复制任务号</button>
+              <div class="story-config-note" id="storyConfigNote"></div>
+              <div class="story-report-action">
+                <button class="btn" id="openVideoAnalysisReportBtn" type="button">视频分析报告</button>
               </div>
-              <div class="story-status" id="storyStatus">等待操作：选择原视频后开始分析。反推结果仅用于分镜参考和名称候选。</div>
+              <div class="story-status" id="storyStatus">请选择原视频。</div>
             </section>
 
             <div class="story-disclosures">
@@ -5186,50 +6391,9 @@
                   <div class="understanding-list" id="fullUnderstandingCharacters"></div>
                   <div class="understanding-detail" id="fullUnderstandingDetails"></div>
                   <div class="understanding-meta" id="fullUnderstandingMeta">来源：- · 缓存位置：-</div>
-                  <details class="story-disclosure" style="margin-top:12px;">
-                    <summary>接口与模型配置</summary>
-                    <div class="story-config-grid">
-                      <div class="field">
-                        <div class="label"><span>百炼接口地址</span><span>反推专用</span></div>
-                        <input class="input" id="preDirectorBaseUrlInput" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
-                      </div>
-                      <div class="field">
-                        <div class="label"><span>百炼密钥</span><span>只保存在当前浏览器</span></div>
-                        <input class="input" id="preDirectorApiKeyInput" type="password" placeholder="请输入密钥" autocomplete="off" />
-                      </div>
-                      <div class="field">
-                        <div class="label"><span>反推模型</span><span>百炼兼容模型</span></div>
-                        <input class="input" id="preDirectorModelInput" placeholder="qwen3.5-omni-plus" />
-                      </div>
-                      <div class="field">
-                        <button class="btn" id="savePreDirectorConfigBtn" type="button">保存反推配置</button>
-                      </div>
-                    </div>
-                  </details>
                 </div>
               </details>
 
-              <details class="story-disclosure story-route-disclosure">
-                <summary>查看后续处理流程</summary>
-                <div class="route">
-                  <div class="route-step ready">
-                    <strong>1. 分析分镜</strong>
-                    <p>整理镜头边界、内容和名称候选。</p>
-                  </div>
-                  <div class="route-step next">
-                    <strong>2. 手动建资产</strong>
-                    <p>自行选帧、截图并上传新参考图。</p>
-                  </div>
-                  <div class="route-step">
-                    <strong>3. 管理分镜</strong>
-                    <p>核对人物、动作、场景和提示词。</p>
-                  </div>
-                  <div class="route-step">
-                    <strong>4. 自动选路线</strong>
-                    <p>单人镜头走 Scail2，多人或粘连镜头走 Seedance。</p>
-                  </div>
-                </div>
-              </details>
             </div>
           </div>
         </div>
@@ -5237,39 +6401,14 @@
 
       <section class="panel module-view" data-module-view="assets">
         <div class="panel-head">
-          <span>资产库（手动模式）</span>
+          <span>资产库</span>
           <div class="timeline-controls">
             <button class="btn good" id="manualAssetBtn" type="button">手动建资产</button>
-            <button class="btn" id="copyAssetBindingsBtn" type="button">复制资产详情</button>
-            <button class="btn primary" id="continueStoryboardBtn" type="button">进入分镜管理</button>
           </div>
         </div>
         <div class="panel-body">
-          <div class="asset-toolbar">
-            <div>
-              <strong id="assetTotalLabel">0 个资产</strong>
-              <span>默认手动建资产：左侧从原视频播放、选帧、画框截图；右侧由你手动上传新参考图。视频反推只提供分镜参考和名称候选，不使用反推图片建资产。</span>
-            </div>
-            <div class="asset-toolbar-status">
-              <span id="assetReadyLabel">待加载项目或手动建资产</span>
-            </div>
-          </div>
-          <div class="asset-understanding-banner warn" id="assetUnderstandingBanner">
-            <strong>手动资产优先</strong>
-            <span>反推名称可以参考，但图片不准时不要用；角色、场景、物品都以你手动画框截图和右侧上传的新参考图为准。</span>
-          </div>
-          <details class="asset-auto-tools">
-            <summary>高级自动工具（仅辅助，不推荐默认使用）</summary>
-            <div class="asset-auto-tools-body">
-              <button class="tiny-btn" id="organizeAssetsBtn" type="button">整理名称</button>
-              <button class="tiny-btn" id="auditAssetsBtn" type="button">体检资产</button>
-              <button class="tiny-btn" id="refineAssetsBtn" type="button">提纯资产</button>
-              <button class="tiny-btn" id="splitAllMixedScenesBtn" type="button" disabled>拆分混合场景</button>
-              <span class="asset-auto-tools-note">这些按钮只作为文字整理或排错工具。反推图片、自动提纯图、候选截图不作为最终资产依据。</span>
-            </div>
-          </details>
           <div class="asset-board" id="assetBoard"></div>
-          <div class="asset-binding-preview" id="assetBindingPreview">暂无资产详情。请先点击“手动建资产”，或载入已有分镜项目。</div>
+          <div class="asset-binding-preview" id="assetBindingPreview"></div>
         </div>
       </section>
 
@@ -5320,7 +6459,7 @@
           </div>
           <div class="seedance-subclips" id="storyboardShotSubclips" hidden></div>
 
-          <div class="field">
+          <div class="field story-summary-field">
             <div class="label"><span>已有故事摘要</span><span id="storySource">未读取</span></div>
             <div class="story-box" id="storySummary">先读取项目或分析原视频，这里会显示已有故事和镜头摘要，作为当前工作流的上层输入。</div>
           </div>
@@ -5337,7 +6476,7 @@
             </div>
           </div>
 
-          <div class="field">
+          <div class="field storyboard-queue-field">
             <div class="label"><span>镜头重写队列</span><span>占位</span></div>
             <table class="shot-table">
               <thead>
@@ -5491,7 +6630,7 @@
                   <div class="label"><span>Seedance 提示词</span><span>可手动接管</span></div>
                   <textarea class="textarea" id="seedancePromptInput"></textarea>
                 </div>
-                <div class="seedance-grid">
+                <div class="seedance-grid seedance-task-grid">
                   <div class="field">
                     <div class="label"><span>任务名称</span></div>
                     <input class="input" id="seedanceTaskNameInput" value="shot_retake_001" />
@@ -5529,6 +6668,48 @@
           </div>
         </div>
       </section>
+      <section class="panel module-view" data-module-view="settings">
+        <div class="panel-head">
+          <span>设置</span>
+          <button class="btn good" id="saveGlobalSettingsBtn" type="button">保存设置</button>
+        </div>
+        <div class="panel-body settings-page">
+          <div class="settings-page-grid">
+            <div class="field">
+              <div class="label"><span>项目目录</span><span id="projectDirHint">可选：读取已有分镜项目</span></div>
+              <div class="story-path-row">
+                <input class="input" id="projectDirInput" placeholder="选择或粘贴项目目录" />
+                <button class="btn" id="pickProjectBtn" type="button">选择</button>
+              </div>
+            </div>
+            <div class="field">
+              <div class="label"><span>百炼接口地址</span><span>反推专用</span></div>
+              <input class="input" id="preDirectorBaseUrlInput" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
+            </div>
+            <div class="field">
+              <div class="label"><span>百炼密钥</span><span>只保存在当前浏览器</span></div>
+              <input class="input" id="preDirectorApiKeyInput" type="password" placeholder="请输入密钥" autocomplete="off" />
+            </div>
+            <div class="field">
+              <div class="label"><span>反推模型</span><span>百炼兼容模型</span></div>
+              <input class="input" id="preDirectorModelInput" placeholder="qwen3.5-omni-plus" />
+            </div>
+            <div class="field">
+              <div class="label"><span>通道A中转 URL</span><span>NewAPI / Seedance 地址</span></div>
+              <input class="input" id="settingsSeedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
+            </div>
+            <div class="field">
+              <div class="label"><span>通道A API Key</span><span>只保存在当前浏览器</span></div>
+              <input class="input" id="settingsSeedanceRelayApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
+            </div>
+          </div>
+          <div class="settings-page-note">这里的设置会直接影响当前流程，不再用弹窗单独打断页面。</div>
+          <div class="settings-page-actions">
+            <button class="btn" id="cancelGlobalSettingsBtn" type="button">恢复默认</button>
+          </div>
+        </div>
+      </section>
+
       <aside class="assistant-panel" aria-label="SP 助手">
         <div class="assistant-head">
           <span>SP 助手</span>
@@ -5543,7 +6724,13 @@
           <div class="assistant-guide-card">
             <button class="assistant-guide-btn" id="assistantGuideVideoBtn" type="button">带我做视频</button>
             <div class="assistant-guide-status" id="assistantGuideStatus">点“带我做视频”，我会按当前路线检查下一步。</div>
+            <div class="assistant-log-stream" id="assistantLogStream" hidden></div>
           </div>
+          <div class="assistant-chat-list" id="assistantChatList" aria-live="polite"></div>
+          <form class="assistant-composer" id="assistantChatForm">
+            <textarea id="assistantChatInput" rows="2" placeholder="直接问我，或说你想做什么"></textarea>
+            <button type="submit">发送</button>
+          </form>
         </div>
       </aside>
     </main>
@@ -5562,6 +6749,7 @@
     const SEEDANCE_A_DRAFT_KEY = "sp_story_seedance_channel_a_draft";
     const SEEDANCE_A_RELAY_CONFIG_KEY = "sp_story_seedance_channel_a_relay";
     const PRE_DIRECTOR_CONFIG_KEY = "sp_story_pre_director_config";
+    const ASSISTANT_MODEL_KEY = "sp_story_assistant_model";
     const STORY_PROJECT_CONFIG_KEY = "sp_story_project_config";
     const STORY_REFERENCE_STRATEGY_KEY = "sp_story_reference_strategy";
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
@@ -5569,6 +6757,7 @@
     const DEFAULT_PRE_DIRECTOR_BASE_URL = "https://ws-b8anhpvi1n7lp628.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
     const DEFAULT_PRE_DIRECTOR_API_KEY = "sk-ws-H.EHEYHRH.MmIP.MEUCIFR5bqIfGINteyGg4h74owHUSlJWFLhI-DPn7xNTk9fwAiEApZm4OqN_Z4Y5w3nj92Y6ayQaS-a7slo3yYHVBNwP8fw";
     const DEFAULT_PRE_DIRECTOR_MODEL = "qwen3.5-omni-plus";
+    const DEFAULT_ASSISTANT_MODEL = "gpt-5.5";
     const SEEDANCE_A_MODELS = [
       "A-seedance-2.0-480p",
       "A-seedance-2.0-480p-fast",
@@ -5595,13 +6784,10 @@
       { value: "ko", label: "韩语", note: "字幕、配音和称谓按韩语语境准备。" },
     ];
     const STORY_MOTION_CONSTRAINTS = [
-      { value: "strict", label: "动作锁定", note: "尽量锁住原视频的人物调度、动作、机位和遮挡关系。" },
-      { value: "balanced", label: "平衡重拍", note: "保留剧情关系和关键动作，允许少量重拍细节。" },
-      { value: "remake", label: "风格重拍", note: "保留剧情节点和角色关系，允许更明显的镜头重构。" },
+      { value: "strict", label: "镜头锁定", note: "锁住原视频的人物调度、动作、机位和遮挡关系。" },
     ];
     const STORY_MASK_SOURCE_OPTIONS = [
       { value: "remote_sam3_color", label: "服务器身份辅助", note: "仅用于资产库身份标注/检查，不作为生成路线前置。" },
-      { value: "local_sam3", label: "本机身份辅助", note: "仅用于资产库身份标注/检查，不作为生成路线前置。" },
     ];
     const STORY_REBUILD_GOALS = [
       {
@@ -5622,7 +6808,7 @@
         defaults: {
           style_preset: "short_drama_realism",
           target_language: "zh-CN",
-          motion_constraint: "balanced",
+          motion_constraint: "strict",
           mask_source: "remote_sam3_color",
         },
       },
@@ -5694,6 +6880,9 @@
     let seedanceSubmitting = false;
     let seedanceLastStatusText = "";
     let seedancePendingCompare = null;
+    let assistantLogLines = [];
+    let assistantLastLogKey = "";
+    let assistantChatBusy = false;
     let currentSeedanceMaskJobId = null;
     let seedanceMaskPollTimer = null;
     let seedanceMaskVideoIndex = -1;
@@ -5725,36 +6914,166 @@
     let storyUnderstandingOptions = { use_pre_director: true, force_understand: false };
     let editingAssetId = "";
 
+    function normalizeStatusLines(lines) {
+      return (Array.isArray(lines) ? lines : [lines])
+        .map((line) => String(line || "").trim())
+        .filter(Boolean)
+        .map((line) => line.replace(/^>\s*/, "").replace(/^x\s*/, "失败："));
+    }
+
+    function isRuntimeLogLines(lines) {
+      const text = normalizeStatusLines(lines).join("\n");
+      return /job_id|任务|运行中|查询|推理|进度|提交|生成|输出|完成|失败|日志|ComfyUI|Scail2|Seedance|通道A|蒙版|白膜|分轨|DWPose|SAM3|payload/i.test(text);
+    }
+
+    function assistantRenderLogs() {
+      const box = $("#assistantLogStream");
+      if (!box) return;
+      const entries = assistantLogLines.slice(-30);
+      box.hidden = !entries.length;
+      box.innerHTML = entries.map((entry) => `
+        <div class="assistant-log-entry" data-tone="${escapeHtml(entry.tone || "info")}">
+          <time>${escapeHtml(entry.time || "")}</time>${escapeHtml(entry.lines.join("\n"))}
+        </div>
+      `).join("");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function assistantAppendLog(lines, tone = "info") {
+      const cleanLines = normalizeStatusLines(lines);
+      if (!cleanLines.length) return;
+      const key = `${tone}|${cleanLines.join("\n")}`;
+      if (key === assistantLastLogKey) return;
+      assistantLastLogKey = key;
+      assistantLogLines.push({
+        tone: tone || "info",
+        time: new Date().toLocaleTimeString("zh-CN", { hour12: false }),
+        lines: cleanLines,
+      });
+      if (assistantLogLines.length > 80) assistantLogLines = assistantLogLines.slice(-80);
+      assistantRenderLogs();
+    }
+
+    function assistantAddChatMessage(role, text) {
+      const list = $("#assistantChatList");
+      if (!list) return;
+      const message = String(text || "").trim();
+      if (!message) return;
+      const item = document.createElement("div");
+      item.className = "assistant-chat-message " + (role === "user" ? "user" : "assistant");
+      item.textContent = message;
+      list.appendChild(item);
+      list.scrollTop = list.scrollHeight;
+    }
+
+    function assistantPageContext() {
+      const activeModule = document.querySelector(".module-step.active")?.textContent?.trim() || "";
+      const decision = generationRouteForShot(timelineSegments[selectedTimelineIndex] || {});
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const roleAssets = storyAssets.filter((asset) => asset?.kind === "role");
+      const sceneAssets = storyAssets.filter((asset) => asset?.kind === "scene");
+      const missingRoles = roleAssets.filter((asset) => !String(asset?.target_image || "").trim());
+      return [
+        `当前页面: ${activeModule || "未知"}`,
+        `原视频: ${$("#videoPathInput")?.value.trim() || "未选择"}`,
+        `项目目录: ${$("#projectDirInput")?.value.trim() || "未设置"}`,
+        `当前镜头: ${seg.id || seg.shot_id || seg.label || "未选择"}`,
+        `镜头数量: ${timelineSegments.length}`,
+        `资产数量: ${storyAssets.length}`,
+        `角色资产: ${roleAssets.map((asset) => asset.name || asset.id).filter(Boolean).join("、") || "无"}`,
+        `场景资产: ${sceneAssets.length}`,
+        `缺参考图角色: ${missingRoles.map((asset) => asset.name || asset.id).filter(Boolean).join("、") || "无"}`,
+        `当前生成路线: ${decision.label}`,
+        `路线原因: ${decision.reason}`,
+        `建议动作: ${decision.action}`,
+      ].join("\n");
+    }
+
+    function assistantLocalReply(message) {
+      const text = String(message || "");
+      if (/设置|保存目录|目录|key|api/i.test(text)) {
+        openGlobalSettings();
+        return "已打开设置。你要改保存目录、接口地址或密钥，就在这里改。";
+      }
+      if (/带我|下一步|做视频|开始|继续/i.test(text)) {
+        assistantGuideVideo();
+        return "我开始检查当前流程，并直接带你去下一步。";
+      }
+      const state = assistantWorkflowState();
+      if (!state.videoPath) return "先选原视频。我可以帮你打开选文件窗口。";
+      if (!state.hasSegments) return "下一步是分析分镜。点“带我做视频”，我会直接提交分析。";
+      if (!state.assetCount || state.missingTargetRoles.length) return "下一步是补角色参考图。先把缺图角色补齐。";
+      const decision = generationRouteForShot(timelineSegments[selectedTimelineIndex] || {});
+      return `当前该走${decision.label}。${decision.reason}`;
+    }
+
+    async function submitAssistantChat(event) {
+      event?.preventDefault();
+      if (assistantChatBusy) return;
+      const input = $("#assistantChatInput");
+      const submit = $("#assistantChatForm button[type='submit']");
+      const message = String(input?.value || "").trim();
+      if (!message) return;
+      if (input) input.value = "";
+      assistantAddChatMessage("user", message);
+      assistantChatBusy = true;
+      if (submit) submit.disabled = true;
+      try {
+        const director = pullPreDirectorControls();
+        if (!director.base_url || !director.api_key) {
+          assistantAddChatMessage("assistant", assistantLocalReply(message));
+          return;
+        }
+        const response = await fetch("/api/assistant-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            base_url: director.base_url,
+            api_key: director.api_key,
+            model: localStorage.getItem(ASSISTANT_MODEL_KEY) || DEFAULT_ASSISTANT_MODEL,
+            message,
+            context: assistantPageContext(),
+            logs: assistantLogLines.flatMap((entry) => entry.lines || []),
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.ok === false) {
+          throw new Error(data.error || "助手模型请求失败");
+        }
+        assistantAddChatMessage("assistant", data.text || assistantLocalReply(message));
+      } catch (error) {
+        assistantAddChatMessage("assistant", assistantLocalReply(message));
+        assistantAppendLog(["助手模型暂时没有返回，已使用本地流程判断。", error.message || String(error)], "warn");
+      } finally {
+        assistantChatBusy = false;
+        if (submit) submit.disabled = false;
+        input?.focus();
+      }
+    }
+
     function setLogs(lines) {
-      const body = $("#logBody");
-      if (!body) return;
-      body.innerHTML = (lines || []).map((line) => `<div>${escapeHtml(line)}</div>`).join("");
-      body.scrollTop = body.scrollHeight;
+      assistantAppendLog(lines, "info");
     }
 
     function addLogs(lines) {
-      const body = $("#logBody");
-      if (!body) return;
-      (lines || []).forEach((line) => {
-        const div = document.createElement("div");
-        div.textContent = line;
-        body.appendChild(div);
-      });
-      body.scrollTop = body.scrollHeight;
+      assistantAppendLog(lines, "info");
     }
 
     function setStoryStatus(lines, tone = "info") {
       const box = $("#storyStatus");
       if (!box) return;
-      box.className = "story-status" + (tone && tone !== "info" ? " " + tone : "");
-      box.textContent = (lines || []).join("\n");
+      assistantAppendLog(lines, tone);
+      box.hidden = true;
+      box.textContent = "";
     }
 
     function setSeedanceSubmitStatus(lines, tone = "info", actions = []) {
       const box = $("#seedanceSubmitStatus");
-      if (!box) return;
-      box.className = "seedance-submit-status" + (tone && tone !== "info" ? " " + tone : "");
       seedanceLastStatusText = (lines || []).join("\n");
+      assistantAppendLog(lines, tone);
+      if (!box) return;
+      box.hidden = true;
+      box.className = "seedance-submit-status" + (tone && tone !== "info" ? " " + tone : "");
       box.textContent = seedanceLastStatusText;
       const actionList = Array.isArray(actions) ? actions.filter((item) => item && item.action && item.label) : [];
       if (!actionList.length) return;
@@ -6003,7 +7322,14 @@
     function initAssistantRoutePanel() {
       renderAssistantRouteCard();
       $("#assistantGuideVideoBtn")?.addEventListener("click", assistantGuideVideo);
-      assistantSetStatus(["固定自动路线。", "单人干净镜头走 Scail2；多人、粘连、别人手脚参与的镜头走 Seedance。"]);
+      $("#assistantChatForm")?.addEventListener("submit", submitAssistantChat);
+      $("#assistantChatInput")?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          submitAssistantChat(event);
+        }
+      });
+      assistantSetStatus(["点“带我做视频”。"]);
     }
 
     async function assistantGuideVideo() {
@@ -6058,12 +7384,30 @@
       const message = String(error?.message || error || "").trim();
       if (/invalid token|auth failed|401|403/i.test(message)) {
         return [
-          "x Seedance auth failed: token invalid or expired.",
-          "> Refresh the API key and try again.",
-          message ? `> raw error: ${message}` : "",
+          "x Seedance 鉴权失败：密钥无效或已过期。",
+          "> 请到左下角设置里更新通道A API Key。",
+          message ? `> 原始错误：${message}` : "",
         ].filter(Boolean);
       }
-      return ["x Seedance request failed", message ? `> ${message}` : ""];
+      return ["x Seedance 请求失败", message ? `> ${message}` : ""];
+    }
+
+    function zhDisplayText(value, fallback = "") {
+      const text = String(value || "").trim();
+      if (!text) return fallback;
+      if (/Mode2 storyboard draft loaded from cache|visual shot\/person timeline|motion skeleton|semantic understanding/i.test(text)) {
+        return "已读取分镜草稿缓存。当前项目会使用已保存的镜头、人物时间线和语义标签继续处理。";
+      }
+      if (/Model should infer|source video|shot action|emotion|spatial relation/i.test(text)) {
+        return "模型应根据原视频判断当前镜头的动作、情绪和空间关系。";
+      }
+      return text;
+    }
+
+    function zhShotDisplayText(value, fallback = "等待镜头反推") {
+      const text = zhDisplayText(value, fallback);
+      if (/[A-Za-z]{4,}/.test(text)) return fallback;
+      return text;
     }
 
     function normalizeSeedanceRelayConfig(raw) {
@@ -6119,14 +7463,66 @@
 
     function openGlobalSettings() {
       syncSeedanceRelayControls();
-      const overlay = $("#globalSettingsOverlay");
+      switchModule("settings");
+    }
+
+    function closeGlobalSettings() {
+      switchModule("story");
+    }
+
+    function resetGlobalSettings() {
+      preDirectorConfig = normalizePreDirectorConfig({});
+      seedanceRelayConfig = normalizeSeedanceRelayConfig({});
+      syncPreDirectorControls();
+      syncSeedanceRelayControls();
+      renderSeedancePayload();
+      assistantSetStatus(["设置已恢复默认。", "确认后点“保存设置”。"]);
+    }
+
+    function renderVideoAnalysisReport() {
+      const data = fullVideoUnderstanding && typeof fullVideoUnderstanding === "object" ? fullVideoUnderstanding : null;
+      const counts = storyUnderstandingCounts(data);
+      const characterCountEl = $("#reportCharacterCount");
+      const sceneCountEl = $("#reportSceneCount");
+      const boundaryCountEl = $("#reportBoundaryCount");
+      const summaryEl = $("#reportUnderstandingSummary");
+      const charactersEl = $("#reportUnderstandingCharacters");
+      const detailsEl = $("#reportUnderstandingDetails");
+      if (characterCountEl) characterCountEl.textContent = String(counts.characters || 0);
+      if (sceneCountEl) sceneCountEl.textContent = String(counts.scenes || 0);
+      if (boundaryCountEl) boundaryCountEl.textContent = String(counts.boundaries || 0);
+      if (!data) {
+        if (summaryEl) summaryEl.textContent = "还没有视频分析报告。";
+        if (charactersEl) charactersEl.innerHTML = `<span class="understanding-chip">待分析</span>`;
+        if (detailsEl) detailsEl.innerHTML = "";
+        return;
+      }
+      const summary = data.summary || data.story || data.description || data.note || "暂无全片理解摘要";
+      if (summaryEl) summaryEl.textContent = zhDisplayText(summary, "暂无全片理解摘要");
+      const roles = normalizeUnderstandingList(data.characters || data.roles || data.role_list);
+      if (charactersEl) {
+        charactersEl.innerHTML = roles.length
+          ? roles.slice(0, 12).map((role, index) => {
+              const label = typeof role === "string"
+                ? role
+                : (role.role_name || role.name || role.role || (Array.isArray(role.role_candidates) ? role.role_candidates[0] : "") || role.visual_label || role.id || `角色${index + 1}`);
+              return `<span class="understanding-chip">${escapeHtml(String(label))}</span>`;
+            }).join("")
+          : `<span class="understanding-chip">暂无角色信息</span>`;
+      }
+      if (detailsEl) detailsEl.innerHTML = understandingDetailHtml(data);
+    }
+
+    function openVideoAnalysisReport() {
+      renderVideoAnalysisReport();
+      const overlay = $("#videoAnalysisReportOverlay");
       if (!overlay) return;
       overlay.classList.add("open");
       overlay.setAttribute("aria-hidden", "false");
     }
 
-    function closeGlobalSettings() {
-      const overlay = $("#globalSettingsOverlay");
+    function closeVideoAnalysisReport() {
+      const overlay = $("#videoAnalysisReportOverlay");
       if (!overlay) return;
       overlay.classList.remove("open");
       overlay.setAttribute("aria-hidden", "true");
@@ -6481,7 +7877,6 @@
           : "";
         cards.push(`<div class="understanding-detail-card"><strong>生产建议</strong>${strategy ? `<div>${escapeHtml(strategy)}</div>` : ""}${anchors ? `<div>建议标注：${escapeHtml(anchors)}</div>` : ""}${riskText ? `<div>风险：${escapeHtml(riskText)}</div>` : ""}</div>`);
       }
-      cards.push(`<details class="story-disclosure"><summary>完整 JSON</summary><pre class="understanding-json">${escapeHtml(compactJsonText(data))}</pre></details>`);
       return cards.join("");
     }
 
@@ -6553,13 +7948,34 @@
             el.title = String(el.value || el.placeholder || "").trim();
           };
           syncPathTitle();
-          el.addEventListener("input", syncPathTitle);
-          el.addEventListener("change", () => {
+          const rememberPath = () => {
             syncPathTitle();
-            localStorage.setItem("sp_last_" + id, el.value);
-          });
+            localStorage.setItem("sp_last_" + id, String(el.value || "").trim());
+          };
+          el.addEventListener("input", rememberPath);
+          el.addEventListener("change", rememberPath);
         }
       });
+      refreshSourceVideoPreview();
+    }
+
+    function refreshSourceVideoPreview() {
+      const input = $("#videoPathInput");
+      const video = $("#sourceVideoPreview");
+      const empty = $("#sourceVideoEmpty");
+      const path = String(input?.value || "").trim();
+      if (!video || !empty) return;
+      if (path) {
+        video.hidden = false;
+        video.src = mediaSrc(path, 0.1);
+        video.title = path;
+        empty.hidden = true;
+      } else {
+        video.hidden = true;
+        video.removeAttribute("src");
+        video.title = "";
+        empty.hidden = false;
+      }
     }
 
     function optionMeta(items, value) {
@@ -6716,10 +8132,8 @@
       if (!note) return;
       const style = storyStyleMeta();
       const language = storyLanguageMeta();
-      const motion = storyMotionMeta();
-      const maskSource = storyMaskSourceMeta();
       const rebuild = storyRebuildGoalMeta();
-      note.textContent = `当前参数：${rebuild.label} · ${style.label} · ${language.label} · ${storyProjectConfig.output_ratio} · ${motion.label} · ${maskSource.label}`;
+      note.textContent = `当前参数：${rebuild.label} · ${style.label} · ${language.label} · ${storyProjectConfig.output_ratio}`;
     }
 
     function syncStoryProjectControls() {
@@ -6727,8 +8141,6 @@
       fillSelect("storyStyleSelect", STORY_STYLE_PRESETS.map((item) => item.value), storyProjectConfig.style_preset, (value) => storyStyleMeta(value).label);
       fillSelect("storyLanguageSelect", STORY_TARGET_LANGUAGES.map((item) => item.value), storyProjectConfig.target_language, (value) => storyLanguageMeta(value).label);
       fillSelect("storyRatioSelect", STORY_RATIO_OPTIONS, storyProjectConfig.output_ratio);
-      fillSelect("storyMotionSelect", STORY_MOTION_CONSTRAINTS.map((item) => item.value), storyProjectConfig.motion_constraint, (value) => storyMotionMeta(value).label);
-      fillSelect("storyMaskSourceSelect", STORY_MASK_SOURCE_OPTIONS.map((item) => item.value), storyProjectConfig.mask_source, (value) => storyMaskSourceMeta(value).label);
       updateStoryConfigNote();
     }
 
@@ -6739,8 +8151,8 @@
         style_preset: $("#storyStyleSelect")?.value || storyProjectConfig.style_preset,
         target_language: $("#storyLanguageSelect")?.value || storyProjectConfig.target_language,
         output_ratio: $("#storyRatioSelect")?.value || storyProjectConfig.output_ratio,
-        motion_constraint: $("#storyMotionSelect")?.value || storyProjectConfig.motion_constraint,
-        mask_source: $("#storyMaskSourceSelect")?.value || storyProjectConfig.mask_source,
+        motion_constraint: STORY_MOTION_CONSTRAINTS[0].value,
+        mask_source: STORY_MASK_SOURCE_OPTIONS[0].value,
       });
       updateStoryConfigNote();
       return { ...storyProjectConfig };
@@ -6818,6 +8230,7 @@
         if (data.path) {
           target.value = data.path;
           target.dispatchEvent(new Event("change"));
+          if (target.id === "videoPathInput") refreshSourceVideoPreview();
           addLogs(["> 已选择: " + data.path]);
         }
       } catch (error) {
@@ -6859,6 +8272,7 @@
       if (result.meta?.source_path) {
         $("#videoPathInput").value = result.meta.source_path;
         localStorage.setItem("sp_last_videoPathInput", result.meta.source_path);
+        refreshSourceVideoPreview();
       }
       fullVideoUnderstanding = storyboard.understanding && typeof storyboard.understanding === "object"
         ? storyboard.understanding
@@ -6867,8 +8281,10 @@
       $("#segmentCount").textContent = String(result.segment_count || segments.length || 0);
       $("#sceneCount").textContent = sceneCountLabelFromResult(storyboard, story);
       $("#questionCount").textContent = String((autoDirector.questions || []).length || 0);
-      $("#storySource").textContent = storyboard.source || story.source || story.status || "storyboard_draft";
-      $("#storySummary").textContent = storyboard.summary || story.summary || story.story_summary || "项目没有读取到故事摘要，后续需要重新反推。";
+      const storySourceEl = $("#storySource");
+      if (storySourceEl) storySourceEl.textContent = storyboard.source || story.source || story.status || "分镜草稿";
+      const storySummaryEl = $("#storySummary");
+      if (storySummaryEl) storySummaryEl.textContent = zhDisplayText(storyboard.summary || story.summary || story.story_summary, "项目没有读取到故事摘要，后续需要重新反推。");
       storyAssets = normalizeStoryAssets(result.assets || []);
       renderStoryAssets();
       renderTimeline(segments);
@@ -7623,9 +9039,6 @@
       const id = String(asset?.id || "");
       const name = asset?.name || id || "asset";
       const kind = assetKindLabel(asset?.kind || "asset");
-      const status = assetStatusText(asset);
-      const notice = assetQualityNoticeText(asset);
-      const tag = asset?.tag ? `<span class="mode-pill">${escapeHtml(asset.tag)}</span>` : "";
       const editLabel = asset?.kind === "role" ? "\u6362\u56fe" : "\u7f16\u8f91";
       const trackPreview = asset?.kind === "role" ? assetTrackPreviewHtml(asset) : "";
       const actionRail = asset?.kind === "role"
@@ -7639,24 +9052,17 @@
       return `
         <article class="asset-card" data-asset-card="${escapeHtml(id)}">
           <div class="asset-card-head">
-            <span class="asset-kind">${escapeHtml(kind)}</span>
             <span class="asset-card-name">${escapeHtml(name)}</span>
-            ${tag}
-            ${assetAuditBadgeHtml(asset)}
-            <span class="asset-status">${escapeHtml(status)}</span>
+            <span class="asset-card-subtitle">${escapeHtml(kind)}</span>
           </div>
-          ${notice ? `<div class="asset-warning">${escapeHtml(notice)}</div>` : ""}
           <div class="asset-card-main">
-            ${actionRail}
             <div class="asset-card-body" data-edit-asset="${escapeHtml(id)}">
               <div class="asset-media asset-media-primary">${assetMediaHtml(asset, "source")}</div>
               <div class="asset-media asset-media-secondary">${assetMediaHtml(asset, "target")}</div>
             </div>
+            ${actionRail}
           </div>
           ${trackPreview}
-          <div class="asset-card-foot">
-            <span class="asset-foot-text">${escapeHtml(asset?.prompt || "\u70b9\u51fb\u7f16\u8f91\u8865\u5145\u8d44\u4ea7\u4fe1\u606f")}</span>
-          </div>
         </article>
       `;
     }
@@ -11165,23 +12571,6 @@
 
     function showStoryJobId(jobId) {
       currentStoryJobId = jobId || currentStoryJobId;
-      const copyBtn = $("#copyStoryJobBtn");
-      if (copyBtn) copyBtn.style.display = currentStoryJobId ? "" : "none";
-    }
-
-    async function copyStoryJobId() {
-      if (!currentStoryJobId) return setStoryStatus(["x 褰撳墠娌℃湁浠诲姟 ID"], "bad");
-      try {
-        await navigator.clipboard.writeText(currentStoryJobId);
-      } catch (_) {
-        const box = document.createElement("textarea");
-        box.value = currentStoryJobId;
-        document.body.appendChild(box);
-        box.select();
-        document.execCommand("copy");
-        box.remove();
-      }
-      setStoryStatus(["> 已复制任务 ID", `> ${currentStoryJobId}`], "good");
     }
 
     async function startStoryboardDraft() {
@@ -11428,7 +12817,7 @@
         <tr>
           <td>${escapeHtml(seg.segment_id || "")}</td>
           <td>${formatNum(seg.start)}-${formatNum(seg.end)}s</td>
-          <td>${escapeHtml(seg.description || "等待镜头反推")}</td>
+          <td>${escapeHtml(zhShotDisplayText(seg.description, "等待镜头反推"))}</td>
           <td><div class="shot-assets">${escapeHtml(formatShotAssets(seg))}</div></td>
           <td>${escapeHtml(seg.compiled_prompt ? "已编译" : (seg.status || "待重写"))}</td>
         </tr>
@@ -11449,21 +12838,21 @@
     function buildPromptDraft(seg, index) {
       const id = seg.segment_id || String(index + 1).padStart(3, "0");
       const assetLine = `关联资产: ${formatShotAssets(seg)}`;
-      if (seg.seedance_prompt) return String(seg.seedance_prompt);
+      if (seg.seedance_prompt) return zhShotDisplayText(seg.seedance_prompt, seedanceTemplate("remake"));
       if (seg.compiled_prompt) {
-        const compiled = String(seg.compiled_prompt);
+        const compiled = zhShotDisplayText(seg.compiled_prompt, seedanceTemplate("remake"));
         if (compiled.length <= 260 && !compiled.includes("锟")) return compiled;
         return seedanceTemplate("remake");
       }
       if (seg.prompt) {
-        const text = String(seg.prompt);
+        const text = zhShotDisplayText(seg.prompt, seedanceTemplate("remake"));
         if (text.length > 260 || text.includes("锟")) return seedanceTemplate("remake");
         return text.includes(assetLine) ? text : [text, "", assetLine].join("\n");
       }
       return [
         `镜头 ${id}:`,
         `时间: ${formatNum(seg.start)}-${formatNum(seg.end)}s`,
-        `剧情/画面: ${seg.description || "等待镜头反推"}`,
+        `剧情/画面: ${zhShotDisplayText(seg.description, "等待镜头反推")}`,
         `项目默认: ${storyProjectSummary(pullStoryProjectControls())}`,
         assetLine,
         "人物: 从镜头画面和故事关系中识别",
@@ -13995,13 +15384,21 @@
       $("#saveSeedanceRelayBtn")?.addEventListener("click", () => saveSeedanceRelayConfig());
       $("#openGlobalSettingsBtn")?.addEventListener("click", openGlobalSettings);
       $("#saveGlobalSettingsBtn")?.addEventListener("click", () => {
+        const projectDir = $("#projectDirInput")?.value.trim() || "";
+        localStorage.setItem("sp_last_projectDirInput", projectDir);
+        savePreDirectorConfig({ silent: true });
         saveSeedanceRelayConfig();
-        closeGlobalSettings();
+        assistantSetStatus(["设置已保存。"]);
       });
-      $("#cancelGlobalSettingsBtn")?.addEventListener("click", closeGlobalSettings);
+      $("#cancelGlobalSettingsBtn")?.addEventListener("click", resetGlobalSettings);
       $("#closeGlobalSettingsBtn")?.addEventListener("click", closeGlobalSettings);
       $("#globalSettingsOverlay")?.addEventListener("click", (event) => {
         if (event.target === event.currentTarget) closeGlobalSettings();
+      });
+      $("#openVideoAnalysisReportBtn")?.addEventListener("click", openVideoAnalysisReport);
+      $("#closeVideoAnalysisReportBtn")?.addEventListener("click", closeVideoAnalysisReport);
+      $("#videoAnalysisReportOverlay")?.addEventListener("click", (event) => {
+        if (event.target === event.currentTarget) closeVideoAnalysisReport();
       });
       ["seedanceRelayBaseUrlInput", "seedanceRelayApiKeyInput"].forEach((id) => {
         const el = document.getElementById(id);
@@ -14053,20 +15450,16 @@
       bindClick("#openStoryboardShotCutBtn", () => openShotCutWorkbench([]));
       bindClick("#openShotCutWorkbenchBtn", () => openShotCutWorkbench([]));
       bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
-      bindClick("#openPlanBtn", () => openLocalPath(PLAN_PATH));
       bindClick("#pickVideoBtn", () => pickPath("file", "#videoPathInput"));
       bindClick("#pickProjectBtn", () => pickPath("dir", "#projectDirInput"));
       bindClick("#loadProjectBtn", loadProject);
       bindClick("#reverseStoryboardBtn", startStoryboardDraft);
       bindClick("#savePreDirectorConfigBtn", () => savePreDirectorConfig());
-      bindClick("#copyStoryJobBtn", copyStoryJobId);
       bindClick("#manualAssetBtn", openManualAssetCreator);
       bindClick("#organizeAssetsBtn", organizeStoryAssets);
       bindClick("#auditAssetsBtn", startAssetAudit);
       bindClick("#refineAssetsBtn", (event) => startAssetRefinement(Boolean(event.shiftKey)));
       bindClick("#splitAllMixedScenesBtn", () => splitMixedScenes({ allMixed: true }));
-      bindClick("#copyAssetBindingsBtn", copyAssetBindings);
-      bindClick("#continueStoryboardBtn", () => switchModuleLocal("storyboard"));
       bindClick("#buildStoryboardBtn", startStoryboardDraft);
       bindClick("#timelinePrevBtn", () => moveTimeline(-1));
       bindClick("#timelineNextBtn", () => moveTimeline(1));
