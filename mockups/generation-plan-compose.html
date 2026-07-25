@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>编排 - 生成计划原型</title>
+  <style>
+    :root {
+      --black: #050505;
+      --panel: #0e0e0e;
+      --panel-2: #151515;
+      --panel-3: #1c1c1c;
+      --line: #2f2f2f;
+      --line-2: #454545;
+      --text: #f5f5f5;
+      --muted: #a8a8a8;
+      --faint: #777;
+      --white: #fff;
+      --shadow: rgba(0, 0, 0, 0.45);
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--black);
+      color: var(--text);
+      font-family:
+        "Microsoft YaHei",
+        "PingFang SC",
+        "Noto Sans CJK SC",
+        system-ui,
+        sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line-2);
+      background: var(--panel-2);
+      color: var(--text);
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #222;
+      border-color: #666;
+    }
+
+    button.primary {
+      background: var(--white);
+      border-color: var(--white);
+      color: var(--black);
+      font-weight: 700;
+    }
+
+    button.icon {
+      width: 36px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr) 292px;
+      gap: 10px;
+      padding: 10px;
+      background: var(--black);
+    }
+
+    .rail,
+    .main,
+    .assistant {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 20px 60px var(--shadow);
+    }
+
+    .rail {
+      border-radius: 10px;
+      display: grid;
+      grid-template-rows: repeat(6, 64px) 1fr;
+      align-items: start;
+      padding: 8px;
+      gap: 6px;
+    }
+
+    .nav-item {
+      height: 58px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--muted);
+      display: grid;
+      grid-template-rows: 24px 18px;
+      place-items: center;
+      font-size: 12px;
+      user-select: none;
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      border: 2px solid currentColor;
+      position: relative;
+      opacity: 0.92;
+    }
+
+    .nav-icon.video::before,
+    .nav-icon.video::after {
+      content: "";
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+      left: 3px;
+    }
+
+    .nav-icon.video::before {
+      top: 4px;
+      box-shadow: 0 8px 0 currentColor;
+    }
+
+    .nav-icon.asset {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      padding: 2px;
+    }
+
+    .nav-icon.asset span {
+      background: currentColor;
+    }
+
+    .nav-icon.story::before,
+    .nav-icon.story::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      height: 2px;
+      background: currentColor;
+    }
+
+    .nav-icon.story::before {
+      top: 6px;
+      box-shadow: 0 6px 0 currentColor;
+    }
+
+    .nav-icon.story::after {
+      bottom: 4px;
+    }
+
+    .nav-icon.compose {
+      border-radius: 50%;
+    }
+
+    .nav-icon.compose::before,
+    .nav-icon.compose::after {
+      content: "";
+      position: absolute;
+      background: currentColor;
+    }
+
+    .nav-icon.compose::before {
+      width: 12px;
+      height: 2px;
+      left: 3px;
+      top: 6px;
+      box-shadow: 4px 8px 0 currentColor;
+      transform: rotate(-18deg);
+    }
+
+    .nav-icon.compose::after {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      left: 4px;
+      top: 4px;
+      box-shadow: 10px 4px 0 currentColor, 8px 12px 0 currentColor;
+    }
+
+    .nav-icon.play {
+      clip-path: polygon(18% 8%, 18% 92%, 88% 50%);
+      border: 0;
+      background: currentColor;
+    }
+
+    .nav-icon.setting {
+      border-radius: 50%;
+    }
+
+    .nav-icon.setting::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border: 2px solid var(--panel);
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .nav-item.active {
+      background: var(--white);
+      color: var(--black);
+      font-weight: 700;
+    }
+
+    .nav-item.settings {
+      grid-row: 7;
+      align-self: end;
+    }
+
+    .main {
+      min-width: 0;
+      border-radius: 12px;
+      display: grid;
+      grid-template-rows: 58px minmax(0, 1fr) 94px;
+      overflow: hidden;
+    }
+
+    .topbar {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(230px, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #101010;
+    }
+
+    .page-title {
+      min-width: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      white-space: nowrap;
+    }
+
+    .page-title strong {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .page-title span {
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(420px, 1.1fr) minmax(330px, 0.9fr);
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .board,
+    .packs {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: #0b0b0b;
+      border-radius: 10px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 40px minmax(0, 1fr);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #111;
+      font-size: 13px;
+    }
+
+    .section-head strong {
+      font-size: 14px;
+    }
+
+    .section-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .shot-grid {
+      min-height: 0;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      grid-auto-rows: minmax(118px, 1fr);
+      gap: 8px;
+      overflow: hidden;
+      align-content: stretch;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+
+    .shot-grid.drop-target {
+      border-color: var(--white);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .shot-card {
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      border-radius: 8px;
+      padding: 6px;
+      cursor: grab;
+      display: grid;
+      grid-template-rows: minmax(58px, 1fr) 24px;
+      gap: 5px;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
+    }
+
+    .shot-card:hover {
+      border-color: #777;
+      background: #1a1a1a;
+    }
+
+    .shot-card.dragging {
+      opacity: 0.42;
+      transform: scale(0.96);
+    }
+
+    .shot-card.used {
+      opacity: 0.36;
+    }
+
+    .thumb {
+      position: relative;
+      min-height: 0;
+      border: 1px solid #333;
+      border-radius: 6px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, #272727 0%, #111 54%, #050505 100%);
+    }
+
+    .thumb::before,
+    .thumb::after {
+      content: "";
+      position: absolute;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .thumb.person::before {
+      width: 22%;
+      height: 46%;
+      border-radius: 999px 999px 8px 8px;
+      left: 38%;
+      bottom: 12%;
+    }
+
+    .thumb.person::after {
+      width: 14%;
+      height: 18%;
+      border-radius: 50%;
+      left: 42%;
+      top: 19%;
+    }
+
+    .thumb.two::before {
+      width: 18%;
+      height: 42%;
+      border-radius: 999px 999px 8px 8px;
+      left: 28%;
+      bottom: 12%;
+      box-shadow: 22px 0 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .thumb.two::after {
+      width: 12%;
+      height: 16%;
+      border-radius: 50%;
+      left: 31%;
+      top: 22%;
+      box-shadow: 24px 2px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .thumb.scene::before {
+      left: 10%;
+      right: 10%;
+      bottom: 15%;
+      height: 28%;
+      border-radius: 4px;
+    }
+
+    .thumb.scene::after {
+      width: 28%;
+      height: 28%;
+      right: 12%;
+      top: 14%;
+      border-radius: 50%;
+    }
+
+    .shot-id {
+      min-width: 0;
+      align-self: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--white);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .pack-list {
+      min-height: 0;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+      grid-auto-rows: 124px;
+      align-content: start;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .pack-list.dense {
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      grid-auto-rows: 106px;
+      gap: 6px;
+    }
+
+    .pack-list.extra-dense {
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      grid-auto-rows: 88px;
+      gap: 5px;
+    }
+
+    .pack {
+      min-height: 0;
+      position: relative;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      border-radius: 8px;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 20px 10px;
+      padding: 8px;
+      gap: 6px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 120ms ease, background 120ms ease, outline 120ms ease, transform 120ms ease;
+    }
+
+    .pack:hover {
+      border-color: #777;
+      background: #1b1b1b;
+      transform: translateY(-1px);
+    }
+
+    .pack.selected {
+      border-color: #cfcfcf;
+      background: #1a1a1a;
+    }
+
+    .pack.over {
+      border-color: #8a8a8a;
+      background:
+        repeating-linear-gradient(-45deg, #151515 0 8px, #1e1e1e 8px 16px);
+    }
+
+    .pack.full {
+      opacity: 0.6;
+    }
+
+    .pack.drop-target {
+      border-color: var(--white);
+      outline: 2px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .pack-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .pack-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .pack-stack-wrap {
+      min-height: 0;
+      position: relative;
+      overflow: visible;
+    }
+
+    .pack-stack {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
+
+    .pack-stack-card {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      z-index: var(--stack-z);
+      width: 48px;
+      aspect-ratio: 2 / 3;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 15px;
+      border: 1px solid #414141;
+      border-radius: 6px;
+      background: #202020;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42);
+      transform: translateX(calc(-50% + var(--stack-x))) translateY(var(--stack-y)) rotate(var(--stack-rot));
+    }
+
+    .pack-stack-card .thumb {
+      border: 0;
+      border-radius: 0;
+    }
+
+    .pack-stack-card span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border-top: 1px solid #333;
+      color: #dcdcdc;
+      font-size: 9px;
+      line-height: 15px;
+      text-align: center;
+    }
+
+    .pack-more {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 22px;
+      min-width: 30px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(65, 243, 255, 0.55);
+      border-radius: 999px;
+      background: #101010;
+      color: #79f8ff;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 0 16px rgba(65, 243, 255, 0.28);
+    }
+
+    .pack-list.dense .pack {
+      padding: 6px;
+    }
+
+    .pack-list.dense .pack-stack-card {
+      width: 40px;
+      grid-template-rows: minmax(0, 1fr) 13px;
+    }
+
+    .pack-list.extra-dense .pack {
+      padding: 5px;
+      grid-template-rows: minmax(0, 1fr) auto 6px;
+    }
+
+    .pack-list.extra-dense .pack-stack-card {
+      width: 32px;
+      grid-template-rows: minmax(0, 1fr) 11px;
+      border-radius: 5px;
+    }
+
+    .pack-list.extra-dense .pack-stack-card span {
+      display: none;
+    }
+
+    .mini {
+      width: 56px;
+      min-width: 56px;
+      height: 52px;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      background: #222;
+      display: grid;
+      grid-template-rows: 1fr 18px;
+      overflow: hidden;
+      cursor: grab;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.38);
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .card-hand .mini {
+      position: absolute;
+      left: var(--x);
+      top: 50%;
+      z-index: var(--z);
+      transform: translateY(-50%) rotate(var(--rot));
+      transform-origin: 50% 100%;
+      cursor: pointer;
+    }
+
+    .card-hand .mini:hover {
+      border-color: var(--white);
+      background: #2b2b2b;
+      transform: translateY(calc(-50% - 6px)) rotate(var(--rot));
+      z-index: 30;
+    }
+
+    .mini.drop-before,
+    .mini.drop-after {
+      border-color: #ff4fd8;
+      box-shadow: 0 0 20px rgba(255, 79, 216, 0.35);
+      transform: translateY(calc(-50% - 8px)) rotate(var(--rot)) scale(1.04);
+      z-index: 40;
+    }
+
+    .return-strip.drop-target {
+      border-color: #41f3ff;
+      outline: 2px solid rgba(65, 243, 255, 0.24);
+      box-shadow: 0 0 18px rgba(65, 243, 255, 0.2);
+    }
+
+    .mini .thumb {
+      border: 0;
+      border-radius: 0;
+    }
+
+    .mini span {
+      text-align: center;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 18px;
+      border-top: 1px solid #333;
+    }
+
+    .empty-pack {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+      border: 1px dashed #444;
+      border-radius: 6px;
+      color: #777;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+    }
+
+    .hand-hint {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      color: var(--faint);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .meter {
+      height: 10px;
+      border: 1px solid #3a3a3a;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #070707;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: #f2f2f2;
+    }
+
+    .meter.warn span {
+      background:
+        repeating-linear-gradient(90deg, #d5d5d5 0 8px, #8a8a8a 8px 16px);
+    }
+
+    .detail {
+      min-width: 0;
+      border-top: 1px solid var(--line);
+      background: #101010;
+      display: grid;
+      grid-template-columns: minmax(190px, 260px) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+    }
+
+    .detail-title {
+      min-width: 0;
+    }
+
+    .detail-title strong {
+      display: block;
+      font-size: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .detail-title span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .return-strip {
+      min-width: 0;
+      position: relative;
+      height: 74px;
+      overflow: hidden;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #0b0b0b;
+    }
+
+    .return-chip {
+      min-width: 54px;
+      height: 34px;
+      border: 1px solid #3f3f3f;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 11px;
+      background: #171717;
+    }
+
+    .return-strip .mini {
+      width: 68px;
+      min-width: 68px;
+      height: 62px;
+    }
+
+    .assistant {
+      border-radius: 12px;
+      display: grid;
+      grid-template-rows: 48px minmax(0, 1fr) 58px;
+      overflow: hidden;
+    }
+
+    .assistant-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #101010;
+    }
+
+    .assistant-head strong {
+      font-size: 15px;
+    }
+
+    .assistant-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ddd;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+    }
+
+    .chat {
+      min-height: 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .bubble {
+      border: 1px solid var(--line);
+      background: #151515;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #e9e9e9;
+    }
+
+    .bubble.user {
+      background: #f2f2f2;
+      color: #080808;
+      margin-left: 30px;
+    }
+
+    .chat-input {
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr 42px;
+      gap: 8px;
+      background: #101010;
+    }
+
+    .chat-input input {
+      min-width: 0;
+      height: 38px;
+      border: 1px solid #3f3f3f;
+      border-radius: 6px;
+      background: #070707;
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      min-width: 260px;
+      max-width: 560px;
+      border: 1px solid var(--line-2);
+      background: #f2f2f2;
+      color: #060606;
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+      font-size: 13px;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+    @media (max-width: 1050px) {
+      .app {
+        grid-template-columns: 64px minmax(0, 1fr) 250px;
+      }
+
+      .workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) 190px;
+      }
+
+      .pack-list {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        grid-auto-rows: 108px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="rail" aria-label="主导航">
+      <div class="nav-item">
+        <div class="nav-icon video"></div>
+        <div>原片</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon asset"><span></span><span></span><span></span><span></span></div>
+        <div>资产</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon story"></div>
+        <div>分镜</div>
+      </div>
+      <div class="nav-item active">
+        <div class="nav-icon compose"></div>
+        <div>编排</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon play"></div>
+        <div>视频</div>
+      </div>
+      <div class="nav-item settings">
+        <div class="nav-icon setting"></div>
+        <div>设置</div>
+      </div>
+    </nav>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="page-title">
+          <strong>编排</strong>
+          <span id="summaryText">已确认 12 个分镜，生成计划 4 包，总时长 23.8 秒</span>
+        </div>
+        <div class="top-actions">
+          <button id="autoPackBtn" type="button">智能合包</button>
+          <button id="clearPackBtn" type="button">清空</button>
+          <button id="confirmBtn" class="primary" type="button">确认计划</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="board">
+          <div class="section-head">
+            <strong>镜头棋盘</strong>
+            <span>拖到右侧生成包；原片顺序不会改变</span>
+          </div>
+          <div class="shot-grid" id="shotGrid"></div>
+        </div>
+
+        <div class="packs">
+          <div class="section-head">
+            <strong>卡包架</strong>
+            <span>5-10 秒最佳，超过 15 秒禁止</span>
+          </div>
+          <div class="pack-list" id="packList"></div>
+        </div>
+      </section>
+
+      <footer class="detail">
+        <div class="detail-title">
+          <strong id="detailTitle">P001 老公 / 单人 / Scail2</strong>
+          <span id="detailMeta">生成后会拆回原分镜，时间轴保持不变</span>
+        </div>
+        <div class="return-strip" id="returnStrip"></div>
+        <button id="generateBtn" class="primary" type="button">开始生成</button>
+      </footer>
+    </main>
+
+    <aside class="assistant">
+      <div class="assistant-head">
+        <strong>SP 助手</strong>
+        <span class="assistant-status" title="待命"></span>
+      </div>
+      <div class="chat">
+        <div class="bubble">
+          分镜已经保存。现在进入编排：我先按角色、人数、路线和参考图合包，你可以拖动精调。
+        </div>
+        <div class="bubble">
+          单人镜头默认 Scail2，多人或有手脚干扰的镜头默认 Seedance。超过 15 秒的包不会允许提交。
+        </div>
+        <div class="bubble user">
+          老公的单人镜头能不能放一起跑？
+        </div>
+        <div class="bubble">
+          可以。当前 P001 已把 S001、S003、S011 合在一起，总时长 8.6 秒，适合一次生成。
+        </div>
+      </div>
+      <div class="chat-input">
+        <input aria-label="输入消息" placeholder="问助手..." />
+        <button class="icon" type="button">→</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const shots = [
+      { id: "S001", role: "老公", type: "单人", route: "Scail2", time: 2.2, visual: "person" },
+      { id: "S002", role: "妻子+老公", type: "多人", route: "Seedance", time: 3.1, visual: "two" },
+      { id: "S003", role: "老公", type: "单人", route: "Scail2", time: 2.8, visual: "person" },
+      { id: "S004", role: "卧室", type: "场景", route: "Seedance", time: 2.5, visual: "scene" },
+      { id: "S005", role: "妻子", type: "单人", route: "Scail2", time: 2.4, visual: "person" },
+      { id: "S006", role: "妻子+老公", type: "多人", route: "Seedance", time: 4.0, visual: "two" },
+      { id: "S007", role: "戒指", type: "物品", route: "Seedance", time: 1.8, visual: "scene" },
+      { id: "S008", role: "妻子", type: "单人", route: "Scail2", time: 3.0, visual: "person" },
+      { id: "S009", role: "老公", type: "单人", route: "Scail2", time: 3.6, visual: "person" },
+      { id: "S010", role: "走廊", type: "场景", route: "Seedance", time: 2.1, visual: "scene" },
+      { id: "S011", role: "老公", type: "单人", route: "Scail2", time: 3.6, visual: "person" },
+      { id: "S012", role: "妻子+老公", type: "多人", route: "Seedance", time: 2.7, visual: "two" },
+    ];
+
+    let packs = [
+      { id: "P001", label: "老公", route: "Scail2", shotIds: ["S001", "S003", "S011"] },
+      { id: "P002", label: "妻子+老公", route: "Seedance", shotIds: ["S002", "S006"] },
+      { id: "P003", label: "妻子", route: "Scail2", shotIds: ["S005", "S008"] },
+      { id: "P004", label: "场景物品", route: "Seedance", shotIds: ["S004", "S007", "S010", "S012"] },
+    ];
+
+    let selectedPackId = "P001";
+    let dragShotId = "";
+
+    const $ = (selector) => document.querySelector(selector);
+    const shotById = (id) => shots.find((shot) => shot.id === id);
+    const packById = (id) => packs.find((pack) => pack.id === id);
+    const packDuration = (pack) => pack.shotIds.reduce((sum, id) => sum + (shotById(id)?.time || 0), 0);
+    const usedShotIds = () => new Set(packs.flatMap((pack) => pack.shotIds));
+
+    function showToast(text) {
+      const toast = $("#toast");
+      toast.textContent = text;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function thumbClass(visual) {
+      if (visual === "two") return "thumb two";
+      if (visual === "scene") return "thumb scene";
+      return "thumb person";
+    }
+
+    function cardHandHtml(shotIds, packId, options = {}) {
+      const ids = Array.isArray(shotIds) ? shotIds : [];
+      if (!ids.length) return `<div class="empty-pack">拖入镜头</div>`;
+      const count = ids.length;
+      const step = options.large ? 48 : 42;
+      const start = Math.max(0, Math.round((options.offset || 0) - ((count - 1) * step) / 2));
+      const spread = count <= 1 ? 0 : Math.min(18, 6 + count * 2);
+      const hint = options.hint ? `<div class="hand-hint">点牌抽回棋盘</div>` : "";
+      const cards = ids.map((id, index) => {
+        const shot = shotById(id);
+        if (!shot) return "";
+        const center = (count - 1) / 2;
+        const rot = count <= 1 ? 0 : (index - center) * (spread / Math.max(1, center + 1));
+        return `
+          <div class="mini" draggable="true" data-shot="${shot.id}" data-pack="${packId}" title="抽回 ${shot.id}" style="--x:${start + index * step}px; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
+            <div class="${thumbClass(shot.visual)}"></div>
+            <span>${shot.id}</span>
+          </div>
+        `;
+      }).join("");
+      return `<div class="card-hand">${cards}${hint}</div>`;
+    }
+
+    function dropPlacement(event, targetEl, targetId) {
+      const rect = targetEl?.getBoundingClientRect?.();
+      const after = rect && Number.isFinite(event?.clientX)
+        ? event.clientX > rect.left + rect.width / 2
+        : false;
+      return after ? { afterId: targetId } : { beforeId: targetId };
+    }
+
+    function handDropPlacement(event, hand, packId, fallbackTargetId = "", draggedId = dragShotId) {
+      const x = Number(event?.clientX);
+      const pack = packById(packId) || packById(selectedPackId);
+      const ids = Array.isArray(pack?.shotIds) ? pack.shotIds : [];
+      if (!Number.isFinite(x) || !ids.length || !hand) {
+        return fallbackTargetId ? dropPlacement(event, event?.currentTarget, fallbackTargetId) : {};
+      }
+      const dragged = String(draggedId || "").trim();
+      const target = String(fallbackTargetId || "").trim();
+      if (target && dragged && target !== dragged && ids.includes(target) && ids.includes(dragged)) {
+        return { swapId: target };
+      }
+      const cards = [...hand.querySelectorAll(".mini")]
+        .map((el) => {
+          const id = el.dataset.shot || "";
+          const rect = el.getBoundingClientRect?.();
+          return rect && ids.includes(id) ? { id, center: rect.left + rect.width / 2, rect } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.center - b.center);
+      if (!cards.length) return {};
+      const first = cards[0];
+      const last = cards[cards.length - 1];
+      if (x <= first.center) return { beforeId: first.id };
+      if (x >= last.center) return { afterId: last.id };
+      if (fallbackTargetId && fallbackTargetId === last.id && x >= last.rect.left + last.rect.width * 0.35) {
+        return { afterId: last.id };
+      }
+      if (fallbackTargetId && fallbackTargetId === first.id && x <= first.rect.left + first.rect.width * 0.65) {
+        return { beforeId: first.id };
+      }
+      for (const card of cards) {
+        if (x < card.center) return { beforeId: card.id };
+      }
+      return { afterId: last.id };
+    }
+
+    function packStackHtml(pack = {}) {
+      const ids = Array.isArray(pack.shotIds) ? pack.shotIds : [];
+      if (!ids.length) return `<div class="empty-pack">拖入镜头</div>`;
+      const previewIds = ids.slice(0, 4);
+      const count = previewIds.length;
+      const cards = previewIds.map((id, index) => {
+        const shot = shotById(id);
+        if (!shot) return "";
+        const center = (count - 1) / 2;
+        const x = Math.round((index - center) * 17);
+        const y = `${Math.abs(index - center) * 4}px`;
+        const rot = (index - center) * 5;
+        return `
+          <div class="pack-stack-card" style="--stack-x:${x}px; --stack-y:${y}; --stack-z:${10 + index}; --stack-rot:${rot.toFixed(1)}deg">
+            <div class="${thumbClass(shot.visual)}"></div>
+            <span>${shot.id}</span>
+          </div>
+        `;
+      }).join("");
+      const more = ids.length > previewIds.length ? `<div class="pack-more">+${ids.length - previewIds.length}</div>` : "";
+      return `<div class="pack-stack">${cards}${more}</div>`;
+    }
+
+    function renderShotGrid() {
+      const used = usedShotIds();
+      $("#shotGrid").innerHTML = shots.map((shot) => `
+        <article class="shot-card${used.has(shot.id) ? " used" : ""}" draggable="true" data-shot="${shot.id}">
+          <div class="${thumbClass(shot.visual)}"></div>
+          <div class="shot-id">${shot.id}</div>
+        </article>
+      `).join("");
+
+      document.querySelectorAll(".shot-card").forEach((card) => {
+        card.addEventListener("dragstart", () => {
+          dragShotId = card.dataset.shot || "";
+          card.classList.add("dragging");
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("dragging");
+          dragShotId = "";
+          document.querySelectorAll(".pack").forEach((pack) => pack.classList.remove("drop-target"));
+        });
+      });
+      const grid = $("#shotGrid");
+      grid.ondragenter = (event) => {
+        event.preventDefault();
+        grid.classList.add("drop-target");
+      };
+      grid.ondragover = (event) => event.preventDefault();
+      grid.ondragleave = () => grid.classList.remove("drop-target");
+      grid.ondrop = (event) => {
+        event.preventDefault();
+        grid.classList.remove("drop-target");
+        returnShotToBoard(dragShotId);
+      };
+    }
+
+    function renderPacks() {
+      const list = $("#packList");
+      list.classList.toggle("dense", packs.length > 6 && packs.length <= 12);
+      list.classList.toggle("extra-dense", packs.length > 12);
+      list.innerHTML = packs.map((pack) => {
+        const duration = packDuration(pack);
+        const warn = duration > 10;
+        const full = duration >= 15;
+        const width = Math.min(100, (duration / 15) * 100);
+        return `
+          <section class="pack${pack.id === selectedPackId ? " selected" : ""}${warn ? " over" : ""}${full ? " full" : ""}" data-pack="${pack.id}">
+            <div class="pack-stack-wrap">${packStackHtml(pack)}</div>
+            <div class="pack-head">
+              <div class="pack-title">${pack.id}</div>
+            </div>
+            <div class="meter${warn ? " warn" : ""}"><span style="width:${width}%"></span></div>
+          </section>
+        `;
+      }).join("");
+
+      document.querySelectorAll(".pack").forEach((el) => {
+        el.addEventListener("click", () => {
+          selectedPackId = el.dataset.pack || selectedPackId;
+          renderDetail();
+        });
+        el.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          el.classList.add("drop-target");
+        });
+        el.addEventListener("dragover", (event) => event.preventDefault());
+        el.addEventListener("dragleave", () => el.classList.remove("drop-target"));
+        el.addEventListener("drop", (event) => {
+          event.preventDefault();
+          el.classList.remove("drop-target");
+          moveShotToPack(dragShotId, el.dataset.pack);
+        });
+      });
+
+      bindMiniCards(list);
+    }
+
+    function bindMiniCards(root = document) {
+      root.querySelectorAll(".mini").forEach((mini) => {
+        mini.addEventListener("click", (event) => {
+          event.stopPropagation();
+          returnShotToBoard(mini.dataset.shot);
+        });
+        mini.addEventListener("dragstart", (event) => {
+          dragShotId = mini.dataset.shot || "";
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", dragShotId);
+          }
+        });
+        mini.addEventListener("dragend", () => {
+          dragShotId = "";
+          document.querySelectorAll(".mini.drop-before, .mini.drop-after, .return-strip, .pack")
+            .forEach((el) => el.classList.remove("drop-before", "drop-after", "drop-target"));
+        });
+        mini.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          mini.classList.remove("drop-before", "drop-after");
+          const rect = mini.getBoundingClientRect();
+          mini.classList.add(event.clientX > rect.left + rect.width / 2 ? "drop-after" : "drop-before");
+        });
+        mini.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          mini.classList.remove("drop-before", "drop-after");
+          const rect = mini.getBoundingClientRect();
+          mini.classList.add(event.clientX > rect.left + rect.width / 2 ? "drop-after" : "drop-before");
+        });
+        mini.addEventListener("dragleave", () => mini.classList.remove("drop-before", "drop-after"));
+        mini.addEventListener("drop", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          mini.classList.remove("drop-before", "drop-after");
+          const draggedId = dragShotId || event.dataTransfer?.getData("text/plain") || "";
+          const hand = mini.closest(".return-strip");
+          const placement = hand
+            ? handDropPlacement(event, hand, mini.dataset.pack || selectedPackId, mini.dataset.shot)
+            : dropPlacement(event, mini, mini.dataset.shot);
+          moveShotToPack(draggedId, mini.dataset.pack || selectedPackId, placement);
+        });
+      });
+    }
+
+    function bindReturnStripDrop() {
+      const strip = $("#returnStrip");
+      if (!strip) return;
+      strip.ondragenter = (event) => {
+        event.preventDefault();
+        strip.classList.add("drop-target");
+      };
+      strip.ondragover = (event) => event.preventDefault();
+      strip.ondragleave = () => strip.classList.remove("drop-target");
+      strip.ondrop = (event) => {
+        event.preventDefault();
+        strip.classList.remove("drop-target");
+        const draggedId = dragShotId || event.dataTransfer?.getData("text/plain") || "";
+        moveShotToPack(draggedId, selectedPackId, handDropPlacement(event, strip, selectedPackId));
+      };
+    }
+
+    function moveShotToPack(shotId, packId, options = {}) {
+      const shot = shotById(shotId);
+      const target = packById(packId);
+      if (!shot || !target) return;
+      const alreadyInTarget = target.shotIds.includes(shot.id);
+      const beforeId = String(options.beforeId || "").trim();
+      const afterId = String(options.afterId || "").trim();
+      const swapId = String(options.swapId || "").trim();
+      if (alreadyInTarget && swapId && swapId !== shot.id && target.shotIds.includes(swapId)) {
+        const nextIds = [...target.shotIds];
+        const fromIndex = nextIds.indexOf(shot.id);
+        const toIndex = nextIds.indexOf(swapId);
+        if (fromIndex >= 0 && toIndex >= 0) {
+          [nextIds[fromIndex], nextIds[toIndex]] = [nextIds[toIndex], nextIds[fromIndex]];
+          target.shotIds = nextIds;
+          selectedPackId = target.id;
+          render();
+        }
+        return;
+      }
+      if (alreadyInTarget && ((!beforeId && !afterId) || beforeId === shot.id || afterId === shot.id)) {
+        selectedPackId = target.id;
+        render();
+        return;
+      }
+      const nextDuration = packDuration(target) + (alreadyInTarget ? 0 : shot.time);
+      if (nextDuration > 15) {
+        selectedPackId = target.id;
+        renderDetail();
+        showToast("超过 15 秒，不能放入这个生成包");
+        return;
+      }
+      packs.forEach((pack) => {
+        pack.shotIds = pack.shotIds.filter((id) => id !== shot.id);
+      });
+      const nextIds = [...target.shotIds];
+      const beforeIndex = beforeId ? nextIds.indexOf(beforeId) : -1;
+      const afterIndex = afterId ? nextIds.indexOf(afterId) : -1;
+      if (beforeIndex >= 0) nextIds.splice(beforeIndex, 0, shot.id);
+      else if (afterIndex >= 0) nextIds.splice(afterIndex + 1, 0, shot.id);
+      else nextIds.push(shot.id);
+      target.shotIds = nextIds;
+      selectedPackId = target.id;
+      render();
+    }
+
+    function returnShotToBoard(shotId) {
+      const shot = shotById(shotId);
+      if (!shot) return;
+      let changed = false;
+      packs.forEach((pack) => {
+        const before = pack.shotIds.length;
+        pack.shotIds = pack.shotIds.filter((id) => id !== shot.id);
+        if (pack.shotIds.length !== before) changed = true;
+      });
+      if (!changed) return;
+      render();
+      showToast(`${shot.id} 已抽回棋盘`);
+    }
+
+    function renderDetail() {
+      const pack = packById(selectedPackId) || packs[0];
+      if (!pack) return;
+      selectedPackId = pack.id;
+      const duration = packDuration(pack);
+      $("#detailTitle").textContent = `${pack.id} ${pack.label} / ${pack.route}`;
+      $("#detailMeta").textContent = duration > 10
+        ? `当前 ${duration.toFixed(1)} 秒，偏长但可用；超过 15 秒会被禁止。`
+        : `当前 ${duration.toFixed(1)} 秒，适合一次生成，拆回原分镜。`;
+      $("#returnStrip").innerHTML = cardHandHtml(pack.shotIds, pack.id, { large: true, hint: true, offset: 120 });
+      bindMiniCards($("#returnStrip"));
+      bindReturnStripDrop();
+      document.querySelectorAll(".pack").forEach((el) => {
+        el.classList.toggle("selected", el.dataset.pack === selectedPackId);
+      });
+    }
+
+    function renderSummary() {
+      const total = packs.reduce((sum, pack) => sum + packDuration(pack), 0);
+      $("#summaryText").textContent = `已确认 ${shots.length} 个分镜，生成计划 ${packs.length} 包，总时长 ${total.toFixed(1)} 秒`;
+    }
+
+    function render() {
+      renderShotGrid();
+      renderPacks();
+      renderDetail();
+      renderSummary();
+    }
+
+    $("#autoPackBtn").addEventListener("click", () => {
+      packs = [
+        { id: "P001", label: "老公", route: "Scail2", shotIds: ["S001", "S003", "S009", "S011"] },
+        { id: "P002", label: "妻子", route: "Scail2", shotIds: ["S005", "S008"] },
+        { id: "P003", label: "妻子+老公", route: "Seedance", shotIds: ["S002", "S006", "S012"] },
+        { id: "P004", label: "场景物品", route: "Seedance", shotIds: ["S004", "S007", "S010"] },
+      ];
+      selectedPackId = "P001";
+      render();
+      showToast("已按角色、人数、路线粗合包");
+    });
+
+    $("#clearPackBtn").addEventListener("click", () => {
+      packs = [
+        { id: "P001", label: "未分配", route: "待定", shotIds: [] },
+        { id: "P002", label: "未分配", route: "待定", shotIds: [] },
+        { id: "P003", label: "未分配", route: "待定", shotIds: [] },
+        { id: "P004", label: "未分配", route: "待定", shotIds: [] },
+      ];
+      selectedPackId = "P001";
+      render();
+      showToast("已清空生成包");
+    });
+
+    $("#confirmBtn").addEventListener("click", () => {
+      $("#confirmBtn").textContent = "已确认";
+      showToast("生成计划已确认，下一步进入视频生成");
+    });
+
+    $("#generateBtn").addEventListener("click", () => {
+      showToast("这里将提交生成计划，不直接改变原分镜时间轴");
+    });
+
+    render();
+  </script>
+</body>
+</html>

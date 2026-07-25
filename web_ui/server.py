@@ -837,6 +837,15 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/storyboard-assets/delete-asset":
+            try:
+                payload = self._read_json()
+                result = _delete_storyboard_mode2_asset(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/storyboard-assets/create-asset":
             try:
                 payload = self._read_json()
@@ -7708,6 +7717,79 @@ def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
         logging.warning("Mode2 asset audit skipped after manual update: %s", exc)
     result = _load_mode2_storyboard_result(root, store_path)
     result["updated_asset_id"] = asset_id
+    return result
+
+
+def _delete_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
+    project_dir = str(payload.get("project_dir") or "").strip()
+    asset_id = str(payload.get("asset_id") or payload.get("id") or "").strip()
+    if not project_dir:
+        raise ValueError("missing_project_dir")
+    if not asset_id:
+        raise ValueError("missing_asset_id")
+
+    root = _resolve_storyboard_mode2_project_dir(project_dir)
+    store_path = _storyboard_mode2_asset_store_path(root)
+    data = _load_storyboard_mode2_store(root)
+    assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
+    target = next((item for item in assets if str(item.get("id") or "") == asset_id), None)
+    if target is None:
+        raise ValueError(f"asset_not_found: {asset_id}")
+
+    def without_asset_id(value: Any) -> list[str]:
+        return [item for item in _string_list(value) if item != asset_id]
+
+    remaining_assets = [
+        item for item in assets
+        if str(item.get("id") or "") != asset_id
+    ]
+    for asset in remaining_assets:
+        for key in (
+            "deduplicated_asset_ids",
+            "related_asset_ids",
+            "split_child_asset_ids",
+            "superseded_by_asset_ids",
+        ):
+            if key in asset:
+                asset[key] = without_asset_id(asset.get(key))
+
+    shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+    for shot in shots:
+        for key in ("asset_ids", "role_asset_ids", "scene_asset_ids", "prop_asset_ids"):
+            if key in shot:
+                shot[key] = without_asset_id(shot.get(key))
+
+    aliases = data.get("scene_asset_aliases")
+    if isinstance(aliases, dict):
+        data["scene_asset_aliases"] = {
+            str(key): str(value)
+            for key, value in aliases.items()
+            if str(key) != asset_id and str(value) != asset_id
+        }
+
+    data["assets"] = remaining_assets
+    data["shots"] = shots
+    deleted_at = time.time()
+    data.setdefault("asset_manual_history", [])
+    if isinstance(data["asset_manual_history"], list):
+        data["asset_manual_history"].append({
+            "asset_id": asset_id,
+            "action": "delete_current_project_asset",
+            "files_deleted": False,
+            "deleted_at": deleted_at,
+        })
+        data["asset_manual_history"] = data["asset_manual_history"][-200:]
+
+    project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
+    _compile_storyboard_prompts(remaining_assets, shots, project_config=project_config)
+    _write_storyboard_mode2_store(root, data)
+    try:
+        _audit_storyboard_mode2_assets({"project_dir": str(root)})
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("Mode2 asset audit skipped after current-project asset delete: %s", exc)
+    result = _load_mode2_storyboard_result(root, store_path)
+    result["deleted_asset_id"] = asset_id
+    result["files_deleted"] = False
     return result
 
 

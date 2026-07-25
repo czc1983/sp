@@ -7,7 +7,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from web_ui.server import _mode2_scail2_route_check, _storyboard_mode2_shot_subclips
+from web_ui.server import (
+    _delete_storyboard_mode2_asset,
+    _mode2_scail2_route_check,
+    _storyboard_mode2_shot_subclips,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +40,53 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             "合并已生成蒙版",
         ):
             self.assertNotIn(text, html)
+
+    def test_story_dashboard_has_compose_step_before_video_generation(self) -> None:
+        html = (ROOT / "web_ui" / "story_generate_dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('data-module="compose"', html)
+        self.assertIn('data-module-view="compose"', html)
+        self.assertIn('id="composeAutoPackBtn"', html)
+        self.assertIn("function composeCreateSmartPlan", html)
+        self.assertIn("function composePackContainingShot", html)
+        self.assertIn("function composeDropPlacement", html)
+        self.assertIn("function composeHandDropPlacement", html)
+        self.assertIn("function composeMoveShotToSelectedPack", html)
+        self.assertIn("function bindComposeDetailDrop", html)
+        self.assertIn("function composePackStackHtml", html)
+        self.assertIn("function confirmComposePlan", html)
+        self.assertIn('openComposePage({ rebuild: true })', html)
+        self.assertIn("5-10 秒最佳，超过 15 秒禁止", html)
+        self.assertIn("卡包架", html)
+        self.assertIn("compose-pack-shelf", html)
+        self.assertIn("compose-pack-stack-card", html)
+        self.assertIn("compose-shot-id", html)
+        self.assertIn("extra-dense", html)
+        self.assertIn('data-compose-board-mode="current"', html)
+        self.assertIn("compose-strip-hand", html)
+        self.assertIn("aspect-ratio: 2 / 3", html)
+        self.assertIn("#41f3ff", html)
+        self.assertIn("#ff4fd8", html)
+        self.assertIn("drop-before", html)
+        self.assertIn("drop-after", html)
+        self.assertIn("afterId", html)
+        self.assertIn("swapId", html)
+        self.assertIn("last.rect.left + last.rect.width * 0.35", html)
+        self.assertIn("selectedItems.concat", html)
+        self.assertIn('event.dataTransfer.setData("text/plain"', html)
+        self.assertIn("点牌放回镜头池", html)
+        self.assertLess(html.index('data-module="storyboard"'), html.index('data-module="compose"'))
+        self.assertLess(html.index('data-module="compose"'), html.index('data-module="generate"'))
+
+    def test_asset_delete_uses_in_app_confirm_not_browser_confirm(self) -> None:
+        html = (ROOT / "web_ui" / "story_generate_dashboard.html").read_text(encoding="utf-8")
+        self.assertNotIn("window.confirm", html)
+        self.assertIn("asset-delete-confirm-overlay", html)
+        self.assertIn("删除接口没有响应", html)
+        self.assertIn("markCurrentProjectAssetIgnored", html)
+        self.assertIn('manual_asset_status: "ignored"', html)
+        ignored_pos = html.index('if (asset.manual_asset_status === "ignored") return true;')
+        role_pos = html.index('if (asset.kind === "role") return false;')
+        self.assertLess(ignored_pos, role_pos)
 
     def test_scail2_route_accepts_single_clean_role_only(self) -> None:
         shot = {
@@ -284,6 +335,54 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertIn("S001", role["used_shots"])
             self.assertIn("S002", role["used_shots"])
             self.assertIn("S002", [item["shot_id"] for item in role["identity_anchors"]])
+
+    def test_delete_storyboard_asset_keeps_image_files_and_unlinks_shots(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store_path = root / "assets" / "storyboard_assets.json"
+            store_path.parent.mkdir(parents=True)
+            image_path = root / "assets" / "manual_assets" / "R001" / "target.png"
+            image_path.parent.mkdir(parents=True)
+            image_path.write_bytes(b"image")
+            store_path.write_text(
+                json.dumps({
+                    "video_path": str(root / "source.mp4"),
+                    "assets": [
+                        {
+                            "id": "R001",
+                            "kind": "role",
+                            "name": "老公",
+                            "target_image": str(image_path),
+                        },
+                        {"id": "scene_1", "kind": "scene", "name": "房间"},
+                    ],
+                    "shots": [{
+                        "segment_id": "S001",
+                        "start": 0,
+                        "end": 2,
+                        "duration": 2,
+                        "asset_ids": ["R001", "scene_1"],
+                        "role_asset_ids": ["R001"],
+                        "scene_asset_ids": ["scene_1"],
+                    }],
+                }, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            with patch("web_ui.server._audit_storyboard_mode2_assets", return_value={}):
+                result = _delete_storyboard_mode2_asset({
+                    "project_dir": str(root),
+                    "asset_id": "R001",
+                })
+
+            self.assertFalse(result["files_deleted"])
+            self.assertTrue(image_path.exists())
+            saved = json.loads(store_path.read_text(encoding="utf-8"))
+            self.assertEqual([asset["id"] for asset in saved["assets"]], ["scene_1"])
+            shot = saved["shots"][0]
+            self.assertEqual(shot["asset_ids"], ["scene_1"])
+            self.assertEqual(shot["role_asset_ids"], [])
+            self.assertEqual(shot["scene_asset_ids"], ["scene_1"])
 
 
 if __name__ == "__main__":

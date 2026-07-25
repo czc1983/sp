@@ -1796,6 +1796,44 @@
       padding: 20px;
     }
 
+    .modal-box.confirm-modal {
+      width: min(420px, calc(100vw - 32px));
+      padding: 16px;
+    }
+
+    .confirm-modal h4 {
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    .confirm-modal p {
+      margin-bottom: 10px;
+    }
+
+    .confirm-target-name {
+      display: block;
+      margin: 10px 0 14px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d0f10;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .confirm-modal-status {
+      min-height: 18px;
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .confirm-modal-status.bad {
+      color: var(--bad);
+    }
+
     .modal-box.asset-editor-modal {
       width: min(780px, calc(100vw - 32px));
       max-height: calc(100vh - 44px);
@@ -7097,6 +7135,578 @@
       min-width: 84px;
       height: 30px;
     }
+
+    .module-view[data-module-view="compose"] > .panel-body {
+      flex: 1 1 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0;
+      overflow: hidden !important;
+      padding: 10px !important;
+    }
+
+    .compose-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compose-workbench {
+      flex: 1 1 0;
+      min-height: 0;
+      height: 100%;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 124px;
+      gap: 10px;
+    }
+
+    .compose-main {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(420px, 1.08fr) minmax(330px, .92fr);
+      gap: 10px;
+    }
+
+    .compose-board,
+    .compose-packs,
+    .compose-detail {
+      min-height: 0;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #0b0b0b;
+      overflow: hidden;
+    }
+
+    .compose-board,
+    .compose-packs {
+      display: grid;
+      grid-template-rows: 38px minmax(0, 1fr);
+    }
+
+    .compose-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      padding: 8px 10px;
+      border-bottom: 1px solid #2a2a2a;
+      background: #111;
+      font-size: 13px;
+      color: #f4f4f4;
+    }
+
+    .compose-section-head span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #b8b8b8;
+      font-size: 12px;
+    }
+
+    .compose-board-tools {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .compose-board-mode {
+      height: 24px;
+      padding: 0 9px;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #151515;
+      color: #c8c8c8;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .compose-board-mode.active {
+      border-color: #f2f2f2;
+      background: #f2f2f2;
+      color: #050505;
+    }
+
+    .compose-shot-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(86px, 104px));
+      grid-auto-rows: max-content;
+      align-content: start;
+      justify-content: start;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .compose-shot-grid.drop-target {
+      border-color: #f2f2f2;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .compose-shot-card {
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 2 / 3;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 24px;
+      gap: 5px;
+      padding: 6px;
+      border: 1px solid #2f2f2f;
+      border-radius: 8px;
+      background: #151515;
+      cursor: grab;
+      transition: opacity .14s ease, border-color .14s ease, background .14s ease, transform .14s ease;
+    }
+
+    .compose-shot-card:hover {
+      border-color: #777;
+      background: #1c1c1c;
+    }
+
+    .compose-shot-card.used {
+      opacity: .36;
+    }
+
+    .compose-shot-card.unpacked {
+      border-color: #41f3ff;
+      outline: 2px solid rgba(65, 243, 255, .42);
+      background: linear-gradient(180deg, #1b2527 0%, #111 58%, #151515 100%);
+      box-shadow: 0 0 0 1px rgba(65, 243, 255, .25), 0 0 22px rgba(65, 243, 255, .28);
+      opacity: 1;
+    }
+
+    .compose-shot-card.unpacked .compose-shot-id {
+      color: #79f8ff;
+      font-weight: 900;
+    }
+
+    .compose-shot-card.dragging {
+      opacity: .42;
+      transform: scale(.96);
+    }
+
+    .compose-shot-card.drop-before,
+    .compose-shot-card.drop-after {
+      border-color: #ff4fd8;
+      outline: 2px solid rgba(255, 79, 216, .42);
+      background: #242027;
+      box-shadow: 0 0 18px rgba(255, 79, 216, .28);
+      transform: translateY(-4px);
+    }
+
+    .compose-thumb {
+      min-height: 0;
+      position: relative;
+      border: 1px solid #333;
+      border-radius: 6px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #252525 0%, #101010 58%, #050505 100%);
+    }
+
+    .compose-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .compose-thumb-empty::before,
+    .compose-thumb-empty::after {
+      content: "";
+      position: absolute;
+      border: 1px solid rgba(255, 255, 255, .22);
+      background: rgba(255, 255, 255, .1);
+    }
+
+    .compose-thumb-empty::before {
+      width: 22%;
+      height: 46%;
+      left: 38%;
+      bottom: 13%;
+      border-radius: 999px 999px 8px 8px;
+    }
+
+    .compose-thumb-empty::after {
+      width: 14%;
+      height: 18%;
+      left: 42%;
+      top: 20%;
+      border-radius: 50%;
+    }
+
+    .compose-shot-id {
+      min-width: 0;
+      align-self: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #f4f4f4;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .compose-pack-list {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+      grid-auto-rows: 124px;
+      align-content: start;
+      gap: 8px;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    .compose-pack-list.dense {
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      grid-auto-rows: 106px;
+      gap: 6px;
+    }
+
+    .compose-pack-list.extra-dense {
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      grid-auto-rows: 88px;
+      gap: 5px;
+    }
+
+    .compose-pack {
+      min-height: 0;
+      position: relative;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 20px 7px;
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #151515;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color .14s ease, background .14s ease, outline .14s ease, transform .14s ease;
+    }
+
+    .compose-pack:hover {
+      border-color: #777;
+      background: #1b1b1b;
+      transform: translateY(-1px);
+    }
+
+    .compose-pack.selected {
+      border-color: #d0d0d0;
+      background: #1a1a1a;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+    }
+
+    .compose-pack.warn {
+      background: repeating-linear-gradient(-45deg, #151515 0 8px, #202020 8px 16px);
+    }
+
+    .compose-pack.drop-target,
+    .compose-detail-hand.drop-target {
+      border-color: #41f3ff;
+      outline: 2px solid rgba(65, 243, 255, .28);
+      box-shadow: 0 0 18px rgba(65, 243, 255, .22);
+    }
+
+    .compose-pack-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .compose-pack-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 800;
+      color: #f4f4f4;
+    }
+
+    .compose-pack-stack-wrap,
+    .compose-detail-hand {
+      position: relative;
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .compose-pack-stack {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
+
+    .compose-pack-stack-card {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      z-index: var(--stack-z);
+      width: 48px;
+      aspect-ratio: 2 / 3;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 15px;
+      border: 1px solid #414141;
+      border-radius: 6px;
+      background: #202020;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, .42);
+      transform: translateX(calc(-50% + var(--stack-x))) translateY(var(--stack-y)) rotate(var(--stack-rot));
+    }
+
+    .compose-pack-stack-card .compose-thumb {
+      border: 0;
+      border-radius: 0;
+    }
+
+    .compose-pack-stack-card span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border-top: 1px solid #333;
+      color: #dcdcdc;
+      font-size: 9px;
+      line-height: 15px;
+      text-align: center;
+    }
+
+    .compose-pack-more {
+      position: absolute;
+      right: 0;
+      top: 0;
+      height: 22px;
+      min-width: 30px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(65, 243, 255, .55);
+      border-radius: 999px;
+      background: #101010;
+      color: #79f8ff;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 0 16px rgba(65, 243, 255, .28);
+    }
+
+    .compose-pack-list.dense .compose-pack {
+      padding: 6px;
+    }
+
+    .compose-pack-list.dense .compose-pack-stack-card {
+      width: 40px;
+      grid-template-rows: minmax(0, 1fr) 13px;
+    }
+
+    .compose-pack-list.extra-dense .compose-pack {
+      padding: 5px;
+      grid-template-rows: minmax(0, 1fr) auto 6px;
+    }
+
+    .compose-pack-list.extra-dense .compose-pack-stack-card {
+      width: 32px;
+      grid-template-rows: minmax(0, 1fr) 11px;
+      border-radius: 5px;
+    }
+
+    .compose-pack-list.extra-dense .compose-pack-stack-card span {
+      display: none;
+    }
+
+    .compose-card-hand {
+      position: absolute;
+      inset: 0;
+    }
+
+    .compose-mini {
+      position: absolute;
+      left: var(--x);
+      top: 50%;
+      z-index: var(--z);
+      width: 56px;
+      height: 50px;
+      display: grid;
+      grid-template-rows: 1fr 17px;
+      border: 1px solid #3b3b3b;
+      border-radius: 6px;
+      background: #222;
+      overflow: hidden;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, .38);
+      transform: translate(-50%, -50%) rotate(var(--rot));
+      transform-origin: 50% 130%;
+      transition: transform .14s ease, border-color .14s ease, background .14s ease;
+    }
+
+    .compose-mini:hover {
+      z-index: 40;
+      border-color: #f4f4f4;
+      background: #2b2b2b;
+      transform: translate(-50%, calc(-50% - 8px)) rotate(var(--rot));
+    }
+
+    .compose-mini.drop-before,
+    .compose-mini.drop-after {
+      z-index: 50;
+      border-color: #ff4fd8;
+      box-shadow: 0 0 20px rgba(255, 79, 216, .35);
+      transform: translate(-50%, calc(-50% - 10px)) rotate(var(--rot)) scale(1.04);
+    }
+
+    .compose-strip-hand.compose-card-hand {
+      position: absolute;
+      inset: -8px 0 -2px;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .compose-strip-hand .compose-mini {
+      position: absolute;
+      left: var(--x);
+      top: 52%;
+      width: 58px;
+      height: 87px;
+      grid-template-rows: 1fr 18px;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, .36);
+      transform: translate(-50%, -50%) rotate(var(--rot));
+    }
+
+    .compose-strip-hand .compose-mini span {
+      line-height: 18px;
+    }
+
+    .compose-strip-hand .compose-mini:hover,
+    .compose-strip-hand .compose-mini.drop-before,
+    .compose-strip-hand .compose-mini.drop-after {
+      transform: translate(-50%, calc(-50% - 5px)) rotate(var(--rot));
+    }
+
+    .compose-mini .compose-thumb {
+      border: 0;
+      border-radius: 0;
+    }
+
+    .compose-mini span {
+      border-top: 1px solid #333;
+      color: #d0d0d0;
+      font-size: 10px;
+      line-height: 17px;
+      text-align: center;
+    }
+
+    .compose-pack-empty {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #444;
+      border-radius: 6px;
+      color: #777;
+      font-size: 12px;
+    }
+
+    .compose-hand-hint {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      color: #777;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .compose-meter {
+      height: 9px;
+      border: 1px solid #3a3a3a;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #070707;
+    }
+
+    .compose-meter span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: #f2f2f2;
+    }
+
+    .compose-meter.warn span {
+      background: repeating-linear-gradient(90deg, #d5d5d5 0 8px, #8a8a8a 8px 16px);
+    }
+
+    .compose-detail {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(210px, 320px) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #101010;
+      overflow: visible;
+    }
+
+    .compose-detail-title {
+      min-width: 0;
+    }
+
+    .compose-detail-title strong,
+    .compose-detail-title span {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .compose-detail-title strong {
+      font-size: 15px;
+    }
+
+    .compose-detail-title span {
+      margin-top: 4px;
+      color: #aaa;
+      font-size: 12px;
+    }
+
+    .compose-detail-hand {
+      height: 62px;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #0b0b0b;
+      overflow: visible;
+    }
+
+    .compose-detail-hand .compose-card-hand {
+      inset: -118px 0 -8px;
+      overflow: visible;
+    }
+
+    .compose-detail-hand .compose-mini {
+      width: clamp(96px, 6.8vw, 122px);
+      height: clamp(142px, 10vw, 178px);
+      grid-template-rows: 1fr 24px;
+      border-radius: 8px;
+    }
+
+    .compose-detail-hand .compose-mini span {
+      line-height: 24px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1180px) {
+      .compose-main {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) 190px;
+      }
+
+      .compose-pack-list {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        grid-auto-rows: 108px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -7125,6 +7735,12 @@
             <svg viewBox="0 0 24 24"><path d="M4 11h16"></path><path d="M8 4l-4 7"></path><path d="M14 4l-4 7"></path><path d="M20 4l-4 7"></path><rect x="3" y="4" width="18" height="16" rx="2"></rect></svg>
           </span>
           <span class="module-title">分镜</span>
+        </button>
+        <button class="module-step" type="button" data-module="compose">
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 17l6-10 6 10"></path><path d="M8.2 13.3h7.6"></path><rect x="3" y="5" width="5" height="14" rx="1.2"></rect><rect x="16" y="5" width="5" height="14" rx="1.2"></rect></svg>
+          </span>
+          <span class="module-title">编排</span>
         </button>
         <button class="module-step" type="button" data-module="generate">
           <span class="module-icon" aria-hidden="true">
@@ -7301,6 +7917,7 @@
                 <div class="timeline-controls">
                   <button class="tiny-btn" id="timelinePrevBtn" type="button">上一个</button>
                   <button class="tiny-btn" id="timelineNextBtn" type="button">下一个</button>
+                  <button class="tiny-btn" id="playStoryboardBtn" type="button" disabled>播放分镜</button>
                   <button class="tiny-btn primary" id="saveStoryboardBtn" type="button">保存分镜</button>
                 </div>
               </div>
@@ -7351,6 +7968,49 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel module-view" data-module-view="compose">
+        <div class="panel-head">
+          <span>编排</span>
+          <div class="compose-toolbar">
+            <button class="btn" id="composeAutoPackBtn" type="button">智能合包</button>
+            <button class="btn" id="composeClearBtn" type="button">清空</button>
+            <button class="btn primary" id="composeConfirmBtn" type="button">确认计划</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="compose-workbench">
+            <div class="compose-main">
+              <section class="compose-board">
+                <div class="compose-section-head">
+                  <strong>镜头池</strong>
+                  <div class="compose-board-tools">
+                    <button class="compose-board-mode active" type="button" data-compose-board-mode="all">全部</button>
+                    <button class="compose-board-mode" type="button" data-compose-board-mode="current">当前包</button>
+                    <span id="composeBoardSummary">保存分镜后自动生成</span>
+                  </div>
+                </div>
+                <div class="compose-shot-grid" id="composeShotGrid"></div>
+              </section>
+              <section class="compose-packs">
+                <div class="compose-section-head">
+                  <strong>卡包架</strong>
+                  <span>5-10 秒最佳，超过 15 秒禁止</span>
+                </div>
+                <div class="compose-pack-list compose-pack-shelf" id="composePackList"></div>
+              </section>
+            </div>
+            <div class="compose-detail">
+              <div class="compose-detail-title">
+                <strong id="composeDetailTitle">生成计划</strong>
+                <span id="composeDetailMeta">分镜保存后，在这里确认生成包。</span>
+              </div>
+              <div class="compose-detail-hand" id="composeDetailHand"></div>
+              <button class="btn primary" id="composeStartGenerateBtn" type="button">开始生成</button>
+            </div>
           </div>
         </div>
       </section>
@@ -7753,9 +8413,15 @@
       previewRatioManual: false,
       drawing: null,
     };
+    let composePlan = { packs: [], selectedPackId: "" };
+    let composeConfirmedPlan = null;
+    let composeDragShotId = "";
+    let composeBoardMode = "all";
     let storyboardLeftPreviewMode = "source";
     let storyboardLeftSubclipEdit = null;
     let storyboardShotCutBusy = false;
+    let storyboardPlayAllRunning = false;
+    let storyboardPlayAllToken = 0;
     let storyAssets = [];
     let fullVideoUnderstanding = null;
     let storyUnderstandingOptions = { use_pre_director: true, force_understand: false };
@@ -9569,7 +10235,9 @@
     }
 
     function assetApprovalRestricted(asset) {
-      return isMixedSceneAsset(asset) || hasRefinementProvenanceIssue(asset);
+      return String(asset?.manual_asset_status || "") === "ignored"
+        || isMixedSceneAsset(asset)
+        || hasRefinementProvenanceIssue(asset);
     }
 
     function isShotReferenceAsset(asset) {
@@ -9768,12 +10436,13 @@
     }
 
     function assetHiddenFromMainBoard(asset) {
-      if (!asset || asset.kind === "role") return false;
+      if (!asset) return false;
+      if (asset.manual_asset_status === "ignored") return true;
+      if (asset.kind === "role") return false;
       if (assetApprovalRestricted(asset)) return true;
       if (assetHasTargetReference(asset)) return false;
       const info = assetDisplayInfo(asset);
       if (asset.manual_asset_status === "approved" && info.image) return false;
-      if (asset.manual_asset_status === "ignored") return true;
       if (isUnconfirmedPropCandidate(asset) || isUnusableSceneCandidate(asset)) return true;
       if (asset.asset_hidden_by_default) return true;
       if (!info.image) return true;
@@ -9874,7 +10543,7 @@
                 <small title="${escapeHtml(assetCandidateReason(asset))}">${escapeHtml(assetCandidatePreviewInfo(asset).label)} 路 ${escapeHtml(assetCandidateReason(asset))}</small>
               </div>
               <div class="asset-candidate-row-actions">
-                <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(asset.id)}">编辑/换图</button>
+                <button class="tiny-btn" type="button" data-delete-asset="${escapeHtml(asset.id)}">删除</button>
               </div>
             </div>
           `).join("")}
@@ -9890,8 +10559,7 @@
           : "";
         return `<img src="${escapeHtml(mediaSrc(info.image, 0.1))}" alt="${escapeHtml(info.label)}">${warning}`;
       }
-      const action = asset?.kind === "role" ? "Select target image" : "Edit / replace image";
-      return `<div class="asset-empty-side">${escapeHtml(info.warning)}<br><button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(asset.id)}">${escapeHtml(action)}</button></div>`;
+      return `<div class="asset-empty-side">${escapeHtml(info.warning || "暂无参考图")}</div>`;
     }
 
     function assetMediaHtml(asset, side) {
@@ -9993,6 +10661,12 @@
           openAssetEditor(button.dataset.editAsset || "");
         });
       });
+      board.querySelectorAll("[data-delete-asset]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          deleteCurrentStoryAsset(button.dataset.deleteAsset || "");
+        });
+      });
       board.querySelectorAll("[data-anchor-role]").forEach((button) => {
         button.addEventListener("click", (event) => {
           event.preventDefault();
@@ -10025,6 +10699,176 @@
       if (questionCount) questionCount.textContent = String(storyAssets.length || 0);
     }
 
+    function assetDeleteErrorText(error) {
+      const message = String(error?.message || error || "").trim();
+      if (/not_found|404|not found|cannot post/i.test(message)) {
+        return "当前后端还没有删除接口，请重启 Web 服务后再试。";
+      }
+      if (/failed to fetch|networkerror|connection|empty response|unexpected/i.test(message)) {
+        return "删除接口没有响应。当前后端可能还没重启，请重启 Web 服务后再试。";
+      }
+      return message || "删除资产失败。";
+    }
+
+    function assetDeleteNeedsCompatFallback(error) {
+      return /not_found|404|not found|cannot post/i.test(String(error?.message || error || ""));
+    }
+
+    async function markCurrentProjectAssetIgnored(projectDir, assetId, name) {
+      const response = await fetch("/api/storyboard-assets/update-asset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_dir: projectDir,
+          asset_id: assetId,
+          updates: {
+            manual_asset_status: "ignored",
+            manual_note: "从当前项目资产页删除；图片文件未删除。",
+          },
+        }),
+      });
+      const raw = await response.text();
+      let data = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        data = {};
+      }
+      if (!response.ok || data.error) {
+        throw new Error(data.error || raw || `HTTP ${response.status}`);
+      }
+      const target = (Array.isArray(data.assets) ? data.assets : []).find((item) => String(item?.id || "") === assetId);
+      if (target && target.manual_asset_status !== "ignored") {
+        throw new Error(`${name || assetId} 没有成功移出当前资产页`);
+      }
+      return data;
+    }
+
+    function openCurrentProjectAssetDeleteDialog(asset, projectDir) {
+      const name = asset?.name || asset?.tag || asset?.id || "当前资产";
+      const id = String(asset?.id || "").trim();
+      document.querySelector(".asset-delete-confirm-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay asset-delete-confirm-overlay";
+      overlay.innerHTML = `
+        <div class="modal-box confirm-modal" role="dialog" aria-modal="true" aria-labelledby="assetDeleteConfirmTitle">
+          <h4 id="assetDeleteConfirmTitle">删除当前项目资产</h4>
+          <p>只从当前项目移除这个资产和分镜绑定，图片文件不会删除。</p>
+          <strong class="confirm-target-name">${escapeHtml(name)}</strong>
+          <p class="confirm-modal-status" data-asset-delete-status></p>
+          <div class="asset-editor-actions">
+            <button class="tiny-btn" type="button" data-cancel-asset-delete>取消</button>
+            <button class="tiny-btn" type="button" data-confirm-asset-delete>删除</button>
+          </div>
+        </div>
+      `;
+      let submitting = false;
+      const status = overlay.querySelector("[data-asset-delete-status]");
+      const cancelBtn = overlay.querySelector("[data-cancel-asset-delete]");
+      const confirmBtn = overlay.querySelector("[data-confirm-asset-delete]");
+      const close = () => {
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const setBusy = (running) => {
+        submitting = Boolean(running);
+        if (cancelBtn) cancelBtn.disabled = submitting;
+        if (confirmBtn) {
+          confirmBtn.disabled = submitting;
+          confirmBtn.textContent = submitting ? "删除中" : "删除";
+        }
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape" && !submitting) close();
+      };
+      const runDelete = async () => {
+        if (submitting) return;
+        if (status) {
+          status.textContent = "正在删除当前项目资产...";
+          status.classList.remove("bad");
+        }
+        setBusy(true);
+        setStoryStatus(["> 正在删除当前项目资产", `> ${name}`], "warn");
+        try {
+          const response = await fetch("/api/storyboard-assets/delete-asset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ project_dir: projectDir, asset_id: id }),
+          });
+          const raw = await response.text();
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (_) {
+            data = {};
+          }
+          if (!response.ok || data.error) {
+            throw new Error(data.error || raw || `HTTP ${response.status}`);
+          }
+          applyLoadedProject(data, { story: data.storyboard || {} }, { preserveStrategy: true });
+          const lines = [
+            "> 已删除当前项目资产",
+            `> ${name}`,
+            "> 图片文件未删除",
+          ];
+          setStoryStatus(lines, "good");
+          addLogs(lines);
+          close();
+        } catch (error) {
+          if (assetDeleteNeedsCompatFallback(error)) {
+            if (status) {
+              status.textContent = "当前后端未加载删除接口，正在用兼容方式移出当前资产页...";
+              status.classList.remove("bad");
+            }
+            try {
+              const fallbackData = await markCurrentProjectAssetIgnored(projectDir, id, name);
+              applyLoadedProject(fallbackData, { story: fallbackData.storyboard || {} }, { preserveStrategy: true });
+              const lines = [
+                "> 已从当前资产页移除",
+                `> ${name}`,
+                "> 兼容模式：图片文件未删除；重启后端后会使用真正删除接口",
+              ];
+              setStoryStatus(lines, "good");
+              addLogs(lines);
+              close();
+              return;
+            } catch (fallbackError) {
+              error = fallbackError;
+            }
+          }
+          const detail = assetDeleteErrorText(error);
+          if (status) {
+            status.textContent = detail;
+            status.classList.add("bad");
+          }
+          const lines = ["x 删除资产失败", "> " + detail];
+          setStoryStatus(lines, "bad");
+          addLogs(lines);
+          setBusy(false);
+        }
+      };
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay && !submitting) close();
+      });
+      cancelBtn?.addEventListener("click", close);
+      confirmBtn?.addEventListener("click", runDelete);
+      document.addEventListener("keydown", onKeyDown);
+      document.body.appendChild(overlay);
+      cancelBtn?.focus();
+    }
+
+    function deleteCurrentStoryAsset(assetId) {
+      const id = String(assetId || "").trim();
+      const asset = findStoryAsset(id);
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!id || !projectDir) {
+        setStoryStatus(["x 删除资产失败", "> 当前项目或资产为空。"], "bad");
+        return;
+      }
+      const name = asset?.name || asset?.tag || id;
+      openCurrentProjectAssetDeleteDialog(asset || { id, name }, projectDir);
+    }
+
     function openAssetLibraryPanel() {
       const lines = [
         "> 资产库入口已打开",
@@ -10053,15 +10897,14 @@
       const id = String(asset?.id || "");
       const name = asset?.name || id || "asset";
       const kind = assetKindLabel(asset?.kind || "asset");
-      const editLabel = asset?.kind === "role" ? "\u6362\u56fe" : "\u7f16\u8f91";
       const trackPreview = asset?.kind === "role" ? assetTrackPreviewHtml(asset) : "";
       const actionRail = asset?.kind === "role"
         ? `<div class="asset-action-rail">
-            <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">\u6362\u56fe</button>
             <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">身份定位</button>
+            <button class="tiny-btn" type="button" data-delete-asset="${escapeHtml(id)}">删除</button>
           </div>`
         : `<div class="asset-action-rail">
-            <button class="tiny-btn" type="button" data-edit-asset="${escapeHtml(id)}">${escapeHtml(editLabel)}</button>
+            <button class="tiny-btn" type="button" data-delete-asset="${escapeHtml(id)}">删除</button>
           </div>`;
       return `
         <article class="asset-card" data-asset-card="${escapeHtml(id)}">
@@ -10809,7 +11652,7 @@
         <div class="asset-editor-actions">
           <div class="manual-asset-save-status" id="manualAssetSaveStatus" hidden></div>
           <button class="btn" id="manualAssetCloseBtn" type="button">\u53d6\u6d88</button>
-          <button class="btn good" id="manualAssetSaveBtn" type="button">\u4fdd\u5b58\u5230\u8d44\u4ea7\u5e93</button>
+          <button class="btn good" id="manualAssetSaveBtn" type="button">\u4fdd\u5b58</button>
         </div>
       `;
       overlay.appendChild(box);
@@ -11115,7 +11958,7 @@
         } finally {
           if (saveButton) {
             saveButton.disabled = false;
-            saveButton.textContent = "\u4fdd\u5b58\u5230\u8d44\u4ea7\u5e93";
+            saveButton.textContent = "\u4fdd\u5b58";
           }
         }
       });
@@ -11135,6 +11978,9 @@
       }
       if (target === "storyboard") {
         try { renderStoryAssets(); } catch (_) {}
+      }
+      if (target === "compose") {
+        try { ensureComposePlan(); renderComposePage(); } catch (_) {}
       }
     }
 
@@ -13788,6 +14634,7 @@
     }
 
     function renderTimeline(segments) {
+      stopStoryboardPlayback({ silent: true });
       timelineSegments = Array.isArray(segments) ? segments : [];
       selectedTimelineIndex = -1;
       const strip = $("#timelineStrip");
@@ -14069,6 +14916,9 @@
     }
 
     function selectTimelineSegment(index, options = {}) {
+      if (storyboardPlayAllRunning && !options.playback) {
+        stopStoryboardPlayback({ silent: true });
+      }
       const seg = timelineSegments[index];
       selectedTimelineIndex = seg ? index : -1;
       document.querySelectorAll(".timeline-card").forEach((card) => {
@@ -14079,6 +14929,7 @@
       const nextBtn = $("#timelineNextBtn");
       if (prevBtn) prevBtn.disabled = selectedTimelineIndex <= 0;
       if (nextBtn) nextBtn.disabled = selectedTimelineIndex < 0 || selectedTimelineIndex >= timelineSegments.length - 1;
+      updateStoryboardPlayButton();
 
       const originalVideo = $("#timelineOriginalVideo");
       const generatedVideo = $("#timelineGeneratedVideo");
@@ -14126,6 +14977,131 @@
       if (!timelineSegments.length) return;
       const next = Math.min(timelineSegments.length - 1, Math.max(0, selectedTimelineIndex + delta));
       selectTimelineSegment(next);
+    }
+
+    function updateStoryboardPlayButton() {
+      const button = $("#playStoryboardBtn");
+      if (!button) return;
+      button.disabled = !timelineSegments.length;
+      button.textContent = storyboardPlayAllRunning ? "停止" : "播放分镜";
+      button.classList.toggle("active", storyboardPlayAllRunning);
+    }
+
+    function stopStoryboardPlayback({ silent = false } = {}) {
+      if (!storyboardPlayAllRunning && silent) return;
+      storyboardPlayAllToken += 1;
+      storyboardPlayAllRunning = false;
+      const video = $("#timelineOriginalVideo");
+      try { video?.pause(); } catch (_) {}
+      updateStoryboardPlayButton();
+    }
+
+    function storyboardPlaybackBounds(seg = {}, video = null) {
+      const path = shotVideoPath(seg);
+      const fullSourcePath = storyboardFullSourcePath(seg);
+      const sourcePath = String(seg?.source_video_path || seg?.full_source_video_path || fullSourcePath || "").trim();
+      const clipPath = String(seg?.preview_clip_path || seg?.clip_output_path || "").trim();
+      const usesFullSource = !!path
+        && !clipPath
+        && ((sourcePath && sameStoryboardMediaPath(path, sourcePath)) || (fullSourcePath && sameStoryboardMediaPath(path, fullSourcePath)));
+      const duration = storyboardSegmentDuration(seg);
+      if (usesFullSource) {
+        const start = Math.max(0, Number(seg?.start || 0));
+        const end = Number(seg?.end || 0);
+        return {
+          start,
+          end: Number.isFinite(end) && end > start ? end : start + duration,
+        };
+      }
+      const videoDuration = Number(video?.duration || 0);
+      return {
+        start: 0,
+        end: Number.isFinite(videoDuration) && videoDuration > 0 ? videoDuration : Math.max(0, duration),
+      };
+    }
+
+    function waitForStoryboardVideoMetadata(video, token) {
+      if (!video) return Promise.resolve(false);
+      if (video.readyState >= 1) return Promise.resolve(true);
+      return new Promise((resolve) => {
+        const done = (ok) => {
+          clearTimeout(timer);
+          video.removeEventListener("loadedmetadata", onReady);
+          video.removeEventListener("error", onError);
+          resolve(ok);
+        };
+        const onReady = () => done(storyboardPlayAllRunning && token === storyboardPlayAllToken);
+        const onError = () => done(false);
+        const timer = setTimeout(() => done(false), 8000);
+        video.addEventListener("loadedmetadata", onReady, { once: true });
+        video.addEventListener("error", onError, { once: true });
+      });
+    }
+
+    function waitForStoryboardPlaybackStep(video, endTime, token) {
+      if (!video) return Promise.resolve("stopped");
+      return new Promise((resolve) => {
+        const done = (reason) => {
+          clearInterval(timer);
+          video.removeEventListener("timeupdate", onTick);
+          video.removeEventListener("ended", onEnded);
+          video.removeEventListener("error", onError);
+          resolve(reason);
+        };
+        const onTick = () => {
+          if (!storyboardPlayAllRunning || token !== storyboardPlayAllToken) return done("stopped");
+          if (Number.isFinite(endTime) && endTime > 0 && Number(video.currentTime || 0) >= endTime - 0.04) {
+            try { video.pause(); } catch (_) {}
+            done("ended");
+          }
+        };
+        const onEnded = () => done("ended");
+        const onError = () => done("error");
+        const timer = setInterval(onTick, 120);
+        video.addEventListener("timeupdate", onTick);
+        video.addEventListener("ended", onEnded, { once: true });
+        video.addEventListener("error", onError, { once: true });
+        onTick();
+      });
+    }
+
+    async function playStoryboardSequence() {
+      if (storyboardPlayAllRunning) {
+        stopStoryboardPlayback();
+        return;
+      }
+      if (!timelineSegments.length) return;
+      const video = $("#timelineOriginalVideo");
+      if (!video) return;
+      const token = storyboardPlayAllToken + 1;
+      storyboardPlayAllToken = token;
+      storyboardPlayAllRunning = true;
+      updateStoryboardPlayButton();
+      for (let index = 0; index < timelineSegments.length; index += 1) {
+        if (!storyboardPlayAllRunning || token !== storyboardPlayAllToken) break;
+        const seg = timelineSegments[index] || {};
+        if (!shotVideoPath(seg)) continue;
+        selectTimelineSegment(index, { previewMode: "segment", playback: true });
+        const ready = await waitForStoryboardVideoMetadata(video, token);
+        if (!ready || !storyboardPlayAllRunning || token !== storyboardPlayAllToken) break;
+        const bounds = storyboardPlaybackBounds(seg, video);
+        try {
+          video.currentTime = Math.max(0, Number(bounds.start || 0));
+        } catch (_) {}
+        try {
+          await video.play();
+        } catch (error) {
+          stopStoryboardPlayback({ silent: true });
+          assistantSetStatus(["自动播放被浏览器拦截，请点一下视频后再试。"], "warn");
+          break;
+        }
+        const reason = await waitForStoryboardPlaybackStep(video, bounds.end, token);
+        if (reason !== "ended") break;
+      }
+      if (token === storyboardPlayAllToken) {
+        storyboardPlayAllRunning = false;
+        updateStoryboardPlayButton();
+      }
     }
 
     function updateStoryboardSubclipPreview() {
@@ -14394,6 +15370,635 @@
       return String(path || "").split(/[\\/]/).pop();
     }
 
+    function composeShotKey(seg, index) {
+      return String(seg?.segment_id || seg?.shot_id || `S${String(index + 1).padStart(3, "0")}`);
+    }
+
+    function composeShotById(shotId) {
+      const target = String(shotId || "");
+      const index = timelineSegments.findIndex((seg, i) => composeShotKey(seg, i) === target);
+      return index >= 0 ? { seg: timelineSegments[index], index, id: target } : null;
+    }
+
+    function composeShotDuration(seg = {}) {
+      const duration = Number(seg.duration);
+      if (Number.isFinite(duration) && duration > 0) return duration;
+      const start = Number(seg.start);
+      const end = Number(seg.end);
+      return Number.isFinite(start) && Number.isFinite(end) && end > start ? end - start : 0;
+    }
+
+    function composeShotRoles(seg = {}) {
+      return currentServerTransferRoleAssets(seg)
+        .filter((asset) => asset && asset.kind === "role" && !assetApprovalRestricted(asset));
+    }
+
+    function composeShotLabel(seg = {}) {
+      const names = composeShotRoles(seg)
+        .map((asset) => String(asset.name || asset.tag || asset.id || "").trim())
+        .filter(Boolean);
+      if (names.length) return names.slice(0, 2).join("+");
+      const sceneIds = Array.isArray(seg.scene_asset_ids) ? seg.scene_asset_ids : [];
+      const scenes = sceneIds.map((id) => findStoryAsset(id))
+        .map((asset) => String(asset?.name || asset?.tag || "").trim())
+        .filter(Boolean);
+      if (scenes.length) return scenes[0];
+      const personCount = Number(seg.person_count);
+      if (Number.isFinite(personCount) && personCount > 1) return "多人";
+      if (Number.isFinite(personCount) && personCount === 0) return "场景";
+      return "镜头";
+    }
+
+    function composeShotType(seg = {}, decision = generationRouteForShot(seg)) {
+      const personCount = Number(decision.personCount ?? seg.person_count);
+      if (decision.backend === "scail2") return "单人";
+      if (shotHasMultiOrContactRisk(seg) || Number(decision.roleCount || 0) > 1 || personCount > 1) return "多人";
+      if (personCount === 0) return "场景";
+      return "Seedance";
+    }
+
+    function composeShotRoute(seg = {}) {
+      const decision = generationRouteForShot(seg);
+      return {
+        ...decision,
+        type: composeShotType(seg, decision),
+        labelText: decision.backend === "scail2" ? "Scail2" : "Seedance",
+      };
+    }
+
+    function composePackKey(seg = {}, route = composeShotRoute(seg)) {
+      const roleIds = composeShotRoles(seg).map((asset) => String(asset.id || "").trim()).filter(Boolean).sort();
+      if (route.backend === "scail2") return `scail2:${roleIds[0] || composeShotLabel(seg)}`;
+      if (roleIds.length) return `seedance:${roleIds.join("+")}`;
+      return `seedance:${route.type}:${composeShotLabel(seg)}`;
+    }
+
+    function composePackDuration(pack = {}) {
+      return (pack.shotIds || []).reduce((sum, id) => {
+        const item = composeShotById(id);
+        return sum + composeShotDuration(item?.seg || {});
+      }, 0);
+    }
+
+    function composeUsedShotIds() {
+      return new Set((composePlan.packs || []).flatMap((pack) => pack.shotIds || []));
+    }
+
+    function composePackTitle(pack = {}) {
+      return `${pack.id || "P000"} ${pack.label || "生成包"} / ${pack.route || "Seedance"}`;
+    }
+
+    function composeSelectedPack() {
+      const packs = composePlan.packs || [];
+      if (!packs.length) return null;
+      const pack = packs.find((item) => item.id === composePlan.selectedPackId) || packs[0];
+      composePlan.selectedPackId = pack.id;
+      return pack;
+    }
+
+    function composePackContainingShot(shotId) {
+      const id = String(shotId || "").trim();
+      if (!id) return null;
+      return (composePlan.packs || []).find((pack) => (pack.shotIds || []).includes(id)) || null;
+    }
+
+    function composeDropPlacement(event, targetEl, targetId) {
+      const rect = targetEl?.getBoundingClientRect?.();
+      const after = rect && Number.isFinite(event?.clientX)
+        ? event.clientX > rect.left + rect.width / 2
+        : false;
+      return after ? { afterId: targetId } : { beforeId: targetId };
+    }
+
+    function composeHandDropPlacement(event, hand, packId, fallbackTargetId = "", draggedId = composeDragShotId) {
+      const x = Number(event?.clientX);
+      const pack = (composePlan.packs || []).find((entry) => entry.id === packId) || composeSelectedPack();
+      const ids = Array.isArray(pack?.shotIds) ? pack.shotIds : [];
+      if (!Number.isFinite(x) || !ids.length || !hand) {
+        return fallbackTargetId ? composeDropPlacement(event, event?.currentTarget, fallbackTargetId) : {};
+      }
+      const dragged = String(draggedId || "").trim();
+      const target = String(fallbackTargetId || "").trim();
+      if (target && dragged && target !== dragged && ids.includes(target) && ids.includes(dragged)) {
+        return { swapId: target };
+      }
+      const cards = [...hand.querySelectorAll("[data-compose-mini]")]
+        .map((el) => {
+          const id = el.dataset.composeMini || "";
+          const rect = el.getBoundingClientRect?.();
+          return rect && ids.includes(id) ? { id, center: rect.left + rect.width / 2, rect } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.center - b.center);
+      if (!cards.length) return {};
+      const first = cards[0];
+      const last = cards[cards.length - 1];
+      if (x <= first.center) return { beforeId: first.id };
+      if (x >= last.center) return { afterId: last.id };
+      if (fallbackTargetId && fallbackTargetId === last.id && x >= last.rect.left + last.rect.width * 0.35) {
+        return { afterId: last.id };
+      }
+      if (fallbackTargetId && fallbackTargetId === first.id && x <= first.rect.left + first.rect.width * 0.65) {
+        return { beforeId: first.id };
+      }
+      for (const card of cards) {
+        if (x < card.center) return { beforeId: card.id };
+      }
+      return { afterId: last.id };
+    }
+
+    function composeMarkDropSide(event, targetEl) {
+      if (!targetEl) return;
+      targetEl.classList.remove("drop-before", "drop-after");
+      const rect = targetEl.getBoundingClientRect?.();
+      const after = rect && Number.isFinite(event?.clientX)
+        ? event.clientX > rect.left + rect.width / 2
+        : false;
+      targetEl.classList.add(after ? "drop-after" : "drop-before");
+    }
+
+    function composeAdoptPackFromShot(pack, seg = {}) {
+      if (!pack) return;
+      const route = composeShotRoute(seg);
+      pack.key = composePackKey(seg, route);
+      pack.label = composeShotLabel(seg);
+      pack.route = route.labelText;
+      pack.backend = route.backend;
+      pack.type = route.type;
+    }
+
+    function composeCreateSmartPlan() {
+      const groups = new Map();
+      const packs = [];
+      timelineSegments.forEach((seg, index) => {
+        const shotId = composeShotKey(seg, index);
+        const route = composeShotRoute(seg);
+        const key = composePackKey(seg, route);
+        const label = composeShotLabel(seg);
+        const duration = composeShotDuration(seg);
+        const bucket = groups.get(key) || [];
+        let target = bucket.find((pack) => composePackDuration(pack) + duration <= 10);
+        if (!target) target = bucket.find((pack) => composePackDuration(pack) + duration <= 15);
+        if (!target) {
+          target = {
+            id: `P${String(packs.length + 1).padStart(3, "0")}`,
+            key,
+            label,
+            route: route.labelText,
+            backend: route.backend,
+            type: route.type,
+            shotIds: [],
+          };
+          packs.push(target);
+          bucket.push(target);
+          groups.set(key, bucket);
+        }
+        target.shotIds.push(shotId);
+      });
+      composePlan = {
+        packs,
+        selectedPackId: packs[0]?.id || "",
+      };
+      composeConfirmedPlan = null;
+      renderComposePage();
+    }
+
+    function ensureComposePlan() {
+      const shotIds = new Set(timelineSegments.map((seg, index) => composeShotKey(seg, index)));
+      const plannedIds = new Set((composePlan.packs || []).flatMap((pack) => pack.shotIds || []));
+      const missing = [...shotIds].filter((id) => !plannedIds.has(id));
+      const stale = [...plannedIds].filter((id) => !shotIds.has(id));
+      if (!composePlan.packs?.length || missing.length || stale.length) {
+        composeCreateSmartPlan();
+      }
+    }
+
+    function composeThumbHtml(seg = {}) {
+      const path = shotVideoPath(seg);
+      if (path) {
+        return `<div class="compose-thumb"><video muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(path, shotVideoStartTime(seg)))}"></video></div>`;
+      }
+      return `<div class="compose-thumb compose-thumb-empty"></div>`;
+    }
+
+    function composeMiniCardsHtml(shotIds = [], packId = "", options = {}) {
+      const ids = Array.isArray(shotIds) ? shotIds : [];
+      if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
+      const count = ids.length;
+      const step = options.large ? 86 : (options.strip ? 50 : 42);
+      const offset = Number(options.offset || 0);
+      const start = Math.max(0, Math.round(offset - ((count - 1) * step) / 2));
+      const spread = count <= 1 ? 0 : Math.min(18, 6 + count * 2);
+      const hint = options.hint ? `<div class="compose-hand-hint">点牌放回镜头池</div>` : "";
+      const cards = ids.map((id, index) => {
+        const item = composeShotById(id);
+        if (!item) return "";
+        const center = (count - 1) / 2;
+        const rot = count <= 1 ? 0 : (index - center) * (spread / Math.max(1, center + 1));
+        const delta = Math.round((index - center) * step);
+        const x = (options.center || options.strip) ? `calc(50% + ${delta}px)` : `${start + index * step}px`;
+        return `
+          <div class="compose-mini" draggable="true" data-compose-mini="${escapeHtml(id)}" data-pack="${escapeHtml(packId)}" title="放回 ${escapeHtml(id)}" style="--x:${x}; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
+            ${composeThumbHtml(item.seg)}
+            <span>${escapeHtml(id)}</span>
+          </div>
+        `;
+      }).join("");
+      return `<div class="compose-card-hand${options.strip ? " compose-strip-hand" : ""}">${cards}${options.strip ? "" : hint}</div>`;
+    }
+
+    function composePackStackHtml(pack = {}) {
+      const ids = Array.isArray(pack.shotIds) ? pack.shotIds : [];
+      if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
+      const previewIds = ids.slice(0, 4);
+      const count = previewIds.length;
+      const cards = previewIds.map((id, index) => {
+        const item = composeShotById(id);
+        if (!item) return "";
+        const center = (count - 1) / 2;
+        const x = Math.round((index - center) * 17);
+        const y = `${Math.abs(index - center) * 4}px`;
+        const rot = (index - center) * 5;
+        return `
+          <div class="compose-pack-stack-card" style="--stack-x:${x}px; --stack-y:${y}; --stack-z:${10 + index}; --stack-rot:${rot.toFixed(1)}deg">
+            ${composeThumbHtml(item.seg)}
+            <span>${escapeHtml(id)}</span>
+          </div>
+        `;
+      }).join("");
+      const more = ids.length > previewIds.length ? `<div class="compose-pack-more">+${ids.length - previewIds.length}</div>` : "";
+      return `<div class="compose-pack-stack">${cards}${more}</div>`;
+    }
+
+    function renderComposeShotGrid() {
+      const grid = $("#composeShotGrid");
+      const summary = $("#composeBoardSummary");
+      if (!grid) return;
+      document.querySelectorAll("[data-compose-board-mode]").forEach((button) => {
+        const mode = button.dataset.composeBoardMode || "all";
+        button.classList.toggle("active", mode === composeBoardMode);
+        button.onclick = () => {
+          composeBoardMode = mode;
+          renderComposePage();
+        };
+      });
+      if (!timelineSegments.length) {
+        if (summary) summary.textContent = "暂无分镜";
+        grid.innerHTML = `<div class="empty" style="min-width:260px;">请先保存分镜。</div>`;
+        return;
+      }
+      const used = composeUsedShotIds();
+      const selectedPack = composeSelectedPack();
+      const selectedIds = new Set(selectedPack?.shotIds || []);
+      const selectedItems = (selectedPack?.shotIds || []).map((id) => composeShotById(id)).filter(Boolean);
+      const selectedItemIds = new Set(selectedItems.map((item) => item.id));
+      const timelineItems = timelineSegments.map((seg, index) => ({
+        seg,
+        index,
+        id: composeShotKey(seg, index),
+      }));
+      const items = composeBoardMode === "current"
+        ? selectedItems
+        : selectedItems.concat(timelineItems.filter((item) => !selectedItemIds.has(item.id)));
+      if (summary) {
+        summary.textContent = composeBoardMode === "current"
+          ? `${items.length} 张当前包`
+          : `${timelineSegments.length} 个分镜`;
+      }
+      if (!items.length) {
+        grid.innerHTML = `<div class="empty" style="min-width:220px;">当前包为空</div>`;
+        return;
+      }
+      grid.innerHTML = items.map(({ seg, index, id }) => {
+        const inCurrentPack = selectedIds.has(id);
+        const inAnyPack = used.has(id);
+        const stateClass = composeBoardMode !== "current" && !inCurrentPack
+          ? (inAnyPack ? " used" : " unpacked")
+          : "";
+        return `
+          <article class="compose-shot-card${stateClass}" draggable="true" data-compose-shot="${escapeHtml(id)}" data-index="${index}">
+            ${composeThumbHtml(seg)}
+            <div class="compose-shot-id">${escapeHtml(id)}</div>
+          </article>
+        `;
+      }).join("");
+      grid.querySelectorAll("[data-compose-shot]").forEach((card) => {
+        card.addEventListener("dragstart", (event) => {
+          composeDragShotId = card.dataset.composeShot || "";
+          card.classList.add("dragging");
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", composeDragShotId);
+          }
+        });
+        card.addEventListener("dragend", () => {
+          composeDragShotId = "";
+          card.classList.remove("dragging");
+          document.querySelectorAll(".compose-mini.drop-before, .compose-mini.drop-after, .compose-shot-card.drop-before, .compose-shot-card.drop-after, .compose-pack, .compose-detail-hand")
+            .forEach((el) => el.classList.remove("drop-before", "drop-after", "drop-target"));
+          grid.classList.remove("drop-target");
+        });
+        card.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          composeMarkDropSide(event, card);
+        });
+        card.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          composeMarkDropSide(event, card);
+        });
+        card.addEventListener("dragleave", () => card.classList.remove("drop-before", "drop-after"));
+        card.addEventListener("drop", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          card.classList.remove("drop-before", "drop-after");
+          const draggedId = composeDragShotId || event.dataTransfer?.getData("text/plain") || "";
+          const targetId = card.dataset.composeShot || "";
+          const targetPack = composePackContainingShot(targetId) || composeSelectedPack();
+          composeMoveShotToPack(draggedId, targetPack?.id || "", composeDropPlacement(event, card, targetId));
+        });
+        card.addEventListener("click", () => {
+          const index = Number(card.dataset.index);
+          if (Number.isFinite(index)) selectTimelineSegment(index, { previewMode: "segment" });
+          composeMoveShotToSelectedPack(card.dataset.composeShot);
+        });
+      });
+      grid.ondragenter = (event) => {
+        event.preventDefault();
+        grid.classList.add("drop-target");
+      };
+      grid.ondragover = (event) => event.preventDefault();
+      grid.ondragleave = () => grid.classList.remove("drop-target");
+      grid.ondrop = (event) => {
+        event.preventDefault();
+        grid.classList.remove("drop-target");
+        const draggedId = composeDragShotId || event.dataTransfer?.getData("text/plain") || "";
+        composeReturnShotToBoard(draggedId);
+      };
+    }
+
+    function renderComposePacks() {
+      const list = $("#composePackList");
+      if (!list) return;
+      const packs = composePlan.packs || [];
+      list.classList.toggle("dense", packs.length > 6 && packs.length <= 12);
+      list.classList.toggle("extra-dense", packs.length > 12);
+      if (!packs.length) {
+        list.innerHTML = `<div class="empty" style="min-width:260px;">点击“智能合包”。</div>`;
+        renderComposeDetail();
+        return;
+      }
+      list.innerHTML = packs.map((pack) => {
+        const duration = composePackDuration(pack);
+        const warn = duration > 10;
+        const width = Math.min(100, (duration / 15) * 100);
+        return `
+          <section class="compose-pack${pack.id === composePlan.selectedPackId ? " selected" : ""}${warn ? " warn" : ""}" data-compose-pack="${escapeHtml(pack.id)}">
+            <div class="compose-pack-stack-wrap">${composePackStackHtml(pack)}</div>
+            <div class="compose-pack-head">
+              <div class="compose-pack-title">${escapeHtml(pack.id || "P000")}</div>
+            </div>
+            <div class="compose-meter${warn ? " warn" : ""}"><span style="width:${width}%"></span></div>
+          </section>
+        `;
+      }).join("");
+      list.querySelectorAll("[data-compose-pack]").forEach((packEl) => {
+        packEl.addEventListener("click", () => {
+          composePlan.selectedPackId = packEl.dataset.composePack || composePlan.selectedPackId;
+          renderComposeDetail();
+        });
+        packEl.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          packEl.classList.add("drop-target");
+        });
+        packEl.addEventListener("dragover", (event) => event.preventDefault());
+        packEl.addEventListener("dragleave", () => packEl.classList.remove("drop-target"));
+        packEl.addEventListener("drop", (event) => {
+          event.preventDefault();
+          packEl.classList.remove("drop-target");
+          const draggedId = composeDragShotId || event.dataTransfer?.getData("text/plain") || "";
+          composeMoveShotToPack(draggedId, packEl.dataset.composePack);
+        });
+      });
+      bindComposeMiniCards(list);
+    }
+
+    function bindComposeMiniCards(root = document) {
+      root.querySelectorAll("[data-compose-mini]").forEach((mini) => {
+        mini.addEventListener("click", (event) => {
+          event.stopPropagation();
+          composeReturnShotToBoard(mini.dataset.composeMini);
+        });
+        mini.addEventListener("dragstart", (event) => {
+          composeDragShotId = mini.dataset.composeMini || "";
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", composeDragShotId);
+          }
+        });
+        mini.addEventListener("dragend", () => {
+          composeDragShotId = "";
+          document.querySelectorAll(".compose-mini.drop-before, .compose-mini.drop-after, .compose-shot-card.drop-before, .compose-shot-card.drop-after, .compose-pack, .compose-detail-hand")
+            .forEach((el) => el.classList.remove("drop-before", "drop-after", "drop-target"));
+        });
+        mini.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          composeMarkDropSide(event, mini);
+        });
+        mini.addEventListener("dragover", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          composeMarkDropSide(event, mini);
+        });
+        mini.addEventListener("dragleave", () => mini.classList.remove("drop-before", "drop-after"));
+        mini.addEventListener("drop", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          mini.classList.remove("drop-before", "drop-after");
+          const draggedId = composeDragShotId || event.dataTransfer?.getData("text/plain") || "";
+          const hand = mini.closest(".compose-detail-hand");
+          const placement = hand
+            ? composeHandDropPlacement(event, hand, mini.dataset.pack || composePlan.selectedPackId, mini.dataset.composeMini)
+            : composeDropPlacement(event, mini, mini.dataset.composeMini);
+          composeMoveShotToPack(
+            draggedId,
+            mini.dataset.pack || composePlan.selectedPackId,
+            placement
+          );
+        });
+      });
+    }
+
+    function bindComposeDetailDrop(hand) {
+      if (!hand) return;
+      hand.ondragenter = (event) => {
+        event.preventDefault();
+        hand.classList.add("drop-target");
+      };
+      hand.ondragover = (event) => event.preventDefault();
+      hand.ondragleave = () => hand.classList.remove("drop-target");
+      hand.ondrop = (event) => {
+        event.preventDefault();
+        hand.classList.remove("drop-target");
+        const draggedId = composeDragShotId || event.dataTransfer?.getData("text/plain") || "";
+        const pack = composeSelectedPack();
+        if (!pack) return;
+        composeMoveShotToPack(draggedId, pack.id, composeHandDropPlacement(event, hand, pack.id));
+      };
+    }
+
+    function renderComposeDetail() {
+      const pack = composeSelectedPack();
+      const title = $("#composeDetailTitle");
+      const meta = $("#composeDetailMeta");
+      const hand = $("#composeDetailHand");
+      if (!pack) {
+        if (title) title.textContent = "生成计划";
+        if (meta) meta.textContent = "分镜保存后，在这里确认生成包。";
+        if (hand) hand.innerHTML = "";
+        bindComposeDetailDrop(hand);
+        return;
+      }
+      const duration = composePackDuration(pack);
+      if (title) title.textContent = composePackTitle(pack);
+      if (meta) meta.textContent = duration > 10
+        ? `当前 ${duration.toFixed(1)} 秒，偏长但可用；超过 15 秒禁止。`
+        : `当前 ${duration.toFixed(1)} 秒，适合一次生成，拆回原分镜。`;
+      if (hand) {
+        hand.innerHTML = composeMiniCardsHtml(pack.shotIds, pack.id, { large: true, center: true, hint: true });
+        bindComposeMiniCards(hand);
+        bindComposeDetailDrop(hand);
+      }
+      document.querySelectorAll(".compose-pack").forEach((packEl) => {
+        packEl.classList.toggle("selected", packEl.dataset.composePack === composePlan.selectedPackId);
+      });
+    }
+
+    function renderComposePage() {
+      renderComposeShotGrid();
+      renderComposePacks();
+      renderComposeDetail();
+    }
+
+    function composeMoveShotToPack(shotId, packId, options = {}) {
+      const item = composeShotById(shotId);
+      const pack = (composePlan.packs || []).find((entry) => entry.id === packId);
+      if (!item || !pack) return;
+      const alreadyInTarget = (pack.shotIds || []).includes(item.id);
+      const wasEmpty = !(pack.shotIds || []).length;
+      const beforeId = String(options.beforeId || "").trim();
+      const afterId = String(options.afterId || "").trim();
+      const swapId = String(options.swapId || "").trim();
+      if (alreadyInTarget && swapId && swapId !== item.id && (pack.shotIds || []).includes(swapId)) {
+        const nextIds = [...(pack.shotIds || [])];
+        const fromIndex = nextIds.indexOf(item.id);
+        const toIndex = nextIds.indexOf(swapId);
+        if (fromIndex >= 0 && toIndex >= 0) {
+          [nextIds[fromIndex], nextIds[toIndex]] = [nextIds[toIndex], nextIds[fromIndex]];
+          pack.shotIds = nextIds;
+          composePlan.selectedPackId = pack.id;
+          composeConfirmedPlan = null;
+          renderComposePage();
+        }
+        return;
+      }
+      if (alreadyInTarget && (!beforeId && !afterId || beforeId === item.id || afterId === item.id)) {
+        composePlan.selectedPackId = pack.id;
+        renderComposePage();
+        return;
+      }
+      const nextDuration = composePackDuration(pack) + (alreadyInTarget ? 0 : composeShotDuration(item.seg));
+      if (nextDuration > 15) {
+        composePlan.selectedPackId = pack.id;
+        renderComposeDetail();
+        assistantSetStatus(["超过 15 秒，不能放入这个生成包。"], "warn");
+        return;
+      }
+      (composePlan.packs || []).forEach((entry) => {
+        entry.shotIds = (entry.shotIds || []).filter((id) => id !== item.id);
+      });
+      if (wasEmpty) composeAdoptPackFromShot(pack, item.seg);
+      const nextIds = [...(pack.shotIds || [])];
+      const beforeIndex = beforeId ? nextIds.indexOf(beforeId) : -1;
+      const afterIndex = afterId ? nextIds.indexOf(afterId) : -1;
+      if (beforeIndex >= 0) nextIds.splice(beforeIndex, 0, item.id);
+      else if (afterIndex >= 0) nextIds.splice(afterIndex + 1, 0, item.id);
+      else nextIds.push(item.id);
+      pack.shotIds = nextIds;
+      composePlan.selectedPackId = pack.id;
+      composeConfirmedPlan = null;
+      renderComposePage();
+    }
+
+    function composeMoveShotToSelectedPack(shotId, options = {}) {
+      const pack = composeSelectedPack();
+      if (!pack) return;
+      composeMoveShotToPack(shotId, pack.id, options);
+    }
+
+    function composeReturnShotToBoard(shotId) {
+      const item = composeShotById(shotId);
+      if (!item) return;
+      let changed = false;
+      (composePlan.packs || []).forEach((pack) => {
+        const before = (pack.shotIds || []).length;
+        pack.shotIds = (pack.shotIds || []).filter((id) => id !== item.id);
+        if (before !== pack.shotIds.length) changed = true;
+      });
+      if (!changed) return;
+      composeConfirmedPlan = null;
+      renderComposePage();
+    }
+
+    function composeClearPlan() {
+      composePlan = {
+        packs: [
+          { id: "P001", label: "未分配", route: "待定", backend: "seedance", type: "待定", shotIds: [] },
+          { id: "P002", label: "未分配", route: "待定", backend: "seedance", type: "待定", shotIds: [] },
+          { id: "P003", label: "未分配", route: "待定", backend: "seedance", type: "待定", shotIds: [] },
+          { id: "P004", label: "未分配", route: "待定", backend: "seedance", type: "待定", shotIds: [] },
+        ],
+        selectedPackId: "P001",
+      };
+      composeConfirmedPlan = null;
+      renderComposePage();
+    }
+
+    function openComposePage({ rebuild = false } = {}) {
+      if (rebuild) composeCreateSmartPlan();
+      else ensureComposePlan();
+      switchModuleLocal("compose");
+      renderComposePage();
+    }
+
+    function confirmComposePlan() {
+      ensureComposePlan();
+      const packs = (composePlan.packs || []).filter((pack) => (pack.shotIds || []).length);
+      if (!packs.length) {
+        assistantSetStatus(["还没有生成包。请先点“智能合包”。"], "warn");
+        return;
+      }
+      composeConfirmedPlan = {
+        packs: packs.map((pack) => ({
+          ...pack,
+          duration: Number(composePackDuration(pack).toFixed(3)),
+        })),
+        shot_count: packs.reduce((sum, pack) => sum + (pack.shotIds || []).length, 0),
+        confirmed_at: Date.now(),
+      };
+      switchModuleLocal("generate");
+      const lines = [
+        "> 生成计划已确认",
+        `> 生成包: ${composeConfirmedPlan.packs.length}`,
+        "> 已进入视频生成界面。",
+      ];
+      setSeedanceSubmitStatus(lines, "good");
+      assistantSetStatus(lines, "good");
+      addLogs(lines);
+    }
+
     function isSeedanceGeneratedControlPath(path) {
       const value = String(path || "").trim().toLowerCase();
       const name = fileName(value);
@@ -14429,6 +16034,9 @@
       document.querySelectorAll(".module-view").forEach((view) => {
         view.classList.toggle("active", view.dataset.moduleView === target);
       });
+      if (target === "compose") {
+        try { ensureComposePlan(); renderComposePage(); } catch (_) {}
+      }
     }
 
     function buildStoryboardPlaceholder() {
@@ -16730,8 +18338,8 @@
       const hasShotCutReview = String(state.compareMode || "") === "shot_cut_review" && Array.isArray(state.subclips) && state.subclips.length;
       const saved = hasShotCutReview ? await saveCurrentShotCuts() : true;
       if (!saved) return;
-      switchModuleLocal("generate");
-      const lines = ["> 分镜已保存", "> 已进入视频生成界面。"];
+      openComposePage({ rebuild: true });
+      const lines = ["> 分镜已保存", "> 已进入编排界面。"];
       setSeedanceSubmitStatus(lines, "good");
       assistantSetStatus(lines, "good");
       addLogs(lines);
@@ -17326,6 +18934,11 @@
       bindClick("#splitAllMixedScenesBtn", () => splitMixedScenes({ allMixed: true }));
       bindClick("#timelinePrevBtn", () => moveTimeline(-1));
       bindClick("#timelineNextBtn", () => moveTimeline(1));
+      bindClick("#playStoryboardBtn", () => playStoryboardSequence());
+      bindClick("#composeAutoPackBtn", () => composeCreateSmartPlan());
+      bindClick("#composeClearBtn", () => composeClearPlan());
+      bindClick("#composeConfirmBtn", () => confirmComposePlan());
+      bindClick("#composeStartGenerateBtn", () => confirmComposePlan());
       document.querySelectorAll(".module-step").forEach((step) => {
         step.addEventListener("click", (event) => {
           event.preventDefault();
