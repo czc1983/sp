@@ -9424,13 +9424,55 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
     segment_id = str(payload.get("segment_id") or "").strip()
     if not project_dir:
         raise ValueError("missing_project_dir")
+    root = _resolve_storyboard_mode2_project_dir(project_dir)
+    clear_subclips = bool(payload.get("clear_subclips") or payload.get("clearSubclips"))
+    if clear_subclips:
+        if not segment_id:
+            raise ValueError("missing_segment_id")
+        if bool(payload.get("save")):
+            data = _load_storyboard_mode2_store(root)
+            shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+            shot = next(
+                (
+                    item for item in shots
+                    if str(item.get("segment_id") or "").strip() == segment_id
+                ),
+                None,
+            )
+            if shot is None:
+                raise ValueError(f"shot_not_found: {segment_id}")
+            for key in (
+                "subshots",
+                "subshot_cut_times",
+                "subshot_status",
+                "subshot_updated_at",
+            ):
+                shot.pop(key, None)
+            data["shots"] = shots
+            data["shot_subclips_version"] = int(data.get("shot_subclips_version") or 0) + 1
+            _write_storyboard_mode2_store(root, data)
+        return {
+            "project_dir": str(root),
+            "segment_id": segment_id,
+            "source_video_path": video_path,
+            "duration": 0,
+            "cut_times": [],
+            "source": "manual",
+            "cut_error": "",
+            "compare_mode": "shot_cut_review",
+            "output_label": "子镜头预览",
+            "subclips": [],
+            "cleared": True,
+        }
     if not video_path or not Path(video_path).exists():
         raise ValueError("video_not_found")
-    root = _resolve_storyboard_mode2_project_dir(project_dir)
     meta = probe_video(video_path)
     duration = max(0.01, float(meta.duration or 0.0))
 
     raw_cut_times = payload.get("cut_times")
+    cut_times_provided = "cut_times" in payload
+    auto_cut = bool(payload.get("auto_cut") or payload.get("autoCut"))
+    manual_cut = bool(payload.get("manual_cut") or payload.get("manualCut")) or (cut_times_provided and not auto_cut)
     cut_times: list[float] = []
     if isinstance(raw_cut_times, list):
         for value in raw_cut_times:
@@ -9441,9 +9483,9 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
             if 0.05 < cut_time < duration - 0.05:
                 cut_times.append(round(cut_time, 3))
     cut_times = sorted(set(cut_times))
-    source = "manual" if cut_times else "local_hardcut"
+    source = "manual" if manual_cut or cut_times else "local_hardcut"
     cut_error = ""
-    if not cut_times:
+    if not manual_cut and not cut_times:
         hard_cuts, cut_error = _mode2_reference_video_hard_cuts(video_path)
         if hard_cuts:
             cut_times = [round(float(end), 3) for _start, end in hard_cuts[:-1]]

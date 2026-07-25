@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+import json
 import unittest
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from web_ui.server import _mode2_scail2_route_check
+from web_ui.server import _mode2_scail2_route_check, _storyboard_mode2_shot_subclips
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +72,148 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(meta["contact_risk"])
         self.assertIn("Seedance", reason)
+
+    def test_manual_empty_shot_cuts_do_not_rerun_hardcut(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+            captured_ranges: list[list[tuple[float, float]]] = []
+
+            def fake_create(_video_path, ranges, existing_subshots=None):
+                captured_ranges.append(list(ranges))
+                return [
+                    {
+                        "index": index,
+                        "start": start,
+                        "end": end,
+                        "duration": round(end - start, 3),
+                        "path": str(root / f"sub{index}.mp4"),
+                    }
+                    for index, (start, end) in enumerate(ranges, 1)
+                ]
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=7.0)),
+                patch("web_ui.server._mode2_reference_video_hard_cuts", side_effect=AssertionError("hardcut should not run")),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=fake_create),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [],
+                    "manual_cut": True,
+                })
+
+            self.assertEqual(result["source"], "manual")
+            self.assertEqual(result["cut_times"], [])
+            self.assertEqual(captured_ranges, [[(0.0, 7.0)]])
+            self.assertEqual(len(result["subclips"]), 1)
+
+    def test_empty_cut_times_default_to_manual_for_legacy_undo(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+            captured_ranges: list[list[tuple[float, float]]] = []
+
+            def fake_create(_video_path, ranges, existing_subshots=None):
+                captured_ranges.append(list(ranges))
+                return [
+                    {
+                        "index": index,
+                        "start": start,
+                        "end": end,
+                        "duration": round(end - start, 3),
+                        "path": str(root / f"sub{index}.mp4"),
+                    }
+                    for index, (start, end) in enumerate(ranges, 1)
+                ]
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=7.0)),
+                patch("web_ui.server._mode2_reference_video_hard_cuts", side_effect=AssertionError("hardcut should not run")),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=fake_create),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [],
+                })
+
+            self.assertEqual(result["source"], "manual")
+            self.assertEqual(result["cut_times"], [])
+            self.assertEqual(captured_ranges, [[(0.0, 7.0)]])
+
+    def test_auto_empty_shot_cuts_still_run_hardcut(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+            captured_ranges: list[list[tuple[float, float]]] = []
+
+            def fake_create(_video_path, ranges, existing_subshots=None):
+                captured_ranges.append(list(ranges))
+                return [
+                    {
+                        "index": index,
+                        "start": start,
+                        "end": end,
+                        "duration": round(end - start, 3),
+                        "path": str(root / f"sub{index}.mp4"),
+                    }
+                    for index, (start, end) in enumerate(ranges, 1)
+                ]
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=7.0)),
+                patch("web_ui.server._mode2_reference_video_hard_cuts", return_value=([(0.0, 1.0), (1.0, 7.0)], "")),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=fake_create),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [],
+                    "auto_cut": True,
+                })
+
+            self.assertEqual(result["source"], "local_hardcut")
+            self.assertEqual(result["cut_times"], [1.0])
+            self.assertEqual(captured_ranges, [[(0.0, 1.0), (1.0, 7.0)]])
+
+    def test_clear_shot_subclips_removes_saved_cut_data(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store_path = root / "assets" / "storyboard_assets.json"
+            store_path.parent.mkdir(parents=True)
+            store_path.write_text(json.dumps({
+                "shots": [{
+                    "segment_id": "S001",
+                    "subshots": [{"index": 1, "start": 0.0, "end": 7.0, "path": "sub1.mp4"}],
+                    "subshot_cut_times": [],
+                    "subshot_status": "confirmed",
+                    "subshot_updated_at": 1,
+                }],
+            }), encoding="utf-8")
+
+            result = _storyboard_mode2_shot_subclips({
+                "project_dir": str(root),
+                "segment_id": "S001",
+                "clear_subclips": True,
+                "save": True,
+            })
+
+            self.assertTrue(result["cleared"])
+            self.assertEqual(result["subclips"], [])
+            saved = json.loads(store_path.read_text(encoding="utf-8"))
+            shot = saved["shots"][0]
+            self.assertNotIn("subshots", shot)
+            self.assertNotIn("subshot_cut_times", shot)
+            self.assertNotIn("subshot_status", shot)
+            self.assertNotIn("subshot_updated_at", shot)
 
 
 if __name__ == "__main__":
