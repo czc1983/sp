@@ -5482,8 +5482,12 @@ def _mode2_renumber_timeline_shots(
     for index, shot in enumerate(shots, start=1):
         old_id = str(shot.get("segment_id") or "").strip()
         new_id = f"S{index:03d}"
-        if old_id:
-            source_to_new.setdefault(old_id, []).append(new_id)
+        source_ids = [old_id]
+        parent_id = str(shot.get("manual_parent_segment_id") or "").strip()
+        if parent_id:
+            source_ids.append(parent_id)
+        for source_id in dict.fromkeys(value for value in source_ids if value):
+            source_to_new.setdefault(source_id, []).append(new_id)
         if old_id != new_id:
             _mode2_clear_timeline_outputs(shot)
         shot["segment_id"] = new_id
@@ -9416,6 +9420,98 @@ def _mode2_create_reference_mask_subclips(
     return subclips
 
 
+def _mode2_promote_subclips_to_timeline(
+    root: Path,
+    data: dict[str, Any],
+    *,
+    segment_id: str,
+    subclips: list[dict[str, Any]],
+    cut_times: list[float],
+    selected_subclip_index: int = 0,
+) -> dict[str, Any]:
+    store_path = _storyboard_mode2_asset_store_path(root)
+    shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
+    index = next(
+        (idx for idx, shot in enumerate(shots) if str(shot.get("segment_id") or "").strip() == segment_id),
+        -1,
+    )
+    if index < 0:
+        raise ValueError(f"shot_not_found: {segment_id}")
+    if len(subclips) <= 1:
+        raise ValueError("subclips_not_enough_to_promote")
+
+    parent = shots[index]
+    parent_id = str(parent.get("segment_id") or segment_id).strip() or segment_id
+    parent_start, parent_end = _mode2_shot_time_range(parent)
+    parent_duration = max(0.01, parent_end - parent_start)
+    children: list[dict[str, Any]] = []
+    new_ranges: list[list[float]] = []
+    selected_subclip_index = max(0, min(int(selected_subclip_index or 0), len(subclips) - 1))
+    selected_child_id = parent_id
+    for item in subclips:
+        try:
+            rel_start = max(0.0, float(item.get("start") or 0.0))
+            rel_end = max(rel_start, float(item.get("end") or rel_start))
+        except (TypeError, ValueError):
+            continue
+        rel_start = min(parent_duration, rel_start)
+        rel_end = min(parent_duration, rel_end)
+        if rel_end <= rel_start + 0.01:
+            continue
+        child = copy.deepcopy(parent)
+        child_index = len(children)
+        child_id = f"{parent_id}-sub{child_index + 1:02d}"
+        child_start = round(parent_start + rel_start, 3)
+        child_end = round(parent_start + rel_end, 3)
+        child["segment_id"] = child_id
+        child["start"] = child_start
+        child["end"] = child_end
+        child["duration"] = round(child_end - child_start, 3)
+        child["source_segment_ids"] = _mode2_unique_list(parent.get("source_segment_ids"), [parent_id])
+        child["manual_parent_segment_id"] = parent_id
+        child["manual_timeline_edit"] = {
+            "action": "promote_subclips_to_timeline",
+            "parent_segment_id": parent_id,
+            "subshot_index": int(item.get("index") or len(children) + 1),
+            "relative_range": [round(rel_start, 3), round(rel_end, 3)],
+        }
+        if child_index == selected_subclip_index:
+            selected_child_id = child_id
+        for key in (
+            "subshots",
+            "subshot_cut_times",
+            "subshot_status",
+            "subshot_updated_at",
+            "role_ref_overrides",
+        ):
+            child.pop(key, None)
+        if isinstance(item.get("role_ref_overrides"), dict):
+            child["subshot_role_ref_overrides"] = copy.deepcopy(item["role_ref_overrides"])
+        _mode2_prune_timeline_fields(child)
+        children.append(child)
+        new_ranges.append([child_start, child_end])
+
+    if len(children) <= 1:
+        raise ValueError("subclips_not_enough_to_promote")
+
+    shots = [*shots[:index], *children, *shots[index + 1:]]
+    data["shots"] = shots
+    return _mode2_finish_timeline_edit(
+        root,
+        store_path,
+        data,
+        edit_summary={
+            "action": "promote_subclips_to_timeline",
+            "parent_segment_id": parent_id,
+            "cut_times": cut_times,
+            "old_range": [round(parent_start, 3), round(parent_end, 3)],
+            "new_ranges": new_ranges,
+        },
+        selected_segment_id=selected_child_id,
+        selected_index=index + selected_subclip_index,
+    )
+
+
 def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
     from spvideo.ffmpeg_tools import probe_video
 
@@ -9557,6 +9653,27 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
         shot["subshot_updated_at"] = time.time()
         data["shots"] = shots
         data["shot_subclips_version"] = int(data.get("shot_subclips_version") or 0) + 1
+        if bool(payload.get("promote_to_timeline") or payload.get("promoteToTimeline")) and len(subclips) > 1:
+            response = _mode2_promote_subclips_to_timeline(
+                root,
+                data,
+                segment_id=segment_id,
+                subclips=subclips,
+                cut_times=cut_times,
+                selected_subclip_index=int(payload.get("selected_subclip_index") or payload.get("selectedSubclipIndex") or 0),
+            )
+            response.update({
+                "compare_mode": "shot_cut_review",
+                "output_label": "子镜头预览",
+                "source_video_path": str(Path(video_path)),
+                "duration": round(duration, 3),
+                "cut_times": cut_times,
+                "source": source,
+                "cut_error": cut_error,
+                "subclips": subclips,
+                "promoted_to_timeline": True,
+            })
+            return response
         _write_storyboard_mode2_store(root, data)
 
     return {

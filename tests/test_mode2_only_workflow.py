@@ -215,6 +215,76 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertNotIn("subshot_status", shot)
             self.assertNotIn("subshot_updated_at", shot)
 
+    def test_save_shot_subclips_can_promote_to_real_timeline(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"placeholder")
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+            store_path = root / "assets" / "storyboard_assets.json"
+            store_path.parent.mkdir(parents=True)
+            store_path.write_text(json.dumps({
+                "video_path": str(source),
+                "assets": [{
+                    "id": "R001",
+                    "kind": "role",
+                    "used_shots": ["S001"],
+                    "identity_anchors": [{"shot_id": "S001", "point": [0.5, 0.5]}],
+                }],
+                "shots": [{
+                    "segment_id": "S001",
+                    "start": 10.0,
+                    "end": 17.0,
+                    "duration": 7.0,
+                    "person_count": 1,
+                    "role_asset_ids": ["R001"],
+                    "asset_ids": ["R001"],
+                }],
+            }), encoding="utf-8")
+
+            def fake_create(_video_path, ranges, existing_subshots=None):
+                return [
+                    {
+                        "index": index,
+                        "start": start,
+                        "end": end,
+                        "duration": round(end - start, 3),
+                        "path": str(root / f"sub{index}.mp4"),
+                    }
+                    for index, (start, end) in enumerate(ranges, 1)
+                ]
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=7.0)),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=fake_create),
+                patch("web_ui.server._mode2_ensure_shot_preview_clips", return_value=False),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [1.0],
+                    "manual_cut": True,
+                    "save": True,
+                    "promote_to_timeline": True,
+                    "selected_subclip_index": 1,
+                })
+
+            self.assertTrue(result["promoted_to_timeline"])
+            self.assertEqual(result["selected_index"], 1)
+            self.assertEqual([shot["segment_id"] for shot in result["segments"]], ["S001", "S002"])
+            self.assertEqual(
+                [(shot["start"], shot["end"]) for shot in result["segments"]],
+                [(10.0, 11.0), (11.0, 17.0)],
+            )
+            saved = json.loads(store_path.read_text(encoding="utf-8"))
+            self.assertEqual([shot["segment_id"] for shot in saved["shots"]], ["S001", "S002"])
+            role = saved["assets"][0]
+            self.assertIn("S001", role["used_shots"])
+            self.assertIn("S002", role["used_shots"])
+            self.assertIn("S002", [item["shot_id"] for item in role["identity_anchors"]])
+
 
 if __name__ == "__main__":
     unittest.main()

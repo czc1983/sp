@@ -713,7 +713,8 @@
     }
 
     .storyboard-subclip-return,
-    .storyboard-subclip-merge {
+    .storyboard-subclip-merge,
+    .storyboard-timeline-merge {
       min-width: 34px;
       padding-inline: 10px;
       font-size: 16px;
@@ -7262,13 +7263,15 @@
             <div class="compare-stage">
               <div class="compare-pane">
                 <div class="compare-head">
-                  <strong>原视频</strong>
+                  <strong id="timelineOriginalTitle">原视频</strong>
                   <span id="originalCompareLabel">请选择镜头</span>
                 </div>
                 <video class="compare-video" id="timelineOriginalVideo" controls preload="metadata"></video>
                 <div class="compare-info compare-info-with-action storyboard-original-actions">
                   <span id="timelineOriginalInfo">读取项目后，从下方时间线选择一个镜头。</span>
                   <button class="tiny-btn" id="showOriginalVideoBtn" type="button" hidden>原视频</button>
+                  <button class="tiny-btn storyboard-timeline-merge" id="timelineMergePrevBtn" type="button" title="向前合并片段" aria-label="向前合并片段" hidden>&#8676;</button>
+                  <button class="tiny-btn storyboard-timeline-merge" id="timelineMergeNextBtn" type="button" title="向后合并片段" aria-label="向后合并片段" hidden>&#8677;</button>
                   <button class="tiny-btn storyboard-frame-step" id="storyboardFramePrevBtn" type="button" title="后退一帧" aria-label="后退一帧" hidden>-</button>
                   <button class="tiny-btn storyboard-frame-step" id="storyboardFrameNextBtn" type="button" title="前进一帧" aria-label="前进一帧" hidden>+</button>
                   <button class="tiny-btn" id="shotCutAtCurrentBtn" type="button" hidden>当前时间切一刀</button>
@@ -13916,6 +13919,16 @@
       };
     }
 
+    function storyboardTimelineMergeControls() {
+      const canMerge = selectedTimelineIndex >= 0
+        && storyboardLeftPreviewMode !== "subclip"
+        && timelineSegments.length > 1;
+      return {
+        canTimelineMergePrev: canMerge && selectedTimelineIndex > 0,
+        canTimelineMergeNext: canMerge && selectedTimelineIndex < timelineSegments.length - 1,
+      };
+    }
+
     function setStoryboardShotCutBusy(running) {
       storyboardShotCutBusy = Boolean(running);
       if (!storyboardShotCutBusy) {
@@ -13926,6 +13939,8 @@
         "#storyboardFramePrevBtn",
         "#storyboardFrameNextBtn",
         "#shotCutAtCurrentBtn",
+        "#timelineMergePrevBtn",
+        "#timelineMergeNextBtn",
         "#storyboardReturnSubclipBtn",
         "#shotMergePrevBtn",
         "#shotMergeNextBtn",
@@ -13947,10 +13962,14 @@
       canMerge = false,
       canMergePrev = false,
       canMergeNext = false,
+      canTimelineMergePrev = false,
+      canTimelineMergeNext = false,
     } = {}) {
       const shotCutAtCurrentBtn = $("#shotCutAtCurrentBtn");
       const storyboardFramePrevBtn = $("#storyboardFramePrevBtn");
       const storyboardFrameNextBtn = $("#storyboardFrameNextBtn");
+      const timelineMergePrevBtn = $("#timelineMergePrevBtn");
+      const timelineMergeNextBtn = $("#timelineMergeNextBtn");
       const storyboardReturnSubclipBtn = $("#storyboardReturnSubclipBtn");
       const shotMergePrevBtn = $("#shotMergePrevBtn");
       const shotMergeNextBtn = $("#shotMergeNextBtn");
@@ -13967,6 +13986,16 @@
         shotCutAtCurrentBtn.disabled = storyboardShotCutBusy || !canCut;
         shotCutAtCurrentBtn.classList.toggle("active", !storyboardShotCutBusy && canCut);
       }
+      const timelineMergeVisible = canTimelineMergePrev || canTimelineMergeNext;
+      [
+        [timelineMergePrevBtn, canTimelineMergePrev],
+        [timelineMergeNextBtn, canTimelineMergeNext],
+      ].forEach(([button, enabled]) => {
+        if (!button) return;
+        button.hidden = !timelineMergeVisible;
+        button.disabled = storyboardShotCutBusy || !enabled;
+        button.classList.toggle("active", !storyboardShotCutBusy && enabled);
+      });
       if (storyboardReturnSubclipBtn) {
         storyboardReturnSubclipBtn.hidden = !canReturn;
         storyboardReturnSubclipBtn.disabled = storyboardShotCutBusy || !canReturn;
@@ -13999,9 +14028,11 @@
       setStoryboardVideoSource($("#timelineOriginalVideo"), path, 0.1);
       syncStoryboardOriginalButton(path);
       if (path) {
+        $("#timelineOriginalTitle").textContent = "原视频";
         $("#originalCompareLabel").textContent = "原视频";
         $("#timelineOriginalInfo").textContent = "";
       } else {
+        $("#timelineOriginalTitle").textContent = "原视频";
         $("#originalCompareLabel").textContent = "请选择镜头";
         $("#timelineOriginalInfo").textContent = "";
       }
@@ -14021,6 +14052,7 @@
         canSave: isCurrentReview,
         canReturn: isCurrentReview && subclips.length > 0 && canCutCurrentSegment,
         ...mergeControls,
+        ...storyboardTimelineMergeControls(),
       });
     }
 
@@ -14031,7 +14063,8 @@
       storyboardLeftSubclipEdit = null;
       setStoryboardVideoSource($("#timelineOriginalVideo"), path, shotVideoStartTime(seg));
       syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
-      $("#originalCompareLabel").textContent = `#${id} · ${formatNum(seg.start)}-${formatNum(seg.end)}s`;
+      $("#timelineOriginalTitle").textContent = `#${id}`;
+      $("#originalCompareLabel").textContent = `${formatNum(seg.start)}-${formatNum(seg.end)}s`;
       $("#timelineOriginalInfo").textContent = "";
     }
 
@@ -14060,6 +14093,7 @@
         syncStoryboardOriginalButton(sourcePath);
         setStoryboardShotCutControls();
         if (placeholder) placeholder.style.display = "block";
+        $("#timelineOriginalTitle").textContent = sourcePath ? "原视频" : "请选择镜头";
         $("#originalCompareLabel").textContent = sourcePath ? "原视频" : "请选择镜头";
         $("#generatedCompareLabel").textContent = "";
         $("#timelineOriginalInfo").textContent = "";
@@ -14118,6 +14152,7 @@
           canUndo: false,
           canSave: false,
           canReturn: false,
+          ...storyboardTimelineMergeControls(),
         });
         syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
         if (placeholder) {
@@ -14137,6 +14172,7 @@
         canUndo: subclips.length > 0,
         canReturn: canCutCurrentSegment && subclips.length > 0,
         ...storyboardSubclipMergeControls(true, state, subclips),
+        ...storyboardTimelineMergeControls(),
       });
       const clip = subclips[selectedIndex] || {};
       const path = seedanceSubclipPath(clip);
@@ -14793,6 +14829,7 @@
       };
       setStoryboardVideoSource($("#timelineOriginalVideo"), path, target || 0.1);
       syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
+      $("#timelineOriginalTitle").textContent = "子镜头";
       $("#originalCompareLabel").textContent = `子镜头 ${selectedIndex + 1} · ${formatNum(start)}-${formatNum(end)}s`;
       $("#timelineOriginalInfo").textContent = "";
       setStoryboardShotCutControls({
@@ -14802,6 +14839,7 @@
         canUndo: subclips.length > 0,
         canReturn: true,
         ...storyboardSubclipMergeControls(true, state, subclips),
+        ...storyboardTimelineMergeControls(),
       });
       const leftVideo = $("#timelineOriginalVideo");
       const seekLeft = () => {
@@ -16289,6 +16327,13 @@
         Boolean(options.save),
         Boolean(options.manualCut || options.save || hasExplicitCutTimes),
       );
+      if (options.promoteToTimeline) {
+        payload.promote_to_timeline = true;
+        payload.selected_subclip_index = storyboardSelectedSubclipIndex(
+          seedanceReferenceSubclipState,
+          seedanceReferenceSubclipState.subclips || [],
+        );
+      }
       if (!payload.project_dir) {
         const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
@@ -16316,6 +16361,20 @@
         });
         const data = await response.json();
         if (!response.ok || data.error) throw new Error(data.error || "镜头切段失败");
+        if (data.promoted_to_timeline && Array.isArray(data.segments)) {
+          const nextIndex = Math.max(0, Math.min(Number(data.selected_index) || 0, data.segments.length - 1));
+          resetSeedanceReferenceSubclips();
+          applyLoadedProject(data, { story: data.storyboard || {} }, { preserveStrategy: true });
+          if (data.segments.length) selectTimelineSegment(nextIndex, { previewMode: "segment" });
+          const lines = [
+            "> 子镜头已替换为正式时间线",
+            `> 当前时间线: ${data.segments.length} 段`,
+          ];
+          setSeedanceSubmitStatus(lines, "good");
+          assistantSetStatus(lines, "good");
+          addLogs(lines);
+          return true;
+        }
         renderSeedanceReferenceSubclips(data, seedanceMaskVideoIndex);
         if (storyboardLeftPreviewMode === "subclip") {
           showStoryboardSegmentVideo(timelineSegments[selectedTimelineIndex] || {});
@@ -16371,6 +16430,83 @@
       const target = Math.max(minTime, Math.min(upper, current + step));
       video.pause();
       video.currentTime = target;
+    }
+
+    async function mergeCurrentTimelineSegment(direction) {
+      if (storyboardShotCutBusy) return false;
+      if (selectedTimelineIndex < 0 || !timelineSegments.length) {
+        const lines = ["> 请先选择一个时间线片段"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return false;
+      }
+      if (storyboardLeftPreviewMode === "subclip") {
+        const lines = ["> 当前左侧是子镜头回切预览，请先回到正式时间线片段"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return false;
+      }
+      const mergeBackward = Number(direction) < 0;
+      if (mergeBackward && selectedTimelineIndex <= 0) {
+        const lines = ["> 前面没有片段可合并"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return false;
+      }
+      if (!mergeBackward && selectedTimelineIndex >= timelineSegments.length - 1) {
+        const lines = ["> 后面没有片段可合并"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return false;
+      }
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const segmentId = String(seg.segment_id || "").trim();
+      if (!projectDir || !segmentId) {
+        const lines = ["x 当前项目或片段为空", "> 请先读取项目并选择片段。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return false;
+      }
+      const action = mergeBackward ? "merge_prev" : "merge_next";
+      const lines = [mergeBackward ? "> 正在向前合并片段..." : "> 正在向后合并片段..."];
+      setSeedanceSubmitStatus(lines, "warn");
+      assistantSetRunStatus([mergeBackward ? "向前合并片段中" : "向后合并片段中"], true);
+      setStoryboardShotCutBusy(true);
+      try {
+        const response = await fetch("/api/storyboard-assets/edit-shot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_dir: projectDir,
+            segment_id: segmentId,
+            action,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || "合并片段失败");
+        resetSeedanceReferenceSubclips();
+        applyLoadedProject(data, { story: data.storyboard || {} }, { preserveStrategy: true });
+        const nextIndex = Math.max(0, Math.min(Number(data.selected_index) || 0, (data.segments || []).length - 1));
+        if ((data.segments || []).length) selectTimelineSegment(nextIndex, { previewMode: "segment" });
+        const done = [
+          mergeBackward ? "> 已向前合并片段" : "> 已向后合并片段",
+          `> 当前时间线: ${(data.segments || []).length} 段`,
+        ];
+        setSeedanceSubmitStatus(done, "good");
+        assistantSetStatus(done, "good");
+        addLogs(done);
+        return true;
+      } catch (error) {
+        const failed = ["x 合并片段失败", "> " + (error.message || error)];
+        setSeedanceSubmitStatus(failed, "bad");
+        assistantSetStatus(failed, "bad");
+        addLogs(failed);
+        return false;
+      } finally {
+        assistantSetRunStatus([], false);
+        setStoryboardShotCutBusy(false);
+      }
     }
 
     function addShotCutAtCurrentTime() {
@@ -16586,7 +16722,7 @@
     }
 
     async function saveCurrentShotCuts() {
-      return openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true });
+      return openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true, promoteToTimeline: true });
     }
 
     async function saveStoryboardAndGoGenerate() {
@@ -17162,6 +17298,8 @@
       bindClick("#storyboardFramePrevBtn", () => stepStoryboardFrame(-1));
       bindClick("#storyboardFrameNextBtn", () => stepStoryboardFrame(1));
       bindClick("#shotCutAtCurrentBtn", () => addShotCutAtCurrentTime());
+      bindClick("#timelineMergePrevBtn", () => mergeCurrentTimelineSegment(-1));
+      bindClick("#timelineMergeNextBtn", () => mergeCurrentTimelineSegment(1));
       bindClick("#storyboardReturnSubclipBtn", () => sendCurrentSubclipToStoryboardLeft());
       bindClick("#shotMergePrevBtn", () => mergeCurrentShotSubclip(-1));
       bindClick("#shotMergeNextBtn", () => mergeCurrentShotSubclip(1));
