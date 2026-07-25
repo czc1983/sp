@@ -215,6 +215,57 @@
       font-weight: 800;
     }
 
+    .generate-toolbar {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: nowrap;
+    }
+
+    .generate-model-select {
+      width: clamp(190px, 18vw, 250px);
+      min-width: 170px;
+      height: 32px;
+      padding: 0 34px 0 12px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .generate-param-select {
+      width: 92px;
+      min-width: 78px;
+      height: 32px;
+      padding: 0 30px 0 10px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    @media (max-width: 980px) {
+      .module-view[data-module-view="generate"] .panel-head {
+        height: auto;
+        min-height: 40px;
+        flex-wrap: wrap;
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+
+      .generate-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .generate-model-select {
+        width: min(100%, 260px);
+      }
+
+      .generate-param-select {
+        width: min(100%, 110px);
+      }
+    }
+
     .panel-body {
       min-height: 0;
       padding: 12px;
@@ -624,6 +675,36 @@
       line-height: 1.45;
     }
 
+    .compare-info-with-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .compare-info-with-action > span {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .compare-info-with-action .tiny-btn {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+
+    .storyboard-original-actions {
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .storyboard-original-actions #timelineOriginalInfo {
+      display: none;
+    }
+
+    .storyboard-original-actions #shotCutAtCurrentBtn {
+      margin-left: auto;
+    }
+
     .generated-empty {
       position: absolute;
       left: 16px;
@@ -765,6 +846,63 @@
       background: linear-gradient(180deg, #6c4a16, #3a2810);
       color: #fff4d2;
       font-weight: 800;
+    }
+
+    .story-panel-head {
+      padding-right: 12px;
+      justify-content: flex-start;
+    }
+
+    .panel-icon-btn {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121212;
+      color: var(--soft);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .panel-icon-tab {
+      width: 50px;
+      height: 46px;
+      flex-direction: column;
+      gap: 4px;
+      align-self: center;
+      margin-left: auto;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .story-input-panel > .panel-head.story-panel-head {
+      padding-right: 0 !important;
+    }
+
+    .panel-icon-tab span {
+      color: inherit;
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .panel-icon-btn:hover {
+      background: #191919;
+      color: #fff;
+    }
+
+    .panel-icon-btn svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .tiny-btn.primary:hover:not(:disabled) {
       border-color: #ffd27a;
@@ -2335,6 +2473,61 @@
       min-height: 0;
     }
 
+    .asset-image-editor-modal .asset-editor-body {
+      grid-template-columns: 180px minmax(260px, 360px) !important;
+      gap: 10px !important;
+      max-height: calc(100vh - 126px) !important;
+      overflow: hidden !important;
+    }
+
+    .asset-image-editor-modal {
+      width: min(620px, calc(100vw - 44px)) !important;
+    }
+
+    .asset-editor-name-card {
+      min-height: 118px;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #101010;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      padding: 14px;
+    }
+
+    .asset-editor-name-card span {
+      color: #a8a8a8;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .asset-editor-name-card strong {
+      color: #f2f2f2;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .asset-image-editor-modal .asset-editor-preview {
+      min-height: 0;
+    }
+
+    .asset-image-editor-modal .asset-editor-source {
+      max-height: min(44vh, 320px);
+    }
+
+    .asset-image-editor-modal .asset-editor-target-stack {
+      grid-template-rows: minmax(130px, .62fr) auto minmax(104px, .34fr);
+    }
+
+    .asset-image-editor-modal .asset-bg-recommend {
+      display: none !important;
+    }
+
+    .asset-image-editor-modal .asset-editor-prompt,
+    .asset-image-editor-modal .asset-editor-manual {
+      display: none !important;
+    }
+
     .asset-editor-preview {
       min-height: 0;
       border: 1px solid #2b3338;
@@ -3865,6 +4058,11 @@
       display: none;
     }
 
+    .shot-cut-actions,
+    .seedance-subclip-note {
+      display: none !important;
+    }
+
     .seedance-subclips-head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -4593,9 +4791,20 @@
 
     .story-video-picker {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
       align-items: stretch;
+      justify-content: start;
+    }
+
+    .story-input-file-section .story-source-grid {
+      grid-template-columns: 1fr;
+      place-items: center;
+    }
+
+    .story-input-file-section .story-field {
+      width: 148px;
+      max-width: 100%;
     }
 
     .story-video-preview {
@@ -4606,6 +4815,12 @@
       overflow: hidden;
       display: grid;
       place-items: center;
+      cursor: pointer;
+    }
+
+    .story-video-preview:hover {
+      border-color: #5a5a5a;
+      background: #111111;
     }
 
     .story-video-preview video {
@@ -4614,6 +4829,7 @@
       object-fit: contain;
       background: #050708;
       display: block;
+      pointer-events: none;
     }
 
     .story-video-empty {
@@ -4622,16 +4838,66 @@
       font-weight: 700;
     }
 
-    .story-video-picker .btn {
-      min-width: 68px;
-      height: auto;
+    .story-bottom-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+      padding-right: 0;
+    }
+
+    .story-bottom-actions .btn {
+      width: min(100%, calc(((100% - 36px) / 4) * 2 + 12px));
+      min-height: 42px;
     }
 
     .story-strategy-row {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(220px, 1fr);
+      gap: 10px;
+      align-items: center;
+    }
+
+    .story-reference-radios {
+      display: inline-flex;
+      align-items: center;
       gap: 8px;
-      align-items: start;
+      min-width: 0;
+    }
+
+    .story-radio-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid #2f3a40;
+      border-radius: 8px;
+      background: #15191c;
+      color: #dce7ec;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .story-radio-option:has(input:checked) {
+      border-color: rgba(238, 238, 238, .76);
+      background: #202428;
+      color: #ffffff;
+    }
+
+    .story-radio-option input {
+      accent-color: #eeeeee;
+    }
+
+    .story-strategy-row #reverseStoryboardBtn {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    .story-strategy-row .story-status,
+    .story-strategy-row .story-config-note {
+      grid-column: 1 / -1;
     }
 
     .story-strategy-row .input {
@@ -4710,8 +4976,6 @@
       font-size: 13px;
       font-weight: 800;
     }
-
-    .story-actions #loadProjectBtn { flex: 0 0 auto; }
 
     .story-status {
       min-height: 42px;
@@ -4845,7 +5109,9 @@
       --good: #32c46e;
       --warn: #d6a84c;
       --bad: #ef6f6c;
-      --assistant-width: clamp(360px, 34vw, 680px);
+      --assistant-min-width: 280px;
+      --assistant-width: clamp(300px, 23vw, 460px);
+      --assistant-max-width: 720px;
     }
 
     body { background: #030405; color: var(--text); }
@@ -4872,7 +5138,7 @@
 
     .content {
       grid-area: content;
-      grid-template-columns: minmax(720px, 1fr) var(--assistant-width);
+      grid-template-columns: minmax(620px, 1fr) 10px minmax(var(--assistant-min-width), var(--assistant-width));
       gap: 14px;
       padding: 16px 16px 14px 12px;
       background: #030405;
@@ -4943,6 +5209,43 @@
       border-radius: 12px;
       background: #060708;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+    }
+
+    .assistant-resizer {
+      min-width: 10px;
+      height: 100%;
+      align-self: stretch;
+      position: relative;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      cursor: col-resize;
+      touch-action: none;
+    }
+
+    .assistant-resizer::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 50%;
+      width: 2px;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      transition: width .12s ease, background .12s ease;
+    }
+
+    .assistant-resizer:hover::before,
+    .assistant-resizer:focus-visible::before,
+    .assistant-resizer.is-dragging::before {
+      width: 3px;
+      background: rgba(255,255,255,.46);
+    }
+
+    body.assistant-resizing {
+      cursor: col-resize;
+      user-select: none;
     }
 
     .panel-head,
@@ -5361,6 +5664,7 @@
         overflow: auto;
       }
 
+      .assistant-resizer { display: none !important; }
       .assistant-panel { min-height: 360px; }
     }
 
@@ -5824,9 +6128,19 @@
     }
 
     .story-video-picker {
-      grid-template-columns: 148px 72px !important;
+      grid-template-columns: 148px !important;
       align-items: stretch !important;
-      justify-content: start !important;
+      justify-content: center !important;
+    }
+
+    .story-input-file-section .story-source-grid {
+      grid-template-columns: 1fr !important;
+      place-items: center !important;
+    }
+
+    .story-input-file-section .story-field {
+      width: 148px !important;
+      max-width: 100% !important;
     }
 
     .story-video-preview,
@@ -5837,33 +6151,28 @@
       aspect-ratio: 1 / 1 !important;
     }
 
-    .story-video-picker .btn {
-      width: 72px !important;
-      min-width: 72px !important;
-      height: 148px !important;
-    }
-
     .story-config-grid {
-      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
       gap: 12px !important;
     }
 
     .story-actions {
-      width: min(470px, 100%) !important;
+      width: min(345px, 100%) !important;
       display: grid !important;
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      grid-template-columns: minmax(0, 1fr) !important;
       gap: 10px !important;
       margin-top: 14px !important;
     }
 
-    .story-report-action {
-      width: min(230px, 100%) !important;
-      margin-top: 10px !important;
+    .story-bottom-actions {
+      display: flex !important;
+      justify-content: flex-end !important;
+      margin-top: 14px !important;
     }
 
-    .story-report-action .btn {
-      width: 100% !important;
-      min-height: 38px !important;
+    .story-bottom-actions .btn {
+      width: min(100%, calc(((100% - 36px) / 4) * 2 + 12px)) !important;
+      min-height: 42px !important;
     }
 
     :root {
@@ -5988,6 +6297,204 @@
       grid-template-columns: 96px minmax(0, 1fr) !important;
     }
 
+    body.density-upscaled {
+      overflow: hidden !important;
+    }
+
+    body.density-upscaled .app {
+      width: var(--app-density-width, 100vw) !important;
+      height: var(--app-density-height, 100vh) !important;
+      min-height: var(--app-density-height, 100vh) !important;
+      zoom: var(--app-density-scale, 1);
+    }
+
+    .story-input-panel > .panel-body {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: auto !important;
+      padding: 0 !important;
+      background: #050505 !important;
+      scrollbar-color: #3a3a3a #050505;
+      scrollbar-width: thin;
+    }
+
+    .story-input-panel > .panel-body::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .story-input-panel > .panel-body::-webkit-scrollbar-track {
+      background: #050505;
+    }
+
+    .story-input-panel > .panel-body::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: #3a3a3a;
+    }
+
+    .story-input-panel .story-workspace {
+      flex: 0 0 auto !important;
+      height: auto !important;
+      min-height: 0 !important;
+      background: #050505 !important;
+    }
+
+    .story-report-view {
+      flex: 1 1 0 !important;
+      height: auto;
+      min-height: clamp(220px, 32vh, 360px);
+      overflow: hidden;
+      margin: 4px 38px 18px;
+      padding: 0;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #050505 !important;
+      box-shadow: none !important;
+    }
+
+    .story-report-label {
+      flex: 0 0 auto;
+      margin: 10px 38px 4px;
+      color: #f2f2f2;
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .story-report-view[hidden] {
+      display: none !important;
+    }
+
+    .story-report-inner {
+      height: 100%;
+      max-width: none;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .story-report-view .understanding-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .story-report-view .understanding-metric {
+      min-height: 0;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      padding: 0;
+      border: 0 !important;
+      background: transparent !important;
+      color: #8d969c;
+      box-shadow: none !important;
+    }
+
+    .story-report-view .understanding-metric strong {
+      color: #f2f2f2;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .story-report-view .understanding-metric span {
+      color: #8d969c;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .story-input-panel,
+    .story-input-panel > .panel-body,
+    .story-input-panel .story-workspace,
+    .story-input-panel .story-report-view,
+    .story-input-panel .story-report-inner {
+      background-color: #050505 !important;
+    }
+
+    .story-report-view .understanding-summary {
+      min-height: 0;
+      padding: 0;
+      border: 0 !important;
+      background: transparent !important;
+      color: #d6d6d6;
+      box-shadow: none !important;
+    }
+
+    .story-report-view .understanding-list {
+      gap: 10px;
+    }
+
+    .story-report-role-name {
+      color: #d6d6d6;
+      font-size: 12px;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .story-report-inner > .understanding-grid,
+    .story-report-inner > .understanding-summary,
+    .story-report-inner > .understanding-list,
+    .story-report-inner > .understanding-detail {
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+
+    .story-report-inner > .understanding-grid {
+      margin-top: 14px;
+    }
+
+    .story-report-inner > .understanding-detail {
+      min-height: 0;
+      overflow: auto;
+      margin-bottom: 16px;
+    }
+
+    .story-report-view.is-empty .story-report-inner {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    .story-report-view.is-empty .understanding-grid,
+    .story-report-view.is-empty .understanding-list,
+    .story-report-view.is-empty .understanding-detail {
+      display: none !important;
+    }
+
+    .story-report-view.is-empty .understanding-summary {
+      width: auto;
+      height: auto;
+      min-height: 0;
+      align-self: start;
+      justify-self: start;
+      display: block;
+      margin: 16px;
+      padding: 0;
+      border: 0 !important;
+      border-radius: 0;
+      background: transparent !important;
+      color: #cfcfcf;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .panel-icon-tab.is-active {
+      background: #eeeeee !important;
+      border-color: #eeeeee !important;
+      color: #050505 !important;
+    }
+
+    .panel-icon-tab.is-active svg {
+      color: #050505 !important;
+      stroke: #050505 !important;
+    }
+
     .module-step,
     .module-settings-btn {
       width: 100% !important;
@@ -6084,16 +6591,87 @@
       align-self: start;
     }
 
+    .secret-input-wrap {
+      position: relative;
+      display: grid;
+      align-items: center;
+    }
+
+    .secret-input-wrap .input {
+      width: 100%;
+      padding-right: 42px !important;
+    }
+
+    .secret-toggle {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      width: 30px;
+      height: 28px;
+      transform: translateY(-50%);
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: #b8b8b8;
+      cursor: pointer;
+    }
+
+    .secret-toggle:hover {
+      background: #242424;
+      color: #ffffff;
+    }
+
+    .secret-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .secret-toggle .secret-slash {
+      display: none;
+    }
+
+    .secret-toggle.is-hidden .secret-slash {
+      display: block;
+    }
+
     .assistant-panel {
-      min-width: 360px !important;
+      min-width: var(--assistant-min-width) !important;
       background: #050505 !important;
+      height: 100% !important;
     }
 
     .assistant-body {
-      display: grid !important;
-      grid-template-rows: auto auto auto minmax(120px, 1fr) auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 0 !important;
+      height: 100% !important;
       overflow: hidden !important;
       gap: 10px !important;
+    }
+
+    .assistant-head > .mode-pill,
+    .assistant-route-card {
+      display: none !important;
+    }
+
+    .assistant-guide-card {
+      display: none !important;
+    }
+
+    .assistant-guide-btn {
+      width: fit-content !important;
+      min-width: 118px !important;
+      min-height: 34px !important;
+      margin: 0 !important;
+      padding: 0 14px !important;
+      border-radius: 9px !important;
     }
 
     .assistant-route-current span,
@@ -6106,14 +6684,19 @@
     }
 
     .assistant-guide-status {
-      min-height: 72px !important;
-      max-height: 120px !important;
+      display: block !important;
+      min-height: 132px !important;
+      max-height: 28vh !important;
       overflow: auto !important;
       border-radius: 10px !important;
+      margin: 0 !important;
     }
 
     .assistant-log-stream {
-      max-height: 150px !important;
+      flex: 0 0 auto !important;
+      max-height: 118px !important;
+      margin-top: 0 !important;
+      overflow: auto !important;
     }
 
     .assistant-log-entry[data-tone="warn"],
@@ -6146,11 +6729,23 @@
 
     .assistant-chat-list {
       min-height: 0;
+      flex: 1 1 0;
       display: flex;
       flex-direction: column;
       gap: 8px;
       overflow: auto;
-      padding-right: 2px;
+      padding: 10px;
+      border: 1px solid #303030;
+      border-radius: 10px;
+      background: #050505;
+    }
+
+    .assistant-bottom-actions {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 0;
     }
 
     .assistant-chat-message {
@@ -6178,30 +6773,36 @@
     }
 
     .assistant-composer {
+      flex: 0 0 auto;
+      margin-top: 0;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 64px;
+      grid-template-columns: minmax(0, 1fr) 54px;
+      align-items: end;
       gap: 8px;
-      padding-top: 8px;
+      padding-top: 10px;
       border-top: 1px solid #242424;
     }
 
     .assistant-composer textarea {
       width: 100%;
-      min-height: 54px;
-      max-height: 112px;
+      min-height: 86px;
+      max-height: 180px;
       resize: vertical;
       border: 1px solid #3a3a3a;
       border-radius: 10px;
-      padding: 9px 10px;
+      padding: 10px 11px;
       line-height: 1.45;
     }
 
     .assistant-composer button {
-      min-height: 54px;
+      min-height: 36px;
+      height: 38px;
+      padding: 0 10px;
       border: 1px solid #3a3a3a;
-      border-radius: 10px;
+      border-radius: 9px;
       background: #181818;
       color: #f2f2f2;
+      font-size: 12px;
       font-weight: 900;
       cursor: pointer;
     }
@@ -6216,6 +6817,262 @@
     [style*="border-color: #"] {
       color: inherit;
     }
+
+    .manual-asset-modal {
+      width: min(760px, calc(100vw - 44px)) !important;
+      max-height: calc(100vh - 54px) !important;
+      overflow: hidden !important;
+      padding: 16px !important;
+    }
+
+    .manual-asset-modal h4 {
+      margin: 0 0 10px !important;
+      font-size: 16px !important;
+      line-height: 1.2 !important;
+    }
+
+    .manual-asset-modal h4 .mode-pill,
+    .manual-asset-kind-help,
+    .manual-asset-video-wrap,
+    .manual-crop-layer,
+    .manual-crop-box,
+    .manual-asset-toolbar,
+    .manual-asset-source-preview,
+    .manual-asset-prompt-field,
+    .manual-asset-internal-note-field,
+    .manual-upload-actions {
+      display: none !important;
+    }
+
+    .manual-asset-body {
+      grid-template-columns: minmax(260px, 1fr) 260px !important;
+      gap: 14px !important;
+      max-height: calc(100vh - 132px) !important;
+      overflow: hidden !important;
+    }
+
+    .manual-asset-panel {
+      gap: 8px !important;
+      min-height: 0 !important;
+      grid-template-rows: auto minmax(0, auto) auto !important;
+    }
+
+    .manual-asset-form-grid {
+      grid-template-columns: 96px minmax(0, 1fr) !important;
+      gap: 8px !important;
+    }
+
+    .manual-asset-form-grid .field,
+    .manual-asset-modal .field {
+      min-height: 0 !important;
+      padding: 0 !important;
+      background: transparent !important;
+      border: 0 !important;
+    }
+
+    .manual-asset-form-grid .label,
+    .manual-asset-modal .label {
+      margin-bottom: 4px !important;
+      font-size: 12px !important;
+    }
+
+    .manual-candidate-field {
+      display: block !important;
+      grid-column: 1 / -1 !important;
+    }
+
+    .manual-asset-modal .input,
+    .manual-asset-modal select.input {
+      height: 34px !important;
+      min-height: 34px !important;
+      padding: 0 10px !important;
+      font-size: 13px !important;
+      border-radius: 8px !important;
+    }
+
+    .manual-asset-video-wrap {
+      min-height: 0 !important;
+      height: min(52vh, 460px) !important;
+      border-radius: 8px !important;
+    }
+
+    .manual-asset-video-wrap video {
+      max-height: none !important;
+      height: 100% !important;
+    }
+
+    .manual-asset-upload-preview {
+      min-height: 0 !important;
+      height: 220px !important;
+      border-radius: 8px !important;
+      display: grid !important;
+      place-items: center !important;
+      gap: 10px !important;
+    }
+
+    .manual-extra-ref-panel {
+      display: grid !important;
+      padding: 8px !important;
+      gap: 7px !important;
+    }
+
+    .manual-extra-ref-panel .asset-extra-ref-list {
+      min-height: 48px !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+
+    .manual-asset-upload-preview .asset-editor-empty {
+      padding: 0 12px !important;
+      font-size: 13px !important;
+      line-height: 1.35 !important;
+    }
+
+    .manual-asset-upload-preview .tiny-btn {
+      min-width: 104px !important;
+    }
+
+    .manual-upload-actions,
+    .asset-editor-actions {
+      gap: 6px !important;
+    }
+
+    .manual-asset-modal .tiny-btn,
+    .manual-asset-modal .btn {
+      height: 32px !important;
+      min-height: 32px !important;
+      padding: 0 10px !important;
+      font-size: 13px !important;
+      border-radius: 8px !important;
+    }
+
+    .manual-asset-modal .textarea {
+      min-height: 0 !important;
+      height: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+    }
+
+    .manual-asset-save-status {
+      min-height: 32px !important;
+      padding: 7px 9px !important;
+      font-size: 12px !important;
+    }
+
+    .manual-upload-actions {
+      display: none !important;
+    }
+
+    .manual-asset-modal .seedance-pose-toggle {
+      display: none !important;
+    }
+
+    .manual-asset-overlay {
+      inset: 58px calc(var(--assistant-width, 360px) + 56px) 14px 128px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 18px !important;
+      overflow: auto !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal {
+      width: min(560px, calc(100vw - 32px)) !important;
+      max-height: calc(100vh - 36px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      padding: 12px !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal h4 {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      margin-bottom: 8px !important;
+      font-size: 15px !important;
+    }
+
+    .asset-editor-title-meta {
+      min-width: 0;
+      color: #d6d6d6;
+      font-size: 13px;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-editor-body {
+      display: block !important;
+      margin: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-editor-name-card {
+      display: none !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-editor-target-stack {
+      display: grid !important;
+      grid-template-rows: auto auto !important;
+      gap: 8px !important;
+      min-height: 0 !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-editor-preview {
+      height: min(42vh, 310px) !important;
+      min-height: 180px !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-extra-ref-panel {
+      max-height: 148px !important;
+      padding: 7px !important;
+      overflow: hidden !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-extra-ref-list {
+      max-height: 92px !important;
+      overflow: auto !important;
+    }
+
+    .manual-asset-modal.asset-image-editor-modal .asset-editor-actions {
+      flex: 0 0 auto !important;
+      margin-top: 8px !important;
+      padding-top: 8px !important;
+      border-top: 1px solid #242424 !important;
+    }
+
+    @media (max-width: 1100px) {
+      .manual-asset-overlay {
+        inset: 0 !important;
+      }
+    }
+
+    .module-view[data-module-view="storyboard"] > .panel-body {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      padding-bottom: 28px !important;
+    }
+
+    .storyboard-shot-cut-entry {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid #303030;
+      border-radius: 8px;
+      background: #101010;
+      padding: 6px 10px;
+      margin: 10px 0 6px;
+      color: #f2f2f2;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .storyboard-shot-cut-entry .tiny-btn {
+      min-width: 84px;
+      height: 30px;
+    }
   </style>
 </head>
 <body>
@@ -6224,25 +7081,6 @@
       <div class="brand">SP 分镜重生工作台</div>
       <div class="mode-pill">单一工作流 · 分镜重生</div>
     </header>
-
-    <div class="settings-overlay report-overlay" id="videoAnalysisReportOverlay" aria-hidden="true">
-      <div class="settings-modal report-modal" role="dialog" aria-modal="true" aria-labelledby="videoAnalysisReportTitle">
-        <div class="settings-modal-head">
-          <span id="videoAnalysisReportTitle">视频分析报告</span>
-          <button class="tiny-btn" id="closeVideoAnalysisReportBtn" type="button">关闭</button>
-        </div>
-        <div class="settings-modal-body report-modal-body">
-          <div class="understanding-grid">
-            <div class="understanding-metric"><strong id="reportCharacterCount">-</strong><span>角色名称</span></div>
-            <div class="understanding-metric"><strong id="reportSceneCount">-</strong><span>场景名称</span></div>
-            <div class="understanding-metric"><strong id="reportBoundaryCount">-</strong><span>镜头边界</span></div>
-          </div>
-          <div class="understanding-summary" id="reportUnderstandingSummary">暂无分析报告。</div>
-          <div class="understanding-list" id="reportUnderstandingCharacters"></div>
-          <div class="understanding-detail" id="reportUnderstandingDetails"></div>
-        </div>
-      </div>
-    </div>
 
     <nav class="module-nav">
       <div class="module-track">
@@ -6281,7 +7119,9 @@
 
     <main class="content">
       <section class="panel module-view active story-input-panel" data-module-view="story">
-        <div class="panel-head">原片与项目</div>
+        <div class="panel-head story-panel-head">
+          <span id="storyPanelTitle">原视频</span>
+        </div>
         <div class="panel-body">
           <div class="story-workspace">
             <header class="story-hero">
@@ -6291,69 +7131,28 @@
             </header>
 
             <div class="story-core-grid">
-              <section class="story-section">
-                <div class="story-section-head">
-                  <strong>输入文件</strong>
-                </div>
+              <section class="story-section story-input-file-section">
                 <div class="story-source-grid">
                   <div class="story-field">
-                    <div class="label"><span>原视频</span></div>
                     <div class="story-video-picker">
                       <input id="videoPathInput" type="hidden" />
-                      <div class="story-video-preview" id="sourceVideoPreviewBox">
-                        <video id="sourceVideoPreview" controls muted playsinline preload="metadata" hidden></video>
-                        <div class="story-video-empty" id="sourceVideoEmpty">尚未选择原视频</div>
+                      <div class="story-video-preview" id="sourceVideoPreviewBox" role="button" tabindex="0" aria-label="上传视频">
+                        <video id="sourceVideoPreview" muted playsinline preload="metadata" hidden></video>
+                        <div class="story-video-empty" id="sourceVideoEmpty">上传视频</div>
                       </div>
-                      <button class="btn" id="pickVideoBtn" type="button">选择</button>
                     </div>
                   </div>
-                </div>
-              </section>
-
-              <section class="story-section story-primary-actions">
-                <div class="story-section-head">
-                  <strong>开始处理</strong>
-                </div>
-                <div class="story-actions">
-                  <button class="btn primary" id="reverseStoryboardBtn" type="button">分析分镜与候选名称</button>
-                  <button class="btn good" id="loadProjectBtn" type="button">读取旧项目</button>
                 </div>
               </section>
 
             </div>
 
             <section class="story-config-section">
-              <div class="story-section-head">
-                <strong>项目参数</strong>
+              <div class="story-strategy-row">
+                <button class="btn primary" id="reverseStoryboardBtn" type="button">分析视频</button>
+                <div class="story-config-note" id="storyConfigNote" hidden></div>
+                <div class="story-status" id="storyStatus">请选择原视频。</div>
               </div>
-              <div class="story-config-grid">
-                <div class="field">
-                  <div class="label"><span>项目策略</span><span>分析方式</span></div>
-                  <select class="input" id="storyReferenceStrategySelect" aria-label="项目策略"></select>
-                  <div class="story-reference-note" id="storyReferenceNote">当前默认：只按新视频生成，忽略旧项目目录</div>
-                </div>
-                <div class="field">
-                  <div class="label"><span>重制目标</span><span>用于当前任务</span></div>
-                  <select class="input" id="storyRebuildGoalSelect"></select>
-                </div>
-                <div class="field">
-                  <div class="label"><span>画面风格</span><span>全项目默认</span></div>
-                  <select class="input" id="storyStyleSelect"></select>
-                </div>
-                <div class="field">
-                  <div class="label"><span>语言</span><span>影响文案和配音</span></div>
-                  <select class="input" id="storyLanguageSelect"></select>
-                </div>
-                <div class="field">
-                  <div class="label"><span>输出比例</span><span>同步到生成草稿</span></div>
-                  <select class="input" id="storyRatioSelect"></select>
-                </div>
-              </div>
-              <div class="story-config-note" id="storyConfigNote"></div>
-              <div class="story-report-action">
-                <button class="btn" id="openVideoAnalysisReportBtn" type="button">视频分析报告</button>
-              </div>
-              <div class="story-status" id="storyStatus">请选择原视频。</div>
             </section>
 
             <div class="story-disclosures">
@@ -6396,14 +7195,28 @@
 
             </div>
           </div>
+          <div class="story-report-label">分析报告</div>
+          <div class="story-report-view is-empty" id="storyReportView">
+            <div class="story-report-inner">
+              <div class="understanding-grid">
+                <div class="understanding-metric"><strong id="reportCharacterCount">-</strong><span>角色名称</span></div>
+                <div class="understanding-metric"><strong id="reportSceneCount">-</strong><span>场景名称</span></div>
+                <div class="understanding-metric"><strong id="reportBoundaryCount">-</strong><span>镜头边界</span></div>
+              </div>
+              <div class="understanding-summary" id="reportUnderstandingSummary" aria-live="polite">暂无报告</div>
+              <div class="understanding-list" id="reportUnderstandingCharacters"></div>
+              <div class="understanding-detail" id="reportUnderstandingDetails"></div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="panel module-view" data-module-view="assets">
         <div class="panel-head">
-          <span>资产库</span>
+          <span>当前资产</span>
           <div class="timeline-controls">
-            <button class="btn good" id="manualAssetBtn" type="button">手动建资产</button>
+            <button class="btn" id="openAssetLibraryBtn" type="button">资产库</button>
+            <button class="btn good" id="manualAssetBtn" type="button">添加资产</button>
           </div>
         </div>
         <div class="panel-body">
@@ -6415,8 +7228,6 @@
       <section class="panel module-view" data-module-view="storyboard">
         <div class="panel-head">
           <span>分镜管理</span>
-          <button class="btn" id="openStoryboardShotCutBtn" type="button">镜头切段</button>
-          <button class="btn primary" id="buildStoryboardBtn">刷新分镜计划</button>
         </div>
         <div class="panel-body">
           <div class="stats">
@@ -6432,16 +7243,24 @@
                   <span id="originalCompareLabel">请选择镜头</span>
                 </div>
                 <video class="compare-video" id="timelineOriginalVideo" controls preload="metadata"></video>
-                <div class="compare-info" id="timelineOriginalInfo">读取项目后，从下方时间线选择一个镜头。</div>
+                <div class="compare-info compare-info-with-action storyboard-original-actions">
+                  <span id="timelineOriginalInfo">读取项目后，从下方时间线选择一个镜头。</span>
+                  <button class="tiny-btn" id="showOriginalVideoBtn" type="button" hidden>原视频</button>
+                  <button class="tiny-btn" id="shotCutAtCurrentBtn" type="button" hidden>当前时间切一刀</button>
+                  <button class="tiny-btn primary" id="shotSaveCutsBtn" type="button" hidden>确认保存切段</button>
+                </div>
               </div>
               <div class="compare-pane">
                 <div class="compare-head">
-                  <strong>新视频</strong>
-                  <span id="generatedCompareLabel">待生成</span>
+                  <strong>子镜头</strong>
+                  <span id="generatedCompareLabel"></span>
                 </div>
                 <video class="compare-video" id="timelineGeneratedVideo" controls preload="metadata"></video>
-                <div class="generated-empty" id="generatedPlaceholder">这里以后显示重新生成的视频。<br>当前镜头还没有生成结果。</div>
-                <div class="compare-info" id="timelineGeneratedInfo">新模式会把分镜提示词送给视频模型，生成后与左侧原片逐镜头对比。</div>
+                <div class="generated-empty" id="generatedPlaceholder">子镜头会在这里显示。</div>
+                <div class="compare-info compare-info-with-action">
+                  <span id="timelineGeneratedInfo">从下方子镜头按钮选择一段，这里会同步预览。</span>
+                  <button class="tiny-btn" id="shotUndoCutBtn" type="button" hidden>撤销此切点</button>
+                </div>
               </div>
             </div>
             <div class="timeline-main">
@@ -6450,12 +7269,16 @@
                 <div class="timeline-controls">
                   <button class="tiny-btn" id="timelinePrevBtn" type="button">上一个</button>
                   <button class="tiny-btn" id="timelineNextBtn" type="button">下一个</button>
+                  <button class="tiny-btn primary" id="saveStoryboardBtn" type="button">保存分镜</button>
                 </div>
               </div>
               <div class="timeline-strip" id="timelineStrip">
                 <div class="empty" style="min-width:260px;">读取项目后，这里会显示横向镜头缩略条。</div>
               </div>
             </div>
+          </div>
+          <div class="storyboard-shot-cut-entry">
+            <span>子镜头控制预览</span>
           </div>
           <div class="seedance-subclips" id="storyboardShotSubclips" hidden></div>
 
@@ -6477,7 +7300,7 @@
           </div>
 
           <div class="field storyboard-queue-field">
-            <div class="label"><span>镜头重写队列</span><span>占位</span></div>
+            <div class="label"><span>镜头重写队列</span><span>待生成</span></div>
             <table class="shot-table">
               <thead>
                 <tr>
@@ -6503,70 +7326,42 @@
       <section class="panel module-view" data-module-view="generate">
         <div class="panel-head">
           <span>视频生成</span>
-          <button class="btn" id="openShotCutWorkbenchBtn" type="button">镜头切段</button>
-          <button class="btn good" id="openTransferWorkbenchBtn" type="button">Scail2 生成</button>
-          <button class="btn primary" id="batchGenerateBtn" type="button">提交通道A生成</button>
+          <div class="generate-toolbar">
+            <select class="input generate-model-select" id="seedanceModelSelect" title="模型选择"></select>
+            <select class="input generate-param-select" id="seedanceRatioSelect" title="比例" aria-label="比例"></select>
+            <select class="input generate-param-select" id="seedanceDurationSelect" title="时长" aria-label="时长"></select>
+            <select class="input generate-param-select" id="seedanceResolutionSelect" title="分辨率" aria-label="分辨率"></select>
+            <button class="btn good" id="openTransferWorkbenchBtn" type="button">单人 Scail2 生成</button>
+            <button class="btn primary" id="batchGenerateBtn" type="button">多人Api生成</button>
+          </div>
         </div>
         <div class="panel-body">
           <div class="seedance-status-wrap">
-            <div class="seedance-submit-status" id="seedanceSubmitStatus">点击“提交通道A生成”后，这里会显示提交状态、任务进度和拦截原因。</div>
+            <div class="seedance-submit-status" id="seedanceSubmitStatus">点击“多人Api生成”后，这里会显示提交状态、任务进度和拦截原因。</div>
             <button class="seedance-copy-status-btn" id="copySeedanceStatusBtn" type="button">复制日志</button>
           </div>
           <div class="seedance-key-help">
-            <strong>分镜重生通道A</strong>
+            <strong>分镜重生通道2</strong>
             <span>这里优先使用本页填写的中转 URL 和 API Key，不再读取外部项目配置。</span>
           </div>
           <div class="seedance-relay-grid">
             <div class="field">
-              <div class="label"><span>中转 URL</span><span>你的 NewAPI / 通道A地址</span></div>
+              <div class="label"><span>中转 URL</span><span>你的 NewAPI / 通道2地址</span></div>
               <input class="input" id="seedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
             </div>
             <div class="field">
-              <div class="label"><span>通道A API Key</span><span>只保存在当前浏览器</span></div>
-              <input class="input" id="seedanceRelayApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
+              <div class="label"><span>通道2 API Key</span><span>只保存在当前浏览器</span></div>
+              <div class="secret-input-wrap">
+                <input class="input" id="seedanceRelayApiKeyInput" type="text" placeholder="sk-..." autocomplete="off" />
+                <button class="secret-toggle" type="button" data-secret-toggle="seedanceRelayApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
+                </button>
+              </div>
             </div>
             <button class="btn" id="saveSeedanceRelayBtn" type="button">保存配置</button>
           </div>
           <div class="seedance-workbench">
             <div class="seedance-materials">
-              <div class="seedance-card">
-                <div class="seedance-card-head">
-                  <span>通道A参数</span>
-                  <span class="mode-pill">Seedance2.0</span>
-                </div>
-                <div class="seedance-card-body">
-                  <div class="field">
-                    <div class="label"><span>具体模型</span><span>通道A模型</span></div>
-                    <select class="input" id="seedanceModelSelect"></select>
-                  </div>
-                  <div class="seedance-grid three">
-                    <div class="field">
-                      <div class="label"><span>比例</span></div>
-                      <select class="input" id="seedanceRatioSelect"></select>
-                    </div>
-                    <div class="field">
-                      <div class="label"><span>时长</span></div>
-                      <select class="input" id="seedanceDurationSelect"></select>
-                    </div>
-                    <div class="field">
-                      <div class="label"><span>分辨率</span></div>
-                      <select class="input" id="seedanceResolutionSelect"></select>
-                    </div>
-                  </div>
-                  <div class="field">
-                    <div class="label"><span>图片输入模式</span><span>对齐通道A接口</span></div>
-                    <select class="input" id="seedanceFrameModeSelect">
-                      <option value="reference">全部作为参考图</option>
-                      <option value="first">第 1 张作为首帧，其余作为参考图</option>
-                      <option value="firstlast">第 1 张首帧，第 2 张尾帧，其余作为参考图</option>
-                    </select>
-                  </div>
-                  <div class="seedance-note">
-                    本页会生成通道A需要的 model / prompt / seconds / size / resolution / images / videos / audios。
-                  </div>
-                </div>
-              </div>
-
               <div class="material-group" data-kind="images">
                 <div class="material-group-title">
                   参考图 <span id="seedanceImageCount">0/4</span>
@@ -6688,19 +7483,29 @@
             </div>
             <div class="field">
               <div class="label"><span>百炼密钥</span><span>只保存在当前浏览器</span></div>
-              <input class="input" id="preDirectorApiKeyInput" type="password" placeholder="请输入密钥" autocomplete="off" />
+              <div class="secret-input-wrap">
+                <input class="input" id="preDirectorApiKeyInput" type="text" placeholder="请输入密钥" autocomplete="off" />
+                <button class="secret-toggle" type="button" data-secret-toggle="preDirectorApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
+                </button>
+              </div>
             </div>
             <div class="field">
               <div class="label"><span>反推模型</span><span>百炼兼容模型</span></div>
               <input class="input" id="preDirectorModelInput" placeholder="qwen3.5-omni-plus" />
             </div>
             <div class="field">
-              <div class="label"><span>通道A中转 URL</span><span>NewAPI / Seedance 地址</span></div>
+              <div class="label"><span>通道2中转 URL</span><span>NewAPI / 视频地址</span></div>
               <input class="input" id="settingsSeedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
             </div>
             <div class="field">
-              <div class="label"><span>通道A API Key</span><span>只保存在当前浏览器</span></div>
-              <input class="input" id="settingsSeedanceRelayApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
+              <div class="label"><span>通道2 API Key</span><span>只保存在当前浏览器</span></div>
+              <div class="secret-input-wrap">
+                <input class="input" id="settingsSeedanceRelayApiKeyInput" type="text" placeholder="sk-..." autocomplete="off" />
+                <button class="secret-toggle" type="button" data-secret-toggle="settingsSeedanceRelayApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
+                </button>
+              </div>
             </div>
           </div>
           <div class="settings-page-note">这里的设置会直接影响当前流程，不再用弹窗单独打断页面。</div>
@@ -6710,6 +7515,7 @@
         </div>
       </section>
 
+      <div class="assistant-resizer" id="assistantResizer" role="separator" aria-orientation="vertical" aria-label="调整助手宽度" tabindex="0"></div>
       <aside class="assistant-panel" aria-label="SP 助手">
         <div class="assistant-head">
           <span>SP 助手</span>
@@ -6722,13 +7528,15 @@
             <span id="assistantRunStatusText">正在运行...</span>
           </div>
           <div class="assistant-guide-card">
-            <button class="assistant-guide-btn" id="assistantGuideVideoBtn" type="button">带我做视频</button>
             <div class="assistant-guide-status" id="assistantGuideStatus">点“带我做视频”，我会按当前路线检查下一步。</div>
             <div class="assistant-log-stream" id="assistantLogStream" hidden></div>
           </div>
           <div class="assistant-chat-list" id="assistantChatList" aria-live="polite"></div>
+          <div class="assistant-bottom-actions">
+            <button class="assistant-guide-btn" id="assistantGuideVideoBtn" type="button">带我做视频</button>
+          </div>
           <form class="assistant-composer" id="assistantChatForm">
-            <textarea id="assistantChatInput" rows="2" placeholder="直接问我，或说你想做什么"></textarea>
+            <textarea id="assistantChatInput" rows="3" placeholder="直接问我，或说你想做什么"></textarea>
             <button type="submit">发送</button>
           </form>
         </div>
@@ -6739,7 +7547,7 @@
       <span>模式: <strong>分镜重生</strong></span>
       <span>代码: <strong>story_generate_dashboard.html</strong></span>
       <span>界面：<strong>分镜重生 · 手动资产流程</strong></span>
-      <span>状态: <strong>Seedance 通道A已接入草稿提交</strong></span>
+      <span>状态: <strong>视频通道2已接入草稿提交</strong></span>
     </footer>
   </div>
 
@@ -6750,6 +7558,9 @@
     const SEEDANCE_A_RELAY_CONFIG_KEY = "sp_story_seedance_channel_a_relay";
     const PRE_DIRECTOR_CONFIG_KEY = "sp_story_pre_director_config";
     const ASSISTANT_MODEL_KEY = "sp_story_assistant_model";
+    const ASSISTANT_WIDTH_KEY = "sp_story_assistant_width";
+    const ASSISTANT_WIDTH_MIN = 280;
+    const ASSISTANT_WIDTH_MAX = 720;
     const STORY_PROJECT_CONFIG_KEY = "sp_story_project_config";
     const STORY_REFERENCE_STRATEGY_KEY = "sp_story_reference_strategy";
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
@@ -6759,14 +7570,16 @@
     const DEFAULT_PRE_DIRECTOR_MODEL = "qwen3.5-omni-plus";
     const DEFAULT_ASSISTANT_MODEL = "gpt-5.5";
     const SEEDANCE_A_MODELS = [
-      "A-seedance-2.0-480p",
-      "A-seedance-2.0-480p-fast",
-      "A-seedance-2.0-720p",
-      "A-seedance-2.0-720p-fast",
+      "videos",
+      "videos-mini",
+      "sd-2.0-r3",
+      "xinghe-2.0",
+      "videos_stable_fast",
+      "videos_stable",
     ];
     const DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000";
-    const SEEDANCE_A_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
-    const SEEDANCE_A_DURATIONS = Array.from({ length: 12 }, (_, index) => index + 4);
+    const SEEDANCE_A_RATIOS = ["9:16", "16:9"];
+    const SEEDANCE_A_DURATIONS = Array.from({ length: 10 }, (_, index) => index + 6);
     const SEEDANCE_A_RESOLUTIONS = ["480p", "720p"];
     const SEEDANCE_MATERIAL_LIMITS = { images: 4, videos: 3, audios: 3 };
     const STORY_STYLE_PRESETS = [
@@ -6816,7 +7629,6 @@
     const STORY_REFERENCE_STRATEGIES = [
       { value: "new_only", label: "只分析当前原片", note: "忽略旧项目目录，只整理当前视频的分镜和名称候选。" },
       { value: "old_reference", label: "旧项目作参考", note: "读取旧故事、人物和片段描述，作为当前新视频的软参考。" },
-      { value: "hybrid_reference", label: "旧项目 + 新视频融合", note: "旧项目提供故事和角色提示，新视频决定实际切法。" },
     ];
     const STORY_GENERATION_ROUTES = [
       {
@@ -6826,7 +7638,7 @@
         note: "固定规则：单人干净镜头走 Scail2；多人、粘连、只有别人手脚参与的镜头走 Seedance。",
       },
     ];
-    const STORY_RATIO_OPTIONS = ["9:16", ...SEEDANCE_A_RATIOS.filter((value) => value !== "9:16")];
+    const STORY_RATIO_OPTIONS = ["9:16", "16:9"];
     const STORY_REBUILD_DEFAULT = STORY_REBUILD_GOALS[0].value;
     let storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
     let storyGenerationRoute = "auto_fixed_route";
@@ -6839,11 +7651,10 @@
       mask_source: "remote_sam3_color",
     };
     let seedanceDraft = {
-      model: "A-seedance-2.0-480p-fast",
+      model: "videos_stable_fast",
       ratio: "9:16",
       duration: 5,
       resolution: "480p",
-      frameMode: "reference",
       taskName: "shot_retake_001",
       seed: 0,
       prompt: "",
@@ -6882,6 +7693,7 @@
     let seedancePendingCompare = null;
     let assistantLogLines = [];
     let assistantLastLogKey = "";
+    let assistantLastStatusKey = "";
     let assistantChatBusy = false;
     let currentSeedanceMaskJobId = null;
     let seedanceMaskPollTimer = null;
@@ -6909,6 +7721,7 @@
       previewRatioManual: false,
       drawing: null,
     };
+    let storyboardLeftPreviewMode = "source";
     let storyAssets = [];
     let fullVideoUnderstanding = null;
     let storyUnderstandingOptions = { use_pre_director: true, force_understand: false };
@@ -7181,7 +7994,7 @@
           return {
             backend: "seedance",
             label: "Seedance",
-            action: "点提交通道A生成",
+          action: "点多人Api生成",
             roleCount,
             personCount,
             reason: hasRisk
@@ -7196,7 +8009,7 @@
         return {
           backend: storedRoute,
           label: storedRoute === "scail2" ? "单人 Scail2" : "Seedance",
-          action: storedRoute === "scail2" ? "点 Scail2 生成" : "点提交通道A生成",
+          action: storedRoute === "scail2" ? "点 Scail2 生成" : "点多人Api生成",
           roleCount,
           personCount,
           reason,
@@ -7219,7 +8032,7 @@
       return {
         backend: "seedance",
         label: "Seedance",
-        action: "点提交通道A生成",
+        action: "点多人Api生成",
         roleCount,
         personCount,
         reason: hasRisk
@@ -7239,10 +8052,18 @@
     }
 
     function assistantSetStatus(lines, tone = "info") {
+      const cleanLines = normalizeStatusLines(lines);
+      const message = cleanLines.join("\n").trim();
       const box = $("#assistantGuideStatus");
-      if (!box) return;
-      box.textContent = (lines || []).filter(Boolean).join("\n");
-      box.dataset.tone = tone || "info";
+      if (box) {
+        box.textContent = message;
+        box.dataset.tone = tone || "info";
+      }
+      if (!message) return;
+      const key = `${tone}|${message}`;
+      if (key === assistantLastStatusKey) return;
+      assistantLastStatusKey = key;
+      assistantAddChatMessage("assistant", message);
     }
 
     function assistantSetRunStatus(lines, running = true) {
@@ -7279,7 +8100,7 @@
       if (submitBtn) {
         submitBtn.classList.toggle("primary", decision.backend === "seedance");
         submitBtn.classList.toggle("warn", decision.backend !== "seedance");
-        submitBtn.textContent = decision.backend === "seedance" ? "提交通道A生成" : "单人镜头走 Scail2";
+        submitBtn.textContent = "多人Api生成";
       }
       if (transferBtn) {
         transferBtn.hidden = false;
@@ -7319,7 +8140,125 @@
       };
     }
 
+    function assistantWidthBounds() {
+      const content = $(".content");
+      let maxWidth = ASSISTANT_WIDTH_MAX;
+      if (content) {
+        const contentWidth = content.getBoundingClientRect().width;
+        if (Number.isFinite(contentWidth) && contentWidth > 0) {
+          maxWidth = Math.min(maxWidth, Math.max(ASSISTANT_WIDTH_MIN, Math.floor(contentWidth - 630)));
+        }
+      }
+      return {
+        min: ASSISTANT_WIDTH_MIN,
+        max: Math.max(ASSISTANT_WIDTH_MIN, maxWidth),
+      };
+    }
+
+    function clampAssistantWidth(width) {
+      const parsed = Number(width);
+      const bounds = assistantWidthBounds();
+      if (!Number.isFinite(parsed)) return bounds.min;
+      return Math.min(bounds.max, Math.max(bounds.min, Math.round(parsed)));
+    }
+
+    function readAssistantWidth() {
+      const panelWidth = $(".assistant-panel")?.getBoundingClientRect().width;
+      if (Number.isFinite(panelWidth) && panelWidth > 0) return panelWidth;
+      const cssWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--assistant-width"));
+      if (Number.isFinite(cssWidth)) return cssWidth;
+      return 320;
+    }
+
+    function setAssistantWidth(width, options = {}) {
+      const nextWidth = clampAssistantWidth(width);
+      document.documentElement.style.setProperty("--assistant-width", `${nextWidth}px`);
+      const bounds = assistantWidthBounds();
+      const resizer = $("#assistantResizer");
+      if (resizer) {
+        resizer.setAttribute("aria-valuemin", String(bounds.min));
+        resizer.setAttribute("aria-valuemax", String(bounds.max));
+        resizer.setAttribute("aria-valuenow", String(nextWidth));
+      }
+      if (options.persist) {
+        try {
+          localStorage.setItem(ASSISTANT_WIDTH_KEY, String(nextWidth));
+        } catch (_) {}
+      }
+      return nextWidth;
+    }
+
+    function initAssistantResize() {
+      const content = $(".content");
+      const resizer = $("#assistantResizer");
+      if (!content || !resizer) return;
+
+      let savedWidth = NaN;
+      try {
+        savedWidth = Number(localStorage.getItem(ASSISTANT_WIDTH_KEY));
+      } catch (_) {}
+      if (Number.isFinite(savedWidth) && savedWidth > 0) {
+        setAssistantWidth(savedWidth);
+      } else if (window.innerWidth > 1280) {
+        setAssistantWidth(readAssistantWidth());
+      }
+
+      let dragWidth = readAssistantWidth();
+      let activePointerId = null;
+
+      const onPointerMove = (event) => {
+        const rect = content.getBoundingClientRect();
+        dragWidth = setAssistantWidth(rect.right - event.clientX);
+      };
+
+      const stopDrag = () => {
+        resizer.classList.remove("is-dragging");
+        document.body.classList.remove("assistant-resizing");
+        if (activePointerId !== null && resizer.releasePointerCapture) {
+          try { resizer.releasePointerCapture(activePointerId); } catch (_) {}
+        }
+        activePointerId = null;
+        setAssistantWidth(dragWidth, { persist: true });
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", stopDrag);
+        window.removeEventListener("pointercancel", stopDrag);
+      };
+
+      resizer.addEventListener("pointerdown", (event) => {
+        if (window.innerWidth <= 1280) return;
+        event.preventDefault();
+        activePointerId = event.pointerId;
+        dragWidth = readAssistantWidth();
+        resizer.classList.add("is-dragging");
+        document.body.classList.add("assistant-resizing");
+        if (resizer.setPointerCapture) {
+          try { resizer.setPointerCapture(activePointerId); } catch (_) {}
+        }
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", stopDrag);
+        window.addEventListener("pointercancel", stopDrag);
+      });
+
+      resizer.addEventListener("keydown", (event) => {
+        const bounds = assistantWidthBounds();
+        let nextWidth = null;
+        if (event.key === "ArrowLeft") nextWidth = readAssistantWidth() + 24;
+        if (event.key === "ArrowRight") nextWidth = readAssistantWidth() - 24;
+        if (event.key === "Home") nextWidth = bounds.min;
+        if (event.key === "End") nextWidth = bounds.max;
+        if (nextWidth === null) return;
+        event.preventDefault();
+        setAssistantWidth(nextWidth, { persist: true });
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth <= 1280) return;
+        setAssistantWidth(readAssistantWidth());
+      });
+    }
+
     function initAssistantRoutePanel() {
+      initAssistantResize();
       renderAssistantRouteCard();
       $("#assistantGuideVideoBtn")?.addEventListener("click", assistantGuideVideo);
       $("#assistantChatForm")?.addEventListener("submit", submitAssistantChat);
@@ -7329,7 +8268,6 @@
           submitAssistantChat(event);
         }
       });
-      assistantSetStatus(["点“带我做视频”。"]);
     }
 
     async function assistantGuideVideo() {
@@ -7366,7 +8304,7 @@
         assistantSetStatus([
           "Seedance 已准备。",
           decision.reason,
-          "确认草稿后可以点“提交通道A生成”。",
+          "确认草稿后可以点“多人Api生成”。",
         ], "good");
         return;
       }
@@ -7385,7 +8323,7 @@
       if (/invalid token|auth failed|401|403/i.test(message)) {
         return [
           "x Seedance 鉴权失败：密钥无效或已过期。",
-          "> 请到左下角设置里更新通道A API Key。",
+          "> 请到左下角设置里更新通道2 API Key。",
           message ? `> 原始错误：${message}` : "",
         ].filter(Boolean);
       }
@@ -7452,7 +8390,7 @@
       localStorage.setItem(SEEDANCE_A_RELAY_CONFIG_KEY, JSON.stringify(relay));
       if (!options.silent) {
         setSeedanceSubmitStatus([
-          "> 分镜重生通道A配置已保存",
+          "> 分镜重生通道2配置已保存",
           `> base URL: ${relay.base_url}`,
           relay.api_key ? "> API Key: set" : "> API Key: empty",
         ], relay.api_key ? "good" : "warn");
@@ -7479,8 +8417,44 @@
       assistantSetStatus(["设置已恢复默认。", "确认后点“保存设置”。"]);
     }
 
+    function setSecretVisible(input, button, visible = true) {
+      if (!input || !button) return;
+      input.type = visible ? "text" : "password";
+      button.classList.toggle("is-hidden", !visible);
+      button.setAttribute("aria-pressed", visible ? "false" : "true");
+      button.setAttribute("aria-label", visible ? "隐藏密钥" : "显示密钥");
+      button.title = visible ? "隐藏密钥" : "显示密钥";
+    }
+
+    function initSecretToggles() {
+      document.querySelectorAll("[data-secret-toggle]").forEach((button) => {
+        const input = document.getElementById(button.dataset.secretToggle || "");
+        if (!input) return;
+        setSecretVisible(input, button, true);
+        button.addEventListener("click", () => {
+          setSecretVisible(input, button, input.type === "password");
+        });
+      });
+    }
+
+    function hasUsableVideoAnalysisReport(data) {
+      if (!data || typeof data !== "object") return false;
+      const counts = storyUnderstandingCounts(data);
+      const hasCountedContent = Boolean((counts.characters || 0) || (counts.scenes || 0) || (counts.boundaries || 0));
+      const status = understandingRawStatus(data);
+      const unavailableStatuses = new Set(["disabled", "missing_api_key", "pending", "unknown", "failed", "error"]);
+      if (unavailableStatuses.has(status) && !hasCountedContent) return false;
+      const summary = String(data.summary || data.story || data.description || "").trim();
+      const roleTimeline = normalizeUnderstandingList(data.role_timeline || data.characters || data.roles || data.role_list);
+      const scenes = understandingScenes(data);
+      const hasNotes = data.production_notes && typeof data.production_notes === "object" && Object.keys(data.production_notes).length > 0;
+      const hasSpatial = data.spatial_map && typeof data.spatial_map === "object" && Object.keys(data.spatial_map).length > 0;
+      return Boolean(hasCountedContent || summary || roleTimeline.length || scenes.length || hasNotes || hasSpatial);
+    }
+
     function renderVideoAnalysisReport() {
       const data = fullVideoUnderstanding && typeof fullVideoUnderstanding === "object" ? fullVideoUnderstanding : null;
+      const reportView = $("#storyReportView");
       const counts = storyUnderstandingCounts(data);
       const characterCountEl = $("#reportCharacterCount");
       const sceneCountEl = $("#reportSceneCount");
@@ -7491,13 +8465,15 @@
       if (characterCountEl) characterCountEl.textContent = String(counts.characters || 0);
       if (sceneCountEl) sceneCountEl.textContent = String(counts.scenes || 0);
       if (boundaryCountEl) boundaryCountEl.textContent = String(counts.boundaries || 0);
-      if (!data) {
-        if (summaryEl) summaryEl.textContent = "还没有视频分析报告。";
-        if (charactersEl) charactersEl.innerHTML = `<span class="understanding-chip">待分析</span>`;
+      if (!hasUsableVideoAnalysisReport(data)) {
+        reportView?.classList.add("is-empty");
+        if (summaryEl) summaryEl.textContent = "暂无角色信息";
+        if (charactersEl) charactersEl.innerHTML = "";
         if (detailsEl) detailsEl.innerHTML = "";
         return;
       }
-      const summary = data.summary || data.story || data.description || data.note || "暂无全片理解摘要";
+      reportView?.classList.remove("is-empty");
+      const summary = data.summary || data.story || data.description || "暂无全片理解摘要";
       if (summaryEl) summaryEl.textContent = zhDisplayText(summary, "暂无全片理解摘要");
       const roles = normalizeUnderstandingList(data.characters || data.roles || data.role_list);
       if (charactersEl) {
@@ -7506,26 +8482,35 @@
               const label = typeof role === "string"
                 ? role
                 : (role.role_name || role.name || role.role || (Array.isArray(role.role_candidates) ? role.role_candidates[0] : "") || role.visual_label || role.id || `角色${index + 1}`);
-              return `<span class="understanding-chip">${escapeHtml(String(label))}</span>`;
+              return `<span class="story-report-role-name">${escapeHtml(String(label))}</span>`;
             }).join("")
-          : `<span class="understanding-chip">暂无角色信息</span>`;
+          : "";
       }
       if (detailsEl) detailsEl.innerHTML = understandingDetailHtml(data);
     }
 
     function openVideoAnalysisReport() {
-      renderVideoAnalysisReport();
-      const overlay = $("#videoAnalysisReportOverlay");
-      if (!overlay) return;
-      overlay.classList.add("open");
-      overlay.setAttribute("aria-hidden", "false");
+      const panel = document.querySelector('.module-view[data-module-view="story"]');
+      const nextVisible = !panel?.classList.contains("is-report-view");
+      switchModule("story", { keepStoryReport: true });
+      setStoryReportVisible(nextVisible);
     }
 
     function closeVideoAnalysisReport() {
-      const overlay = $("#videoAnalysisReportOverlay");
-      if (!overlay) return;
-      overlay.classList.remove("open");
-      overlay.setAttribute("aria-hidden", "true");
+      setStoryReportVisible(false);
+    }
+
+    function setStoryReportVisible(visible) {
+      const panel = document.querySelector('.module-view[data-module-view="story"]');
+      const view = $("#storyReportView");
+      const button = $("#openVideoAnalysisReportBtn");
+      const title = $("#storyPanelTitle");
+      renderVideoAnalysisReport();
+      panel?.classList.remove("is-report-view");
+      if (view) view.hidden = false;
+      button?.classList.remove("is-active");
+      button?.setAttribute("aria-pressed", "false");
+      if (title) title.textContent = "原视频";
     }
 
     function normalizePreDirectorConfig(raw) {
@@ -7591,7 +8576,7 @@
       const startBtn = $("#reverseStoryboardBtn");
       if (startBtn) {
         startBtn.disabled = running;
-        startBtn.textContent = running ? "正在分析分镜..." : "分析分镜与候选名称";
+        startBtn.textContent = running ? "正在分析..." : "分析视频";
       }
       updateStoryReferenceUi({ running });
     }
@@ -7896,25 +8881,26 @@
     function syncStoryUnderstandingControls() {
       const useEl = $("#usePreDirectorToggle");
       const forceEl = $("#forceUnderstandToggle");
-      const oldReferenceLocked = normalizeStoryReferenceStrategy(storyReferenceStrategy) !== "new_only";
+      storyUnderstandingOptions = normalizeStoryUnderstandingOptions({
+        use_pre_director: true,
+        force_understand: true,
+      });
       if (useEl) {
-        useEl.checked = Boolean(storyUnderstandingOptions.use_pre_director);
-        useEl.disabled = oldReferenceLocked;
+        useEl.checked = true;
+        useEl.disabled = true;
       }
       if (forceEl) {
-        forceEl.checked = Boolean(storyUnderstandingOptions.force_understand);
-        forceEl.disabled = oldReferenceLocked || !storyUnderstandingOptions.use_pre_director;
+        forceEl.checked = true;
+        forceEl.disabled = true;
       }
       renderFullVideoUnderstanding();
       renderAssetUnderstandingBanner();
     }
 
     function pullStoryUnderstandingControls() {
-      const useEl = $("#usePreDirectorToggle");
-      const forceEl = $("#forceUnderstandToggle");
       storyUnderstandingOptions = normalizeStoryUnderstandingOptions({
-        use_pre_director: useEl ? useEl.checked : storyUnderstandingOptions.use_pre_director,
-        force_understand: forceEl ? forceEl.checked : storyUnderstandingOptions.force_understand,
+        use_pre_director: true,
+        force_understand: true,
       });
       syncStoryUnderstandingControls();
       saveStoryUnderstandingOptions();
@@ -8000,23 +8986,18 @@
 
     function updateStoryReferenceUi(options = {}) {
       const running = Boolean(options.running);
-      const meta = storyReferenceMeta();
       const note = $("#storyReferenceNote");
-      const costNote = meta.value === "new_only"
-        ? "当前不会读取旧项目，适合重新开始。"
-        : "当前会读取旧项目作为参考，避免重复消耗。";
-      if (note) note.textContent = `${meta.label} · ${meta.note} · ${costNote}`;
+      if (note) note.textContent = "分析视频会强制重新分析当前原视频；旧项目仅在源视频一致时自动恢复。";
       const hint = $("#projectDirHint");
       if (hint) {
-        hint.textContent = meta.value === "new_only"
-          ? "可选：不读取旧项目"
-          : "需要选择旧项目目录";
+        hint.textContent = "后台缓存：源视频一致时自动恢复";
       }
       const loadBtn = $("#loadProjectBtn");
       if (loadBtn) {
-        loadBtn.textContent = meta.value === "hybrid_reference" ? "读取旧项目并融合" : "读取旧项目作参考";
-        loadBtn.disabled = running || meta.value === "new_only";
+        loadBtn.textContent = "读取旧项目";
+        loadBtn.disabled = running;
       }
+      renderVideoAnalysisReport();
     }
 
     function applyReferenceCostGuard(value) {
@@ -8044,7 +9025,7 @@
     }
 
     function pullStoryReferenceStrategy() {
-      storyReferenceStrategy = normalizeStoryReferenceStrategy($("#storyReferenceStrategySelect")?.value || storyReferenceStrategy);
+      storyReferenceStrategy = "new_only";
       applyReferenceCostGuard(storyReferenceStrategy);
       syncStoryUnderstandingControls();
       updateStoryReferenceUi({ running: Boolean(storyPollTimer) });
@@ -8056,8 +9037,7 @@
     }
 
     function applyStoryReferenceStrategy(value) {
-      storyReferenceStrategy = normalizeStoryReferenceStrategy(value);
-      fillSelect("storyReferenceStrategySelect", STORY_REFERENCE_STRATEGIES.map((item) => item.value), storyReferenceStrategy, (option) => storyReferenceMeta(option).label);
+      storyReferenceStrategy = "new_only";
       applyReferenceCostGuard(storyReferenceStrategy);
       syncStoryUnderstandingControls();
       updateStoryReferenceUi({ running: Boolean(storyPollTimer) });
@@ -8201,19 +9181,8 @@
     }
 
     function initStoryReferenceStrategy() {
-      try {
-        storyReferenceStrategy = normalizeStoryReferenceStrategy(localStorage.getItem(STORY_REFERENCE_STRATEGY_KEY) || "");
-      } catch (_) {
-        storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
-      }
+      storyReferenceStrategy = "new_only";
       applyStoryReferenceStrategy(storyReferenceStrategy);
-      const select = $("#storyReferenceStrategySelect");
-      if (select) {
-        select.addEventListener("change", () => {
-          pullStoryReferenceStrategy();
-          saveStoryReferenceStrategy();
-        });
-      }
     }
 
     async function pickPath(kind, targetSelector) {
@@ -8278,6 +9247,7 @@
         ? storyboard.understanding
         : (storyboard.understanding_status ? { status: storyboard.understanding_status } : null);
       renderFullVideoUnderstanding();
+      renderVideoAnalysisReport();
       $("#segmentCount").textContent = String(result.segment_count || segments.length || 0);
       $("#sceneCount").textContent = sceneCountLabelFromResult(storyboard, story);
       $("#questionCount").textContent = String((autoDirector.questions || []).length || 0);
@@ -8979,7 +9949,7 @@
       renderAssetUnderstandingBanner();
       const visibleAssets = storyAssets.filter((asset) => !assetHiddenFromMainBoard(asset));
       if (!visibleAssets.length) {
-        board.innerHTML = `<div class="empty">暂无资产。请点击“手动建资产”，或载入已有分镜项目。</div>`;
+        board.innerHTML = `<div class="empty">暂无资产。请点击“添加资产”，或载入已有分镜项目。</div>`;
       } else {
         board.innerHTML = visibleAssets.map((asset) => renderAssetCard(asset)).join("");
       }
@@ -9019,6 +9989,16 @@
       preview.innerHTML = buildAssetBindingPreviewHtmlV2();
       const questionCount = $("#questionCount");
       if (questionCount) questionCount.textContent = String(storyAssets.length || 0);
+    }
+
+    function openAssetLibraryPanel() {
+      const lines = [
+        "> 资产库入口已打开",
+        "> 当前页面显示的是当前项目资产；资产库用于存放历史所有可复用资产。",
+        "> 下一步会接入：从资产库选择角色/场景/物品，加入到当前资产。",
+      ];
+      setStoryStatus(lines, "warn");
+      addLogs(lines);
     }
 
     function openAssetRoleAnchor(roleId) {
@@ -9185,8 +10165,8 @@
       const representativeImage = assetOriginalRepresentativeImage(asset);
       const evidence = assetEvidenceItems(asset, representativeImage);
       const representative = representativeImage
-        ? assetReviewThumbHtml("source representative", representativeImage)
-        : (asset.source_video_path ? assetPreviewHtml(asset, "source") : `<div class="asset-editor-empty">No source representative</div>`);
+        ? assetReviewThumbHtml("原片代表帧", representativeImage)
+        : (asset.source_video_path ? assetPreviewHtml(asset, "source") : `<div class="asset-editor-empty">暂无原片代表帧</div>`);
       return `
         <div class="asset-source-review">
           <div class="asset-source-representative">${representative}</div>
@@ -9426,20 +10406,50 @@
       }
     }
 
+    function manualAssetExtraRefsHtml(values) {
+      const refs = Array.isArray(values) ? values : [];
+      if (!refs.length) return `<div class="asset-extra-ref-empty">还没有补充参考图</div>`;
+      return refs.map((item, index) => {
+        const src = String(item?.data || item?.path || item || "").trim();
+        return `
+          <div class="asset-extra-ref-thumb" title="补充参考图 ${index + 1}">
+            ${src ? `<img src="${escapeHtml(src.startsWith("data:") ? src : mediaSrc(src, 0.1))}" alt="">` : ""}
+            <button type="button" data-remove-manual-extra-ref="${index}" aria-label="删除">×</button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderManualAssetExtraRefs(state) {
+      const list = $("#manualAssetExtraRefList");
+      if (!list) return;
+      list.innerHTML = manualAssetExtraRefsHtml(state.extraRefs || []);
+      list.querySelectorAll("[data-remove-manual-extra-ref]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const index = Number(button.dataset.removeManualExtraRef);
+          if (Number.isInteger(index) && index >= 0) {
+            state.extraRefs.splice(index, 1);
+            renderManualAssetExtraRefs(state);
+          }
+        });
+      });
+    }
+
     function backgroundRecommendationPanelHtml(asset) {
       if (asset.kind !== "scene") return "";
       const query = [asset.name, asset.tag, asset.manual_note].map((value) => String(value || "").trim()).filter(Boolean).join(" ");
       return `
         <div class="asset-bg-recommend">
           <div class="asset-bg-recommend-head">
-            <strong>Background candidates</strong>
-            <button class="tiny-btn" id="assetBgRecommendBtn" type="button">Recommend</button>
+            <strong>背景候选</strong>
+            <button class="tiny-btn" id="assetBgRecommendBtn" type="button">推荐</button>
           </div>
           <div class="asset-bg-recommend-query">
-            <input class="input" id="assetBgRecommendQueryInput" value="${escapeHtml(query)}" placeholder="keywords, e.g. living room night" />
+            <input class="input" id="assetBgRecommendQueryInput" value="${escapeHtml(query)}" placeholder="例如：夜晚卧室、客厅、走廊" />
           </div>
           <div class="asset-bg-recommend-list" id="assetBgRecommendList">
-            <div class="asset-bg-recommend-empty">Click Recommend to search candidate backgrounds.</div>
+            <div class="asset-bg-recommend-empty">点击推荐后显示候选背景。</div>
           </div>
         </div>
       `;
@@ -9450,7 +10460,7 @@
       if (!list) return;
       const items = Array.isArray(candidates) ? candidates : [];
       if (!items.length) {
-        list.innerHTML = `<div class="asset-bg-recommend-empty">No background candidates found.</div>`;
+        list.innerHTML = `<div class="asset-bg-recommend-empty">没有找到背景候选。</div>`;
         return;
       }
       list.innerHTML = items.map((item) => {
@@ -9460,18 +10470,18 @@
           <div class="asset-bg-candidate">
             <img src="${escapeHtml(mediaSrc(path, score || 0.1))}" alt="">
             <div class="asset-bg-candidate-main">
-              <strong title="${escapeHtml(item.label || path)}">${escapeHtml(item.label || "Background candidate")}</strong>
-              <span>${escapeHtml(item.reason || "Scene candidate")} ? score ${score.toFixed(1)}</span>
+              <strong title="${escapeHtml(item.label || path)}">${escapeHtml(item.label || "背景候选")}</strong>
+              <span>${escapeHtml(item.reason || "场景候选")} · 分数 ${score.toFixed(1)}</span>
               <span title="${escapeHtml(path)}">${escapeHtml(path)}</span>
             </div>
-            <button class="tiny-btn" type="button" data-bg-candidate-path="${escapeHtml(path)}">Use</button>
+            <button class="tiny-btn" type="button" data-bg-candidate-path="${escapeHtml(path)}">使用</button>
           </div>
         `;
       }).join("");
       list.querySelectorAll("[data-bg-candidate-path]").forEach((button) => {
         button.addEventListener("click", () => {
           applyAssetTargetImage(button.dataset.bgCandidatePath || "");
-          setStoryStatus(["> Background candidate filled", "> Save the asset after checking it."], "good");
+          setStoryStatus(["> 已填入背景候选", "> 检查后保存资产。"], "good");
         });
       });
     }
@@ -9683,17 +10693,16 @@
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = $("#videoPathInput")?.value.trim() || "";
       if (!projectDir) return setStoryStatus(["x \u8bf7\u5148\u9009\u62e9\u9879\u76ee\u76ee\u5f55", "> \u624b\u52a8\u8d44\u4ea7\u4f1a\u4fdd\u5b58\u5230\u8fd9\u4e2a\u9879\u76ee\u7684 assets/manual_assets \u76ee\u5f55\u3002"], "bad");
-      if (!videoPath) return setStoryStatus(["x \u8bf7\u5148\u9009\u62e9\u539f\u89c6\u9891", "> \u5de6\u4fa7\u622a\u56fe\u9700\u8981\u4ece\u539f\u89c6\u9891\u53d6\u5e27\u3002"], "bad");
       const currentSeg = timelineSegments[selectedTimelineIndex] || {};
       const initialTime = Number.isFinite(Number(currentSeg.start)) ? Math.max(0, Number(currentSeg.start)) : 0.1;
       const currentShotId = String(currentSeg.segment_id || "").trim();
       const nameCandidates = collectManualAssetNameCandidates(currentSeg);
       const overlay = document.createElement("div");
-      overlay.className = "modal-overlay";
+      overlay.className = "modal-overlay manual-asset-overlay";
       const box = document.createElement("div");
       box.className = "modal-box manual-asset-modal";
       box.innerHTML = `
-        <h4>\u624b\u52a8\u5efa\u8d44\u4ea7 <span class="mode-pill">\u539f\u89c6\u9891\u622a\u56fe + \u65b0\u53c2\u8003\u56fe</span></h4>
+        <h4>\u6dfb\u52a0\u8d44\u4ea7 <span class="mode-pill">\u4e0a\u4f20\u56fe\u7247</span></h4>
         <div class="manual-asset-body">
           <div class="manual-asset-panel">
             <div class="manual-asset-form-grid">
@@ -9709,18 +10718,14 @@
                 <div class="label"><span>\u540d\u79f0</span><span>\u624b\u52a8\u547d\u540d</span></div>
                 <input class="input" id="manualAssetNameInput" placeholder="\u4f8b\u5982\uff1a\u7537\u4e3b\u3001\u5367\u5ba4\u3001\u6212\u6307" />
               </div>
-              <div class="field">
-                <div class="label"><span>\u6807\u7b7e</span><span>\u53ef\u9009</span></div>
-                <input class="input" id="manualAssetTagInput" placeholder="\u4f8b\u5982\uff1a\u53c2\u8003\u56fe1\u3001\u8fd1\u666f\u3001\u5173\u952e\u9053\u5177" />
-              </div>
               <div class="field manual-candidate-field">
-                <div class="label"><span>反推候选名称</span><span>只填文字，不使用反推图片</span></div>
+                <div class="label"><span>智能候选</span><span>选择后自动填名称和类型</span></div>
                 <select class="input" id="manualAssetCandidateSelect">
                   ${manualAssetCandidateOptionsHtml(nameCandidates)}
                 </select>
               </div>
             </div>
-            <div class="manual-asset-kind-help" id="manualAssetKindHelp"></div>
+            <div class="manual-asset-kind-help" id="manualAssetKindHelp" hidden></div>
             <div class="manual-asset-video-wrap">
               <video id="manualAssetVideo" controls preload="metadata" src="${escapeHtml(mediaSrc(videoPath, initialTime))}"></video>
               <div class="manual-crop-layer" id="manualAssetCropLayer">
@@ -9733,24 +10738,30 @@
               <button class="tiny-btn" id="manualAssetFullFrameBtn" type="button">\u4f7f\u7528\u6574\u5e27</button>
               <span class="manual-asset-note" id="manualAssetTimeLabel">\u5f53\u524d\u65f6\u95f4: ${formatNum(initialTime)}s</span>
             </div>
-            <div class="manual-asset-source-preview" id="manualAssetSourcePreview">
-              <div class="asset-editor-empty">先播放或拖进度选帧，再点“开始画框”拖出范围；也可以直接点“使用整帧”。</div>
+            <div class="manual-asset-source-preview" id="manualAssetSourcePreview" hidden>
+              <div class="asset-editor-empty"></div>
             </div>
           </div>
-          <div class="manual-asset-panel">
-            <div class="manual-asset-upload-preview" id="manualAssetTargetPreview">
-              <div class="asset-editor-empty">\u53f3\u4fa7\u4e0a\u4f20\u65b0\u53c2\u8003\u56fe\u3002\u89d2\u8272\u3001\u573a\u666f\u3001\u7269\u54c1\u90fd\u7531\u4f60\u624b\u52a8\u51b3\u5b9a\u3002</div>
-            </div>
+            <div class="manual-asset-panel">
+              <div class="manual-asset-upload-preview" id="manualAssetTargetPreview">
+                <button class="tiny-btn" id="manualAssetPickFileBtn" type="button">\u4e0a\u4f20\u56fe\u7247</button>
+              </div>
+              <div class="asset-extra-ref-panel manual-extra-ref-panel">
+                <div class="asset-extra-ref-head">
+                  <span>补充参考图</span>
+                  <button class="tiny-btn" id="manualAssetAddExtraRefBtn" type="button">加参考图</button>
+                </div>
+                <div class="asset-extra-ref-list" id="manualAssetExtraRefList"></div>
+              </div>
             <div class="manual-upload-actions">
-              <button class="tiny-btn" id="manualAssetPickFileBtn" type="button">\u4e0a\u4f20\u56fe\u7247</button>
-              <button class="tiny-btn" id="manualAssetPickPathBtn" type="button">\u9009\u62e9\u672c\u673a\u8def\u5f84</button>
               <input id="manualAssetFileInput" type="file" accept="image/*" hidden>
+              <input id="manualAssetExtraFileInput" type="file" accept="image/*" multiple hidden>
             </div>
-            <div class="field">
+            <div class="field manual-asset-prompt-field" hidden>
               <div class="label"><span>\u63d0\u793a\u8bcd\u5907\u6ce8</span><span>\u53ef\u9009\uff0c\u53ea\u5199\u8bc6\u522b\u91cd\u70b9</span></div>
               <textarea class="textarea" id="manualAssetPromptInput" placeholder="\u4f8b\u5982\uff1a\u4fdd\u6301\u8fd9\u5957\u53d1\u578b\u548c\u670d\u88c5\u8f6e\u5ed3\uff1b\u6216\uff1a\u5367\u5ba4\u80cc\u666f\u53c2\u8003\u3002"></textarea>
             </div>
-            <div class="field">
+            <div class="field manual-asset-internal-note-field" hidden>
               <div class="label"><span>\u5185\u90e8\u5907\u6ce8</span><span>\u4e0d\u8981\u6c42\u6a21\u578b\u7406\u89e3</span></div>
               <textarea class="textarea" id="manualAssetNoteInput" placeholder="\u4f8b\u5982\uff1a\u4ece\u7b2c\u51e0\u79d2\u622a\u56fe\u3001\u5bf9\u5e94\u54ea\u4e2a\u89d2\u8272\u3001\u54ea\u4e9b\u955c\u5934\u8981\u7528\u3002"></textarea>
             </div>
@@ -9758,13 +10769,11 @@
               <input id="manualAssetBindShotInput" type="checkbox"${currentShotId ? " checked" : ""} ${currentShotId ? "" : "disabled"}>
               <span>${currentShotId ? `\u7ed1\u5b9a\u5230\u5f53\u524d\u5206\u955c ${escapeHtml(currentShotId)}` : "\u5f53\u524d\u6ca1\u6709\u9009\u4e2d\u5206\u955c\uff0c\u5148\u53ea\u52a0\u5165\u8d44\u4ea7\u5e93"}</span>
             </label>
-            <div class="manual-asset-note">
-              \u8fd9\u91cc\u53ea\u8d1f\u8d23\u4fdd\u5b58\u201c\u539f\u7247\u622a\u56fe\u201d\u548c\u201c\u65b0\u53c2\u8003\u56fe\u201d\u3002\u540e\u9762\u67d0\u4e2a\u955c\u5934\u8981\u7528\u54ea\u4e9b\u8d44\u4ea7\uff0c\u518d\u53bb\u5206\u955c\u91cc\u7ed1\u5b9a\u3002
-            </div>
+            <div class="manual-asset-note" hidden></div>
           </div>
         </div>
         <div class="asset-editor-actions">
-          <div class="manual-asset-save-status" id="manualAssetSaveStatus"></div>
+          <div class="manual-asset-save-status" id="manualAssetSaveStatus" hidden></div>
           <button class="btn" id="manualAssetCloseBtn" type="button">\u53d6\u6d88</button>
           <button class="btn good" id="manualAssetSaveBtn" type="button">\u4fdd\u5b58\u5230\u8d44\u4ea7\u5e93</button>
         </div>
@@ -9780,6 +10789,7 @@
         sourceImageData: "",
         targetImageData: "",
         targetImagePath: "",
+        extraRefs: [],
       };
       const video = $("#manualAssetVideo");
       const layer = $("#manualAssetCropLayer");
@@ -9791,6 +10801,12 @@
       function setManualAssetSaveStatus(lines = [], tone = "info") {
         const box = $("#manualAssetSaveStatus");
         if (!box) return;
+        if (tone !== "bad") {
+          box.textContent = "";
+          box.hidden = true;
+          return;
+        }
+        box.hidden = false;
         box.className = "manual-asset-save-status" + (tone && tone !== "info" ? " " + tone : "");
         const text = Array.isArray(lines) ? lines.filter(Boolean).join("\n") : String(lines || "");
         box.textContent = text;
@@ -9823,26 +10839,16 @@
       }
 
       function manualAssetSourceEmptyHtml() {
-        const copy = manualAssetKindCopy($("#manualAssetKindInput")?.value || "role");
-        return `<div class="asset-editor-empty"><strong>${escapeHtml(copy.sourceTitle)}</strong><br>${escapeHtml(copy.sourceText)}<br>先播放或拖进度选帧，再画框截图；也可以直接用整帧。</div>`;
+        return `<div class="asset-editor-empty"></div>`;
       }
 
       function manualAssetTargetEmptyHtml() {
-        const copy = manualAssetKindCopy($("#manualAssetKindInput")?.value || "role");
-        return `<div class="asset-editor-empty"><strong>${escapeHtml(copy.targetTitle)}</strong><br>${escapeHtml(copy.targetText)}</div>`;
+        return `<button class="tiny-btn" id="manualAssetPickFileBtn" type="button">上传图片</button>`;
       }
 
       function syncManualAssetKindHelp() {
         const help = $("#manualAssetKindHelp");
-        const copy = manualAssetKindCopy($("#manualAssetKindInput")?.value || "role");
-        if (help) {
-          help.innerHTML = `
-            <strong>${escapeHtml(copy.sourceTitle)}</strong>
-            <span>${escapeHtml(copy.sourceText)}</span>
-            <strong>${escapeHtml(copy.targetTitle)}</strong>
-            <span>${escapeHtml(copy.targetText)}</span>
-          `;
-        }
+        if (help) help.textContent = "";
         if (sourcePreview && !state.sourceImageData) sourcePreview.innerHTML = manualAssetSourceEmptyHtml();
         if (targetPreview && !state.targetImageData && !state.targetImagePath) targetPreview.innerHTML = manualAssetTargetEmptyHtml();
       }
@@ -9865,14 +10871,14 @@
         state.targetImageData = String(dataUrl || "");
         state.targetImagePath = "";
         if (targetPreview) targetPreview.innerHTML = state.targetImageData ? `<img src="${state.targetImageData}" alt="">` : manualAssetTargetEmptyHtml();
-        if (state.targetImageData) setManualAssetSaveStatus(["已读取右侧新参考图。"], "good");
+        if (state.targetImageData) setManualAssetSaveStatus(["已读取资产主参考图。"], "good");
       }
 
       function setTargetImagePath(path) {
         state.targetImagePath = String(path || "").trim();
         state.targetImageData = "";
         if (targetPreview) targetPreview.innerHTML = state.targetImagePath ? assetPreviewHtml({ target_image: state.targetImagePath }, "target") : manualAssetTargetEmptyHtml();
-        if (state.targetImagePath) setManualAssetSaveStatus(["已选择右侧新参考图。"], "good");
+        if (state.targetImagePath) setManualAssetSaveStatus(["已选择资产主参考图。"], "good");
       }
 
       function captureSourceFrame(fullFrame = false) {
@@ -9904,19 +10910,18 @@
         if (!candidate) return;
         const kindInput = $("#manualAssetKindInput");
         const nameInput = $("#manualAssetNameInput");
-        const tagInput = $("#manualAssetTagInput");
         if (kindInput) kindInput.value = candidate.kind;
         if (nameInput) nameInput.value = candidate.name;
-        if (tagInput && !tagInput.value.trim()) tagInput.value = candidate.tag || candidate.source || "";
         syncManualAssetKindHelp();
         setManualAssetSaveStatus([`已填入候选名称：${assetKindLabel(candidate.kind)} / ${candidate.name}`], "good");
         setStoryStatus(["> 已填入候选名称", `> ${assetKindLabel(candidate.kind)}：${candidate.name}`, "> 这里只使用文字，不会使用反推图片。"], "good");
       });
       $("#manualAssetKindInput")?.addEventListener("change", () => {
         syncManualAssetKindHelp();
-        setManualAssetSaveStatus(["已切换资产类型，请按左右说明检查截图和参考图。"], "info");
+        setManualAssetSaveStatus(["已切换资产类型，请确认名称并上传主参考图。"], "info");
       });
       syncManualAssetKindHelp();
+      renderManualAssetExtraRefs(state);
       drawToggleButton?.addEventListener("click", () => {
         setCropMode(!state.cropMode);
         setManualAssetSaveStatus(
@@ -9980,10 +10985,8 @@
           setStoryStatus(["x " + error.message], "bad");
         }
       });
-      $("#manualAssetPickFileBtn")?.addEventListener("click", () => $("#manualAssetFileInput")?.click());
-      $("#manualAssetPickPathBtn")?.addEventListener("click", async () => {
-        const path = await pickManualAssetTargetPath();
-        if (path) setTargetImagePath(path);
+      targetPreview?.addEventListener("click", (event) => {
+        if (event.target.closest("#manualAssetPickFileBtn")) $("#manualAssetFileInput")?.click();
       });
       $("#manualAssetFileInput")?.addEventListener("change", (event) => {
         const file = event.target.files && event.target.files[0];
@@ -10000,6 +11003,25 @@
         };
         reader.readAsDataURL(file);
       });
+      $("#manualAssetAddExtraRefBtn")?.addEventListener("click", () => $("#manualAssetExtraFileInput")?.click());
+      $("#manualAssetExtraFileInput")?.addEventListener("change", (event) => {
+        const files = Array.from(event.target.files || []).filter((file) => String(file.type || "").startsWith("image/"));
+        if (!files.length) return;
+        const remaining = Math.max(0, 6 - state.extraRefs.length);
+        files.slice(0, remaining).forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const data = String(reader.result || "");
+            if (data) {
+              state.extraRefs.push({ data, name: file.name || "" });
+              renderManualAssetExtraRefs(state);
+              setManualAssetSaveStatus([`已添加补充参考图：${state.extraRefs.length}/6`], "good");
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+        event.target.value = "";
+      });
       $("#manualAssetCloseBtn")?.addEventListener("click", () => overlay.remove());
       overlay.addEventListener("click", (event) => {
         if (event.target === overlay) overlay.remove();
@@ -10014,24 +11036,30 @@
           setManualAssetSaveStatus(["正在检查资产信息..."], "info");
           const name = $("#manualAssetNameInput")?.value.trim() || "";
           if (!name) throw new Error("\u8bf7\u5148\u586b\u5199\u8d44\u4ea7\u540d\u79f0");
-          if (!state.sourceImageData) captureSourceFrame(false);
-          if (!state.targetImageData && !state.targetImagePath) throw new Error("\u8bf7\u5148\u4e0a\u4f20\u6216\u9009\u62e9\u53f3\u4fa7\u53c2\u8003\u56fe");
+          if (!state.targetImageData && !state.targetImagePath) throw new Error("\u8bf7\u5148\u4e0a\u4f20\u8d44\u4ea7\u4e3b\u53c2\u8003\u56fe");
           const payload = {
             project_dir: projectDir,
             video_path: videoPath,
             kind: $("#manualAssetKindInput")?.value || "role",
             name,
-            tag: $("#manualAssetTagInput")?.value.trim() || "",
+            tag: "",
             prompt: $("#manualAssetPromptInput")?.value.trim() || "",
             manual_note: $("#manualAssetNoteInput")?.value.trim() || "",
-            source_time: video?.currentTime || initialTime,
-            source_rect: state.cropRect || { x: 0, y: 0, width: 1, height: 1 },
-            source_image_data: state.sourceImageData,
+            source_time: initialTime,
+            source_rect: {},
+            source_image_data: "",
             target_image_data: state.targetImageData,
             target_image_path: state.targetImagePath,
+            extra_ref_image_data: [],
+            extra_ref_images: [],
             bind_to_shot: Boolean($("#manualAssetBindShotInput")?.checked),
             shot_id: currentShotId,
           };
+          payload.subject_extra_ref_images = payload.extra_ref_images;
+          payload.reference_images = [
+            payload.target_image_path,
+            ...payload.extra_ref_images,
+          ].filter(Boolean);
           if (saveButton) {
             saveButton.textContent = "\u4fdd\u5b58\u4e2d...";
           }
@@ -10059,8 +11087,9 @@
       });
     }
 
-    function switchModuleLocal(name) {
+    function switchModuleLocal(name, options = {}) {
       const target = String(name || "story");
+      if (!options.keepStoryReport) setStoryReportVisible(false);
       document.querySelectorAll(".module-step").forEach((step) => {
         step.classList.toggle("active", step.dataset.module === target);
       });
@@ -10096,43 +11125,34 @@
         : assetPreviewHtml(asset, "target");
       const extraRefs = assetExtraRefList(asset);
       const overlay = document.createElement("div");
-      overlay.className = "modal-overlay";
+      overlay.className = "modal-overlay manual-asset-overlay";
       const box = document.createElement("div");
-      box.className = "modal-box asset-editor-modal";
+      box.className = "modal-box manual-asset-modal asset-editor-modal asset-image-editor-modal";
       box.innerHTML = `
-        <h4>${escapeHtml(asset.name)} <span class="mode-pill">${escapeHtml(assetKindLabel(asset.kind))}</span> <span class="mode-pill">资产编辑</span></h4>
+        <h4>编辑资产 <span class="asset-editor-title-meta">${escapeHtml(assetKindLabel(asset.kind))} / ${escapeHtml(asset.name || "未命名资产")}</span></h4>
         ${restrictedNotice ? `<div class="asset-warning blocked" style="margin-bottom:10px;border:1px solid rgba(234,184,95,.28);border-radius:8px;"><strong>${escapeHtml(assetStatusText(asset))}</strong><br>${escapeHtml(restrictedNotice)}</div>` : ""}
         ${auditNotice ? `<div class="asset-warning${asset.asset_audit_status === "blocked" ? " blocked" : ""}" style="margin-bottom:10px;border:1px solid rgba(234,184,95,.28);border-radius:8px;">${escapeHtml(auditNotice)}</div>` : ""}
-        <div class="asset-editor-usage">
-          <strong>${escapeHtml(assetUsageLabel(asset))}</strong>
-          <span>${escapeHtml(assetUsageDetail(asset))}</span>
-          ${qualityText ? `<span>${escapeHtml(qualityText)}</span>` : ""}
-        </div>
         <div class="asset-editor-body">
-          <div class="asset-editor-preview asset-editor-source">
-            <span>${escapeHtml(isMixedSceneAsset(asset) ? "左图 · 冲突证据" : "左图 · 原片代表帧")}</span>
-            ${assetReviewPanelHtml(asset)}
-          </div>
           <div class="asset-editor-target-stack">
             <div class="asset-editor-preview asset-editor-target"${approvalRestricted ? ' style="cursor:not-allowed;opacity:.78;"' : ' id="assetTargetPickZone"'}>
-              <span>右图 · 参考/替换图</span>
+              <span>参考图</span>
               <div id="assetTargetPreviewSlot">${targetSlotHtml}</div>
             </div>
-            ${asset.kind === "role" && !approvalRestricted ? `
+            ${!approvalRestricted ? `
               <div class="asset-extra-ref-panel">
                 <div class="asset-extra-ref-head">
-                  <span>补充角度图</span>
+                  <span>补充参考图</span>
                   <button class="tiny-btn" id="addAssetExtraRefBtn" type="button">加参考图</button>
                 </div>
                 <div class="asset-extra-ref-list" id="assetExtraRefList">${assetExtraRefsHtml(extraRefs)}</div>
               </div>
             ` : ""}
-            ${approvalRestricted ? "" : backgroundRecommendationPanelHtml(asset)}
-            <div class="asset-editor-prompt">
+            ${""}
+            <div class="asset-editor-prompt" hidden>
               <div class="label"><span>资产提示词</span><span>用于批量绑定和生成时辅助识别</span></div>
               <textarea class="textarea" id="assetPromptInput">${escapeHtml(asset.prompt || "")}</textarea>
             </div>
-            <div class="asset-editor-manual">
+            <div class="asset-editor-manual" hidden>
               <div class="label"><span>人工判断</span><span>控制后续是否使用这个资产</span></div>
               <div class="asset-editor-manual-grid">
                 <select class="input" id="assetManualStatusInput">
@@ -12188,6 +13208,37 @@
       setStoryStatus(["> 已复制资产绑定文本", ...text.split("\n").slice(0, 3)], "good");
     }
 
+    function normalizeLocalPathKey(path) {
+      return String(path || "")
+        .trim()
+        .replace(/^"+|"+$/g, "")
+        .replace(/\//g, "\\")
+        .replace(/\\+$/g, "")
+        .toLowerCase();
+    }
+
+    function sameLocalPath(left, right) {
+      const a = normalizeLocalPathKey(left);
+      const b = normalizeLocalPathKey(right);
+      return !!a && !!b && a === b;
+    }
+
+    function storyboardResultSourcePath(data) {
+      if (!data || typeof data !== "object") return "";
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      const firstAssetSource = assets
+        .map((item) => String(item?.source_video_path || "").trim())
+        .find(Boolean) || "";
+      return String(
+        data.video_path
+        || data.meta?.source_path
+        || data.understanding?.source_path
+        || data.storyboard?.understanding?.source_path
+        || firstAssetSource
+        || ""
+      ).trim();
+    }
+
     async function refreshStoryAssetsFromBackend(options = {}) {
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       if (!projectDir) return null;
@@ -12195,6 +13246,18 @@
         const response = await fetch("/api/storyboard-assets?project_dir=" + encodeURIComponent(projectDir));
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "读取资产表失败");
+        const expectedVideoPath = String(options.expectedVideoPath || "").trim();
+        const sourcePath = storyboardResultSourcePath(data);
+        if (options.requireVideoMatch && (!expectedVideoPath || !sourcePath || !sameLocalPath(expectedVideoPath, sourcePath))) {
+          if (!options.silent) {
+            addLogs([
+              "> 已跳过旧项目自动恢复：源视频不一致",
+              `> 当前原视频: ${expectedVideoPath || "-"}`,
+              `> 旧项目原视频: ${sourcePath || "-"}`,
+            ]);
+          }
+          return null;
+        }
         applyLoadedProject(data, { story: data.storyboard || {} }, { preserveStrategy: Boolean(options.preserveStrategy) });
         return data;
       } catch (error) {
@@ -12205,8 +13268,14 @@
 
     async function autoRestoreMode2ProjectCache() {
       const projectDir = $("#projectDirInput")?.value.trim() || "";
-      if (!projectDir || storyAssets.length) return;
-      const data = await refreshStoryAssetsFromBackend({ silent: true, preserveStrategy: true });
+      const videoPath = $("#videoPathInput")?.value.trim() || "";
+      if (!projectDir || !videoPath || storyAssets.length) return;
+      const data = await refreshStoryAssetsFromBackend({
+        silent: true,
+        preserveStrategy: true,
+        expectedVideoPath: videoPath,
+        requireVideoMatch: true,
+      });
       if (!data || !Array.isArray(data.assets) || !data.assets.length) return;
       setStoryStatus([
         "> 已自动恢复上次分镜项目缓存",
@@ -12527,12 +13596,6 @@
     }
 
     async function loadProject(options = {}) {
-      const referenceStrategy = pullStoryReferenceStrategy();
-      if (referenceStrategy === "new_only") {
-        const lines = ["x 当前策略不读取旧项目", "> 请先把旧项目策略改成“旧项目作参考”或“旧项目 + 新视频融合”"];
-        setStoryStatus(lines, "bad");
-        return setLogs(lines);
-      }
       const projectDir = $("#projectDirInput").value.trim();
       if (!projectDir) {
         const lines = ["x 请先选择项目目录", "> 读取旧项目需要一个已经切过片的结果目录"];
@@ -12576,45 +13639,31 @@
     async function startStoryboardDraft() {
       if (currentStoryJobId && storyPollTimer) return;
       const videoPath = $("#videoPathInput").value.trim();
-      const projectDir = $("#projectDirInput").value.trim();
-      const referenceStrategy = pullStoryReferenceStrategy();
+      const projectDir = "";
+      const referenceStrategy = "new_only";
       const projectConfig = pullStoryProjectControls();
-      const understandingOptions = pullStoryUnderstandingControls();
+      const understandingOptions = {
+        use_pre_director: true,
+        force_understand: true,
+      };
+      storyUnderstandingOptions = normalizeStoryUnderstandingOptions(understandingOptions);
+      syncStoryUnderstandingControls();
+      saveStoryUnderstandingOptions();
       const preDirector = pullPreDirectorControls();
       if (!videoPath) {
         const lines = ["x 请先选择原视频", "> 新模式反推分镜至少需要原视频路径"];
         setStoryStatus(lines, "bad");
         return setLogs(lines);
       }
-      if (referenceStrategy !== "new_only" && !projectDir) {
-        const lines = [
-          "x 当前旧项目策略需要项目目录",
-          `> 已选择: ${storyReferenceMeta(referenceStrategy).label}`,
-          "> 请先选择项目目录，或者把策略改成“只按新视频生成”",
-        ];
-        setStoryStatus(lines, "bad");
-        return setLogs(lines);
-      }
       const lines = [
-        understandingOptions.use_pre_director
-          ? "> 正在提交任务：先理解全片，再整理分镜、镜头边界和名称候选..."
-          : "> 正在提交任务：已关闭全片理解，使用规则整理分镜和名称候选...",
+        "> 正在提交任务：强制重新分析当前原视频...",
         `> 原视频: ${videoPath}`,
-        `> 旧项目策略: ${storyReferenceMeta(referenceStrategy).label}`,
-        referenceStrategy === "new_only"
-          ? (projectDir ? `> 已填写项目目录但当前会忽略: ${projectDir}` : "> 当前策略会忽略旧项目目录")
-          : `> 旧结果参考: ${projectDir}`,
+        "> 旧项目: 不作为分析输入；仅在源视频一致时自动恢复本地结果",
         `> 项目设定: ${storyProjectSummary(projectConfig)}`,
-        `> 参数: use_pre_director=${understandingOptions.use_pre_director}; force_understand=${understandingOptions.force_understand}`,
-        understandingOptions.use_pre_director
-          ? `> 百炼反推: ${preDirector.api_key ? "API Key 已填写" : "API Key 为空"}; model=${preDirector.model}`
-          : "> 百炼反推: 未启用",
-        understandingOptions.use_pre_director
-          ? (understandingOptions.force_understand ? "> 全片理解: 强制重跑" : "> 全片理解: 优先复用缓存")
-          : "> 全片理解: 已关闭，将走规则分析",
-        referenceStrategy === "new_only"
-          ? "> 费用保护: 当前是新视频模式，是否跑全片理解取决于上方开关"
-          : "> 费用保护: 旧项目参考模式默认不跑全片云理解",
+        "> 参数: use_pre_director=true; force_understand=true; force_visual_reanalysis=true",
+        `> 百炼反推: ${preDirector.api_key ? "API Key 已填写" : "API Key 为空"}; model=${preDirector.model}`,
+        "> 全片理解: 强制重跑",
+        "> 镜头/视觉分析: 强制重跑",
       ];
       setStoryStatus(lines, "warn");
       setLogs(lines);
@@ -12630,6 +13679,7 @@
             reference_strategy: referenceStrategy,
             use_pre_director: understandingOptions.use_pre_director,
             force_understand: understandingOptions.force_understand,
+            force_visual_reanalysis: true,
             pre_director_api_key: preDirector.api_key,
             pre_director_base_url: preDirector.base_url,
             pre_director_model: preDirector.model,
@@ -12639,9 +13689,9 @@
         if (!response.ok) throw new Error(data.error || "提交失败");
         showStoryJobId(data.job_id);
         setStoryStatus([
-          understandingOptions.use_pre_director ? "> 全片理解与分镜分析任务已提交" : "> 规则分镜分析任务已提交",
+          "> 强制全片理解与分镜分析任务已提交",
           `> job_id: ${data.job_id}`,
-          referenceStrategy === "new_only" ? "> 可以复制 ID 排查任务" : "> 旧项目省钱模式：使用缓存/规则切分",
+          "> 可以复制 ID 排查任务",
         ], "warn");
         storyPollTimer = setInterval(pollStoryJob, 1000);
         pollStoryJob();
@@ -12731,12 +13781,118 @@
       }).join("");
 
       strip.querySelectorAll(".timeline-card").forEach((card) => {
-        card.addEventListener("click", () => selectTimelineSegment(Number(card.dataset.index)));
+        card.addEventListener("click", () => selectTimelineSegment(Number(card.dataset.index), { previewMode: "segment" }));
       });
-      selectTimelineSegment(0);
+      selectTimelineSegment(0, { previewMode: "segment" });
     }
 
-    function selectTimelineSegment(index) {
+    function storyboardFullSourcePath(seg = timelineSegments[selectedTimelineIndex] || timelineSegments[0] || {}) {
+      const inputPath = $("#videoPathInput")?.value.trim() || "";
+      const draftPath = Array.isArray(seedanceDraft?.videos) ? String(seedanceDraft.videos[0] || "").trim() : "";
+      return String(inputPath || seg?.full_source_video_path || seg?.source_video_path || draftPath || "").trim();
+    }
+
+    function setStoryboardVideoSource(video, path, time = 0.1) {
+      if (!video) return;
+      const value = String(path || "").trim();
+      if (!value) {
+        video.removeAttribute("src");
+        return;
+      }
+      const src = mediaSrc(value, time);
+      if (video.getAttribute("src") !== src) {
+        video.src = src;
+        video.load();
+      }
+    }
+
+    function syncStoryboardOriginalButton(path = "") {
+      const button = $("#showOriginalVideoBtn");
+      if (!button) return;
+      const sourcePath = String(path || storyboardFullSourcePath()).trim();
+      button.hidden = !sourcePath;
+      button.classList.toggle("active", storyboardLeftPreviewMode === "source");
+    }
+
+    function storyboardMediaPathKey(path = "") {
+      return String(path || "").trim().replace(/^file:\/\//i, "").replace(/\\/g, "/").toLowerCase();
+    }
+
+    function sameStoryboardMediaPath(left = "", right = "") {
+      const leftKey = storyboardMediaPathKey(left);
+      const rightKey = storyboardMediaPathKey(right);
+      return !!leftKey && !!rightKey && leftKey === rightKey;
+    }
+
+    function storyboardCutVideoPath(seg = timelineSegments[selectedTimelineIndex] || {}) {
+      return String(seg?.preview_clip_path || seg?.clip_output_path || seg?.output_path || "").trim();
+    }
+
+    function storyboardSegmentDuration(seg = {}) {
+      const duration = Number(seg?.duration);
+      if (Number.isFinite(duration) && duration > 0) return duration;
+      const start = Number(seg?.start || 0);
+      const end = Number(seg?.end || 0);
+      return Number.isFinite(start) && Number.isFinite(end) && end > start ? end - start : 0;
+    }
+
+    function canCutStoryboardSegment(seg = timelineSegments[selectedTimelineIndex] || {}) {
+      return selectedTimelineIndex >= 0 && !!storyboardCutVideoPath(seg);
+    }
+
+    function setStoryboardShotCutControls({ review = false, showCut = review, canCut = false, canUndo = false, canSave = review } = {}) {
+      const shotCutAtCurrentBtn = $("#shotCutAtCurrentBtn");
+      const shotSaveCutsBtn = $("#shotSaveCutsBtn");
+      const shotUndoCutBtn = $("#shotUndoCutBtn");
+      if (shotCutAtCurrentBtn) {
+        shotCutAtCurrentBtn.hidden = !showCut;
+        shotCutAtCurrentBtn.disabled = !canCut;
+        shotCutAtCurrentBtn.classList.toggle("active", canCut);
+      }
+      if (shotSaveCutsBtn) shotSaveCutsBtn.hidden = !(review && canSave);
+      if (shotUndoCutBtn) shotUndoCutBtn.hidden = !(review && canUndo);
+    }
+
+    function showStoryboardOriginalVideo() {
+      const seg = timelineSegments[selectedTimelineIndex] || timelineSegments[0] || {};
+      const path = storyboardFullSourcePath(seg);
+      storyboardLeftPreviewMode = "source";
+      setStoryboardVideoSource($("#timelineOriginalVideo"), path, 0.1);
+      syncStoryboardOriginalButton(path);
+      if (path) {
+        $("#originalCompareLabel").textContent = "原视频";
+        $("#timelineOriginalInfo").textContent = "";
+      } else {
+        $("#originalCompareLabel").textContent = "请选择镜头";
+        $("#timelineOriginalInfo").textContent = "";
+      }
+      const state = seedanceReferenceSubclipState || {};
+      const subclips = Array.isArray(state.subclips) ? state.subclips : [];
+      const currentSegmentId = String(seg.segment_id || "").trim();
+      const stateSegmentId = String(state.segmentId || "").trim();
+      const hasReview = String(state.compareMode || "") === "shot_cut_review" && subclips.length > 0;
+      const isCurrentReview = hasReview && (!currentSegmentId || !stateSegmentId || currentSegmentId === stateSegmentId);
+      const canCutCurrentSegment = canCutStoryboardSegment(seg);
+      setStoryboardShotCutControls({
+        review: hasReview,
+        showCut: canCutCurrentSegment || hasReview,
+        canCut: canCutCurrentSegment,
+        canUndo: isCurrentReview && subclips.length > 1,
+        canSave: isCurrentReview,
+      });
+    }
+
+    function showStoryboardSegmentVideo(seg) {
+      const id = seg.segment_id || String(selectedTimelineIndex + 1).padStart(3, "0");
+      const path = shotVideoPath(seg);
+      storyboardLeftPreviewMode = "segment";
+      setStoryboardVideoSource($("#timelineOriginalVideo"), path, shotVideoStartTime(seg));
+      syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
+      $("#originalCompareLabel").textContent = `#${id} · ${formatNum(seg.start)}-${formatNum(seg.end)}s`;
+      $("#timelineOriginalInfo").textContent = "";
+    }
+
+    function selectTimelineSegment(index, options = {}) {
       const seg = timelineSegments[index];
       selectedTimelineIndex = seg ? index : -1;
       document.querySelectorAll(".timeline-card").forEach((card) => {
@@ -12752,43 +13908,31 @@
       const generatedVideo = $("#timelineGeneratedVideo");
       const placeholder = $("#generatedPlaceholder");
       if (!seg) {
-        originalVideo.removeAttribute("src");
+        document.querySelector('.module-view[data-module-view="storyboard"] .compare-stage')?.classList.remove("shotcut-main-preview");
         generatedVideo.removeAttribute("src");
+        const sourcePath = storyboardFullSourcePath({});
+        storyboardLeftPreviewMode = "source";
+        setStoryboardVideoSource(originalVideo, sourcePath, 0.1);
+        syncStoryboardOriginalButton(sourcePath);
+        setStoryboardShotCutControls();
         if (placeholder) placeholder.style.display = "block";
-        $("#originalCompareLabel").textContent = "请选择镜头";
-        $("#generatedCompareLabel").textContent = "待生成";
-        $("#timelineOriginalInfo").textContent = "读取项目后，从下方时间线选择一个镜头。";
-        $("#timelineGeneratedInfo").textContent = "生成后会在这里和原片逐镜头对比。";
+        $("#originalCompareLabel").textContent = sourcePath ? "原视频" : "请选择镜头";
+        $("#generatedCompareLabel").textContent = "";
+        $("#timelineOriginalInfo").textContent = "";
+        if (placeholder) placeholder.textContent = "子镜头会在这里显示。";
+        $("#timelineGeneratedInfo").textContent = "从下方子镜头按钮选择一段，这里会同步预览。";
         const promptDraft = $("#promptDraft");
         if (promptDraft) promptDraft.value = "";
         renderAssistantRouteCard();
         return;
       }
 
-      const id = seg.segment_id || String(index + 1).padStart(3, "0");
-      const src = mediaSrc(shotVideoPath(seg), shotVideoStartTime(seg));
-      if (src) {
-        originalVideo.src = src;
-        originalVideo.load();
+      if (String(options.previewMode || "segment") === "source") {
+        showStoryboardOriginalVideo();
       } else {
-        originalVideo.removeAttribute("src");
+        showStoryboardSegmentVideo(seg);
       }
-
-      $("#originalCompareLabel").textContent = `#${id} · ${formatNum(seg.start)}-${formatNum(seg.end)}s`;
-      $("#timelineOriginalInfo").textContent = `人物: ${seg.person_count ?? "未知"} · 关联资产: ${formatShotAssets(seg)} · ${seg.output_path ? fileName(seg.output_path) : "无片段文件"}`;
-      const generatedPath = String(seg.generated_path || seg.seedance_output_path || seg.new_video_path || "").trim();
-      if (generatedPath) {
-        generatedVideo.src = mediaSrc(generatedPath, 0.1);
-        generatedVideo.load();
-        if (placeholder) placeholder.style.display = "none";
-        $("#generatedCompareLabel").textContent = "已生成";
-        $("#timelineGeneratedInfo").textContent = `镜头 #${id} 已生成: ${fileName(generatedPath)}`;
-      } else {
-        generatedVideo.removeAttribute("src");
-        if (placeholder) placeholder.style.display = "block";
-        $("#generatedCompareLabel").textContent = "待生成";
-        $("#timelineGeneratedInfo").textContent = `镜头 #${id} 还没有新视频。生成完成后会在这里与原片对比。`;
-      }
+      updateStoryboardSubclipPreview();
       const promptDraft = $("#promptDraft");
       if (promptDraft) promptDraft.value = buildPromptDraft(seg, index);
       renderAssistantRouteCard();
@@ -12804,6 +13948,77 @@
       if (!timelineSegments.length) return;
       const next = Math.min(timelineSegments.length - 1, Math.max(0, selectedTimelineIndex + delta));
       selectTimelineSegment(next);
+    }
+
+    function updateStoryboardSubclipPreview() {
+      const generatedVideo = $("#timelineGeneratedVideo");
+      const placeholder = $("#generatedPlaceholder");
+      const label = $("#generatedCompareLabel");
+      const info = $("#timelineGeneratedInfo");
+      const compareStage = document.querySelector('.module-view[data-module-view="storyboard"] .compare-stage');
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const state = seedanceReferenceSubclipState || {};
+      const subclips = Array.isArray(state.subclips) ? state.subclips : [];
+      const currentSegmentId = String(seg.segment_id || "").trim();
+      const stateSegmentId = String(state.segmentId || "").trim();
+      const isShotCutReview = String(state.compareMode || "") === "shot_cut_review";
+      const isCurrentShot = isShotCutReview && subclips.length && (!currentSegmentId || !stateSegmentId || currentSegmentId === stateSegmentId);
+      if (!isCurrentShot) {
+        compareStage?.classList.remove("shotcut-main-preview");
+        generatedVideo?.removeAttribute("src");
+        const canCutCurrentSegment = canCutStoryboardSegment(seg);
+        setStoryboardShotCutControls({
+          review: isShotCutReview && subclips.length > 0,
+          showCut: canCutCurrentSegment || (isShotCutReview && subclips.length > 0),
+          canCut: canCutCurrentSegment,
+          canUndo: false,
+          canSave: false,
+        });
+        syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
+        if (placeholder) {
+          placeholder.style.display = "block";
+          placeholder.textContent = "子镜头会在这里显示。";
+        }
+        if (label) label.textContent = "";
+        if (info) info.textContent = "从下方子镜头按钮选择一段，这里会同步预览。";
+        return;
+      }
+      const selectedIndex = Math.max(0, Math.min(Number(state.selectedIndex) || 0, subclips.length - 1));
+      const canCutCurrentSegment = canCutStoryboardSegment(seg);
+      setStoryboardShotCutControls({
+        review: true,
+        showCut: true,
+        canCut: canCutCurrentSegment,
+        canUndo: subclips.length > 1,
+      });
+      const clip = subclips[selectedIndex] || {};
+      const path = seedanceSubclipPath(clip);
+      const start = Number(clip.start || 0);
+      const endTime = Number(clip.end || 0);
+      const range = `${Number.isFinite(start) ? start.toFixed(2) : "0.00"}-${Number.isFinite(endTime) ? endTime.toFixed(2) : "0.00"}s`;
+      compareStage?.classList.remove("shotcut-main-preview");
+      if (storyboardLeftPreviewMode === "source") {
+        showStoryboardOriginalVideo();
+      } else {
+        showStoryboardSegmentVideo(seg);
+      }
+      if (path) {
+        if (generatedVideo) {
+          generatedVideo.src = mediaSrc(path, 0.1);
+          generatedVideo.load();
+        }
+        if (placeholder) placeholder.style.display = "none";
+        if (label) label.textContent = `子镜头 ${selectedIndex + 1}/${subclips.length}`;
+        if (info) info.textContent = "";
+      } else {
+        generatedVideo?.removeAttribute("src");
+        if (placeholder) {
+          placeholder.style.display = "block";
+          placeholder.textContent = "当前子镜头没有可预览视频。";
+        }
+        if (label) label.textContent = `子镜头 ${selectedIndex + 1}/${subclips.length}`;
+        if (info) info.textContent = "";
+      }
     }
 
     function renderSegmentPreview(segments) {
@@ -13020,8 +14235,9 @@
       return current;
     }
 
-    function switchModule(name) {
+    function switchModule(name, options = {}) {
       const target = name || "story";
+      if (!options.keepStoryReport) setStoryReportVisible(false);
       document.querySelectorAll(".module-step").forEach((step) => {
         step.classList.toggle("active", step.dataset.module === target);
       });
@@ -13079,6 +14295,17 @@
         seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
         seedanceDraft.audios = normalizeMaterialList(seedanceDraft.audios, 0);
       }
+      if (!SEEDANCE_A_MODELS.includes(seedanceDraft.model)) {
+        seedanceDraft.model = "videos_stable_fast";
+      }
+      if (!SEEDANCE_A_DURATIONS.map(String).includes(String(seedanceDraft.duration))) {
+        seedanceDraft.duration = 6;
+      }
+      if (!SEEDANCE_A_RATIOS.includes(seedanceDraft.ratio)) {
+        seedanceDraft.ratio = SEEDANCE_A_RATIOS.includes(storyProjectConfig.output_ratio)
+          ? storyProjectConfig.output_ratio
+          : SEEDANCE_A_RATIOS[0];
+      }
     }
 
     function normalizeMaterialList(items, minimumRows) {
@@ -13101,8 +14328,6 @@
       fillSelect("seedanceRatioSelect", SEEDANCE_A_RATIOS, seedanceDraft.ratio);
       fillSelect("seedanceDurationSelect", SEEDANCE_A_DURATIONS.map(String), String(seedanceDraft.duration), (value) => value + "s");
       fillSelect("seedanceResolutionSelect", SEEDANCE_A_RESOLUTIONS, seedanceDraft.resolution);
-      const frameMode = $("#seedanceFrameModeSelect");
-      if (frameMode) frameMode.value = seedanceDraft.frameMode || "reference";
       const prompt = $("#seedancePromptInput");
       if (prompt) prompt.value = seedanceDraft.prompt || seedanceTemplate("remake");
       const taskName = $("#seedanceTaskNameInput");
@@ -13118,9 +14343,8 @@
     function pullSeedanceControls() {
       seedanceDraft.model = $("#seedanceModelSelect")?.value || seedanceDraft.model;
       seedanceDraft.ratio = $("#seedanceRatioSelect")?.value || seedanceDraft.ratio;
-      seedanceDraft.duration = Number($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 5);
+      seedanceDraft.duration = Number($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 6);
       seedanceDraft.resolution = $("#seedanceResolutionSelect")?.value || seedanceDraft.resolution;
-      seedanceDraft.frameMode = $("#seedanceFrameModeSelect")?.value || "reference";
       seedanceDraft.prompt = $("#seedancePromptInput")?.value || "";
       seedanceDraft.taskName = $("#seedanceTaskNameInput")?.value || "shot_retake_001";
       seedanceDraft.seed = Math.max(0, Number($("#seedanceSeedInput")?.value || 0) || 0);
@@ -13310,10 +14534,9 @@
         controlPath: value,
         outputLabel: "白膜反推生成结果",
       };
-      seedanceDraft.model = "A-seedance-2.0-480p-fast";
+      seedanceDraft.model = "videos_stable_fast";
       seedanceDraft.ratio = storyProjectConfig.output_ratio || "9:16";
       seedanceDraft.resolution = "480p";
-      seedanceDraft.frameMode = "reference";
       seedanceDraft.prompt = seedanceTemplate("whiteMaskReverse");
       seedanceDraft.taskName = `white_mask_reverse_${seedanceTaskSlug(context.originalVideoPath || value)}`;
       const segDuration = Number(seg.duration);
@@ -13326,14 +14549,12 @@
       const modelSelect = $("#seedanceModelSelect");
       const ratioSelect = $("#seedanceRatioSelect");
       const resolutionSelect = $("#seedanceResolutionSelect");
-      const frameModeSelect = $("#seedanceFrameModeSelect");
       const promptInput = $("#seedancePromptInput");
       const taskNameInput = $("#seedanceTaskNameInput");
       const durationSelect = $("#seedanceDurationSelect");
       if (modelSelect) modelSelect.value = seedanceDraft.model;
       if (ratioSelect) ratioSelect.value = seedanceDraft.ratio;
       if (resolutionSelect) resolutionSelect.value = seedanceDraft.resolution;
-      if (frameModeSelect) frameModeSelect.value = seedanceDraft.frameMode;
       if (promptInput) promptInput.value = seedanceDraft.prompt;
       if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
       if (durationSelect) durationSelect.value = String(seedanceDraft.duration);
@@ -13773,6 +14994,7 @@
       if (!subclips.length) {
         root.hidden = true;
         root.innerHTML = "";
+        if (root.id === "storyboardShotSubclips") updateStoryboardSubclipPreview();
         return;
       }
       const selectedIndex = Math.max(0, Math.min(Number(state.selectedIndex) || 0, subclips.length - 1));
@@ -13823,16 +15045,23 @@
           return `<span class="seedance-subclip-anchor-hint">${escapeHtml(subclipRoleLabel(state, roleIndex))}${hasPoint ? " 已定位" : " 未定位"}</span>`;
         }).join("")
         : `<span class="seedance-subclip-anchor-hint">暂无角色参考图</span>`;
-      const referencePickerHtml = subshotReferencePickerHtml(state, clip);
+      const referencePickerHtml = isShotCutReview ? "" : subshotReferencePickerHtml(state, clip);
+      const pathInfoHtml = isShotCutReview ? "" : `
+        <div class="seedance-subclip-path" title="${escapeHtml(path)}">视频: ${escapeHtml(path || "-")}</div>
+        <div class="seedance-subclip-path" title="${escapeHtml(maskPath || mergedMaskPath)}">${escapeHtml(outputTitle)}: ${escapeHtml(maskPath || mergedMaskPath || "-")}</div>
+      `;
+      const ratioControlsHtml = isShotCutReview ? "" : `
+          <div class="seedance-subclip-controls">
+            <button class="tiny-btn ${previewRatio === "9:16" ? "active" : ""}" type="button" data-subclip-ratio="9:16">9:16</button>
+            <button class="tiny-btn ${previewRatio === "16:9" ? "active" : ""}" type="button" data-subclip-ratio="16:9">16:9</button>
+          </div>
+      `;
       root.hidden = false;
       root.innerHTML = `
         <div class="seedance-subclips-head">
           <strong>${escapeHtml(headTitle)}</strong>
           <span>${escapeHtml(headCount)}</span>
-          <div class="seedance-subclip-controls">
-            <button class="tiny-btn ${previewRatio === "9:16" ? "active" : ""}" type="button" data-subclip-ratio="9:16">9:16</button>
-            <button class="tiny-btn ${previewRatio === "16:9" ? "active" : ""}" type="button" data-subclip-ratio="16:9">16:9</button>
-          </div>
+          ${ratioControlsHtml}
         </div>
         ${isSingleCompare ? "" : `<div class="seedance-subclip-controls">${subclips.map((item, i) => {
           const itemStart = Number(item.start || 0);
@@ -13841,7 +15070,7 @@
           const hasMask = item.mask_path || item.output_path ? " · 已生成" : "";
           return `<button class="tiny-btn seedance-subclip-choice ${i === selectedIndex ? "active" : ""}" type="button" data-select-subclip="${i}">子镜头 ${i + 1} ${escapeHtml(itemRange)}${hasMask}</button>`;
         }).join("")}</div>`}
-        <div class="seedance-subclip-compare">
+        ${isShotCutReview ? "" : `<div class="seedance-subclip-compare">
           <div class="seedance-subclip-pane">
             <div class="seedance-subclip-pane-title">${escapeHtml(sourceTitle)}</div>
             <div class="seedance-subclip-player${anchorMode ? " is-anchoring" : ""}" data-subclip-source-player>
@@ -13856,11 +15085,10 @@
               ${maskPath ? `<video controls muted playsinline src="${escapeHtml(mediaSrc(maskPath, 0.1))}"></video>` : `<div class="seedance-subclip-empty">当前还没有${escapeHtml(outputTitle)}</div>`}
             </div>
           </div>
-        </div>
+        </div>`}
         ${isSingleCompare ? "" : (isShotCutReview ? `<div class="seedance-subclip-controls shot-cut-actions">
-          <button class="tiny-btn primary" type="button" data-save-shot-cuts>确认保存这 ${state.subclips.length} 段</button>
-          <button class="tiny-btn" type="button" data-add-shot-cut-at-current>当前时间切一刀</button>
-          <span class="seedance-subclip-note">这里只确认镜头边界；身份定位保存后再做。</span>
+          <button class="tiny-btn primary" type="button" data-save-shot-cuts>确认保存切段</button>
+          <span class="seedance-subclip-note">当前 ${state.subclips.length} 段；这里只确认镜头边界；身份定位保存后再做。</span>
         </div>` : `<div class="seedance-subclip-controls">
           <button class="tiny-btn" type="button" data-use-current-subclip>使用当前子镜头</button>
         </div>`)}
@@ -13868,8 +15096,7 @@
           <button class="tiny-btn ${anchorMode ? "active" : ""}" type="button" data-toggle-subclip-identity>身份定位</button>
           ${roleAnchorSummary}
         </div>`}
-        <div class="seedance-subclip-path" title="${escapeHtml(path)}">视频: ${escapeHtml(path || "-")}</div>
-        <div class="seedance-subclip-path" title="${escapeHtml(maskPath || mergedMaskPath)}">${escapeHtml(outputTitle)}: ${escapeHtml(maskPath || mergedMaskPath || "-")}</div>
+        ${pathInfoHtml}
       `;
       root.querySelectorAll("[data-select-subclip]").forEach((button) => {
         button.addEventListener("click", () => selectSeedanceSubclip(Number(button.dataset.selectSubclip)));
@@ -13877,7 +15104,6 @@
       root.querySelectorAll("[data-subclip-ratio]").forEach((button) => {
         button.addEventListener("click", () => setSeedanceSubclipPreviewRatio(button.dataset.subclipRatio || "16:9"));
       });
-      root.querySelector("[data-add-shot-cut-at-current]")?.addEventListener("click", () => addShotCutAtCurrentTime());
       root.querySelector("[data-save-shot-cuts]")?.addEventListener("click", () => saveCurrentShotCuts());
       root.querySelector("[data-use-current-subclip]")?.addEventListener("click", () => applySeedanceSubclipToVideoSlot(path, state.sourceVideoIndex));
       root.querySelectorAll("[data-subshot-role-ref]").forEach((button) => {
@@ -13992,6 +15218,7 @@
         marker.addEventListener("pointercancel", stopDragging);
       });
       updateSeedanceSubclipMarkerPositions();
+      if (root.id === "storyboardShotSubclips") updateStoryboardSubclipPreview();
     }
     async function startSeedanceSubclipMask(index = seedanceReferenceSubclipState.selectedIndex) {
       if (currentSeedanceMaskJobId) {
@@ -14726,23 +15953,14 @@
         size: seedanceDraft.ratio || "9:16",
         resolution: seedanceDraft.resolution || "480p",
       };
-      let normalImages = imageRefs;
-      if (seedanceDraft.frameMode === "first" && imageRefs.length) {
-        payload.first_frame = imageRefs[0];
-        normalImages = imageRefs.slice(1);
-      } else if (seedanceDraft.frameMode === "firstlast" && imageRefs.length >= 2) {
-        payload.first_frame = imageRefs[0];
-        payload.last_frame = imageRefs[1];
-        normalImages = imageRefs.slice(2);
-      }
-      if (normalImages.length) payload.images = normalImages;
+      if (imageRefs.length) payload.images = imageRefs;
       if (videoRefs.length) payload.videos = videoRefs;
       if (audioRefs.length) payload.audios = audioRefs;
       if (Number(seedanceDraft.seed) > 0) payload.seed = Number(seedanceDraft.seed);
       return {
         taskName: seedanceDraft.taskName || "shot_retake_001",
-        channel: "通道A",
-        provider: "tianyue-a-seedance",
+        channel: "通道2",
+        provider: "stable-video-ch2",
         projectConfig: pullStoryProjectControls(),
         materialLimits: SEEDANCE_MATERIAL_LIMITS,
         relay: {
@@ -14810,9 +16028,10 @@
         selectTimelineSegment(0);
       }
       const seg = timelineSegments[selectedTimelineIndex] || {};
+      const cutVideoPath = storyboardCutVideoPath(seg);
       return {
         project_dir: $("#projectDirInput")?.value.trim() || "",
-        video_path: shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "",
+        video_path: cutVideoPath,
         segment_id: String(seg.segment_id || "").trim(),
         cut_times: Array.isArray(cutTimes) ? cutTimes.map(Number).filter(Number.isFinite) : [],
         save: Boolean(save),
@@ -14821,6 +16040,9 @@
 
     async function openShotCutWorkbench(cutTimes = null, options = {}) {
       switchModuleLocal("storyboard");
+      if (String(options.previewMode || "") === "segment") {
+        storyboardLeftPreviewMode = "segment";
+      }
       const payload = currentShotCutPayload(
         Array.isArray(cutTimes) ? cutTimes : seedanceReferenceSubclipState.cutTimes,
         Boolean(options.save),
@@ -14829,13 +16051,13 @@
         const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
-        return;
+        return false;
       }
       if (!payload.video_path) {
         const lines = ["x 当前镜头视频为空", "> 请先选择分镜。"];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
-        return;
+        return false;
       }
       const intro = [
         options.save ? "> 正在保存镜头切段..." : "> 正在分析镜头切段...",
@@ -14863,11 +16085,13 @@
         setSeedanceSubmitStatus(lines, shortCount ? "warn" : "good");
         assistantSetStatus(lines, shortCount ? "warn" : "good");
         addLogs(lines);
+        return true;
       } catch (error) {
         const lines = ["x 镜头切段失败", "> " + (error.message || error)];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
         addLogs(lines);
+        return false;
       } finally {
         assistantSetRunStatus([], false);
       }
@@ -14875,22 +16099,56 @@
 
     function addShotCutAtCurrentTime() {
       const state = seedanceReferenceSubclipState;
-      const clip = (state.subclips || [])[state.selectedIndex || 0] || {};
-      const root = ["storyboardShotSubclips", "seedanceReferenceSubclips"]
-        .map((id) => document.getElementById(id))
-        .find((el) => el && !el.hidden) || $("#seedanceReferenceSubclips");
-      const video = root?.querySelector("[data-subclip-source-player] video");
-      const base = Number(clip.start || 0);
-      const current = Number(video?.currentTime || 0);
-      const absolute = Math.max(0.05, base + current);
-      const duration = Math.max(...(state.subclips || []).map((item) => Number(item.end || 0)), absolute + 0.1);
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const subclips = Array.isArray(state.subclips) ? state.subclips : [];
+      const currentSegmentId = String(seg.segment_id || "").trim();
+      const stateSegmentId = String(state.segmentId || "").trim();
+      const hasReview = String(state.compareMode || "") === "shot_cut_review" && subclips.length > 0;
+      const isCurrentReview = hasReview && (!currentSegmentId || !stateSegmentId || currentSegmentId === stateSegmentId);
+      const cutVideoPath = storyboardCutVideoPath(seg);
+      if (!cutVideoPath) {
+        const lines = [
+          "x 当前镜头没有可切的视频片段",
+          "> 请先重新读取项目或选择一个已生成预览片段的镜头。",
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const video = $("#timelineOriginalVideo");
+      const rawCurrent = Number(video?.currentTime || 0);
+      const sourcePath = storyboardFullSourcePath(seg);
+      const sourceModeUsesFullVideo = storyboardLeftPreviewMode === "source"
+        && !!sourcePath
+        && !sameStoryboardMediaPath(cutVideoPath, sourcePath);
+      const segmentStart = Number(seg.start || 0);
+      const segmentDuration = storyboardSegmentDuration(seg);
+      const current = sourceModeUsesFullVideo ? rawCurrent - segmentStart : rawCurrent;
+      const absolute = Math.max(0.05, current);
+      const videoDuration = Number(video?.duration || 0);
+      const duration = sourceModeUsesFullVideo && segmentDuration > 0
+        ? segmentDuration
+        : Number.isFinite(videoDuration) && videoDuration > 0
+        ? videoDuration
+        : Math.max(segmentDuration, ...(isCurrentReview ? subclips : []).map((item) => Number(item.end || 0)), absolute + 0.1);
       const rounded = Math.round(absolute * 1000) / 1000;
-      const existing = (state.cutTimes || []).map(Number).filter(Number.isFinite);
+      if (sourceModeUsesFullVideo && (current <= 0.05 || current >= duration - 0.05)) {
+        const lines = [
+          "x 当前时间不在这个镜头片段里",
+          `> 当前镜头范围约 ${formatNum(segmentStart)}-${formatNum(segmentStart + duration)}s，请把左侧视频拖到这个范围内再切。`,
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const existing = (isCurrentReview ? state.cutTimes : []).map(Number).filter(Number.isFinite);
       const boundaries = [
         0,
         duration,
         ...existing,
-        ...(state.subclips || []).flatMap((item) => [Number(item.start || 0), Number(item.end || 0)]),
+        ...(isCurrentReview ? subclips : []).flatMap((item) => [Number(item.start || 0), Number(item.end || 0)]),
       ].filter(Number.isFinite);
       const tooClose = boundaries.some((value) => Math.abs(value - rounded) < 0.08);
       if (tooClose) {
@@ -14911,8 +16169,53 @@
       openShotCutWorkbench([...new Set(cutTimes)]);
     }
 
-    function saveCurrentShotCuts() {
-      openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true });
+    function undoCurrentShotCut() {
+      const state = seedanceReferenceSubclipState || {};
+      const subclips = Array.isArray(state.subclips) ? state.subclips : [];
+      const existing = (state.cutTimes || [])
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      if (subclips.length <= 1 || !existing.length) {
+        const lines = ["x 没有可撤销的切点", "> 当前只有一个子镜头，不能继续合并。"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const selectedIndex = Math.max(0, Math.min(Number(state.selectedIndex) || 0, subclips.length - 1));
+      const clip = subclips[selectedIndex] || {};
+      const boundary = selectedIndex > 0 ? Number(clip.start || 0) : Number(clip.end || 0);
+      const removeIndex = existing.reduce((bestIndex, value, index) => {
+        if (bestIndex < 0) return index;
+        return Math.abs(value - boundary) < Math.abs(existing[bestIndex] - boundary) ? index : bestIndex;
+      }, -1);
+      if (removeIndex < 0 || Math.abs(existing[removeIndex] - boundary) > 0.12) {
+        const lines = ["x 找不到当前子镜头对应的切点", "> 请重新选择子镜头后再试。"];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const nextCutTimes = existing.filter((_, index) => index !== removeIndex);
+      seedanceReferenceSubclipState.selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : 0;
+      openShotCutWorkbench(nextCutTimes);
+    }
+
+    async function saveCurrentShotCuts() {
+      return openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true });
+    }
+
+    async function saveStoryboardAndGoGenerate() {
+      const state = seedanceReferenceSubclipState || {};
+      const hasShotCutReview = String(state.compareMode || "") === "shot_cut_review" && Array.isArray(state.subclips) && state.subclips.length;
+      const saved = hasShotCutReview ? await saveCurrentShotCuts() : true;
+      if (!saved) return;
+      switchModuleLocal("generate");
+      const lines = ["> 分镜已保存", "> 已进入视频生成界面。"];
+      setSeedanceSubmitStatus(lines, "good");
+      assistantSetStatus(lines, "good");
+      addLogs(lines);
     }
 
     async function startMode2ServerTransfer() {
@@ -14926,7 +16229,7 @@
       const seg = timelineSegments[selectedTimelineIndex] || {};
       const decision = generationRouteForShot(seg);
       if (decision.backend !== "scail2") {
-        const lines = ["> 当前镜头固定走 Seedance", `> ${decision.reason}`, "> 请点“提交通道A生成”。"];
+        const lines = ["> 当前镜头固定走 Seedance", `> ${decision.reason}`, "> 请点“多人Api生成”。"];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
         return;
@@ -14956,7 +16259,7 @@
         return;
       }
       if (readyRoles.length !== 1) {
-        const lines = ["> 当前不是单人 Scail2 镜头", `> 已检测到 ${readyRoles.length} 个可替换角色`, "> 请改用“提交通道A生成”。"];
+        const lines = ["> 当前不是单人 Scail2 镜头", `> 已检测到 ${readyRoles.length} 个可替换角色`, "> 请改用“多人Api生成”。"];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
         return;
@@ -15103,7 +16406,7 @@
       const button = $("#batchGenerateBtn");
       if (button) {
         button.disabled = seedanceSubmitting;
-        button.textContent = seedanceSubmitting ? "通道A生成中..." : "提交通道A生成";
+        button.textContent = seedanceSubmitting ? "多人Api生成中..." : "多人Api生成";
       }
       const previewBtn = $("#previewSeedancePayloadBtn");
       if (previewBtn) previewBtn.disabled = seedanceSubmitting;
@@ -15176,7 +16479,7 @@
     }
     async function submitSeedanceATask() {
       if (seedanceSubmitting) {
-        setSeedanceSubmitStatus(["> 通道A生成任务正在运行", "> 请等待当前任务结束"], "warn");
+        setSeedanceSubmitStatus(["> 通道2生成任务正在运行", "> 请等待当前任务结束"], "warn");
         return;
       }
       if (selectedTimelineIndex < 0 && timelineSegments.length) {
@@ -15231,7 +16534,7 @@
         setSeedanceSubmitStatus(["> 预检完成，存在少量警告，但仍可提交"], "warn");
         addLogs(["> 生成前资产提醒", ...preflight.warnings.slice(0, 4).map((line) => `> ${line}`)]);
       } else {
-        setSeedanceSubmitStatus(["> 预检通过，准备提交通道A任务..."], "warn");
+        setSeedanceSubmitStatus(["> 预检通过，准备提交通道2任务..."], "warn");
       }
       if (!draft.payload?.videos?.length && videoPath) {
         seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
@@ -15253,14 +16556,14 @@
       seedancePendingCompare = {
         ...(seedancePendingCompare || {}),
         sourcePath: String(seedancePendingCompare?.sourcePath || body.source_video_path || draft.payload?.videos?.[0] || videoPath || "").trim(),
-        outputLabel: String(seedancePendingCompare?.outputLabel || "通道A生成结果").trim(),
+        outputLabel: String(seedancePendingCompare?.outputLabel || "通道2生成结果").trim(),
       };
       currentSeedanceTimelineIndex = selectedTimelineIndex;
       saveSeedanceDraft();
       setSeedanceSubmitting(true);
       seedanceLastStatusText = "";
       const submitIntro = [
-        "> 正在提交通道A Seedance...",
+        "> 正在提交通道2视频任务...",
         `> 任务: ${body.taskName}`,
         seg.segment_id ? `> 镜头: ${seg.segment_id}` : "> 镜头: 当前草稿",
       ];
@@ -15273,10 +16576,10 @@
           body: JSON.stringify(body),
         });
         const data = await response.json();
-        if (!response.ok || data.success === false) throw new Error(data.error || "通道A提交失败");
+        if (!response.ok || data.success === false) throw new Error(data.error || "通道2提交失败");
         currentSeedanceTaskId = data.task_id || data.taskId;
         const submitLines = [
-          "> 通道A任务已提交",
+          "> 通道2任务已提交",
           `> task_id: ${currentSeedanceTaskId}`,
           `> mode: ${data.mode_type || "auto"}`,
           ...(Array.isArray(data.warnings) ? data.warnings.slice(0, 4).map((line) => `> ${line}`) : []),
@@ -15304,14 +16607,14 @@
           body: JSON.stringify({ task_id: currentSeedanceTaskId }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "通道A查询失败");
+        if (!response.ok) throw new Error(data.error || "通道2查询失败");
         const status = String(data.status || "PENDING");
         const progress = String(data.progress || "");
         const statusText = `${status}${progress ? " " + progress : ""}`;
         if (statusText !== seedanceLastStatusText) {
           seedanceLastStatusText = statusText;
-          setSeedanceSubmitStatus([`> 通道A状态: ${statusText}`], status === "FAILED" ? "bad" : "warn");
-          addLogs([`> 通道A状态: ${statusText}`]);
+          setSeedanceSubmitStatus([`> 通道2状态: ${statusText}`], status === "FAILED" ? "bad" : "warn");
+          addLogs([`> 通道2状态: ${statusText}`]);
         }
         if (status === "SUCCESS") {
           if (seedancePollTimer) clearInterval(seedancePollTimer);
@@ -15327,7 +16630,7 @@
             selectTimelineSegment(restoredIndex);
           }
           const lines = [
-            "> 通道A生成完成",
+            "> 通道2生成完成",
             outputPath ? `> 新视频: ${outputPath}` : "> 没有返回本地视频路径",
           ];
           setSeedanceSubmitStatus(lines, "good");
@@ -15335,7 +16638,7 @@
           if (outputPath) {
             const compare = seedancePendingCompare || {};
             const compareSource = String(compare.sourcePath || shotVideoPath(seg) || "").trim();
-            if (compareSource) renderSeedanceSingleMaskCompare(compareSource, outputPath, compare.outputLabel || "通道A生成结果", 0);
+            if (compareSource) renderSeedanceSingleMaskCompare(compareSource, outputPath, compare.outputLabel || "通道2生成结果", 0);
           }
           seedancePendingCompare = null;
         } else if (status === "FAILED" || data.success === false) {
@@ -15343,7 +16646,7 @@
           seedancePollTimer = null;
           setSeedanceSubmitting(false);
           seedancePendingCompare = null;
-          const lines = ["x 通道A生成失败", "> " + (data.fail_reason || data.error || "未知错误")];
+          const lines = ["x 通道2生成失败", "> " + (data.fail_reason || data.error || "未知错误")];
           setSeedanceSubmitStatus(lines, "bad");
           addLogs(lines);
         }
@@ -15363,7 +16666,7 @@
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio;
       syncSeedanceRelayControls();
       syncSeedanceControls();
-      ["seedanceModelSelect", "seedanceRatioSelect", "seedanceDurationSelect", "seedanceFrameModeSelect", "seedancePromptInput", "seedanceTaskNameInput", "seedanceSeedInput", "seedanceIncludeBodyPoseInput", "seedancePoseBackendSelect", "seedancePoseRenderStyleSelect", "seedancePoseCapsuleStrengthSelect"].forEach((id) => {
+      ["seedanceModelSelect", "seedanceRatioSelect", "seedanceDurationSelect", "seedancePromptInput", "seedanceTaskNameInput", "seedanceSeedInput", "seedanceIncludeBodyPoseInput", "seedancePoseBackendSelect", "seedancePoseRenderStyleSelect", "seedancePoseCapsuleStrengthSelect"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("input", renderSeedancePayload);
         if (el) el.addEventListener("change", renderSeedancePayload);
@@ -15383,6 +16686,7 @@
       $("#copySeedanceStatusBtn")?.addEventListener("click", copySeedanceStatus);
       $("#saveSeedanceRelayBtn")?.addEventListener("click", () => saveSeedanceRelayConfig());
       $("#openGlobalSettingsBtn")?.addEventListener("click", openGlobalSettings);
+      initSecretToggles();
       $("#saveGlobalSettingsBtn")?.addEventListener("click", () => {
         const projectDir = $("#projectDirInput")?.value.trim() || "";
         localStorage.setItem("sp_last_projectDirInput", projectDir);
@@ -15446,21 +16750,54 @@
       }
     }
 
+    function initViewportDensityAdapter() {
+      const root = document.documentElement;
+      let raf = 0;
+      const sync = () => {
+        raf = 0;
+        const width = Number(window.innerWidth || 0);
+        const height = Number(window.innerHeight || 0);
+        const dpr = Number(window.devicePixelRatio || 1);
+        const shouldScale = width >= 2200 && height >= 900 && dpr <= 1.25;
+        const scale = shouldScale ? Math.min(1.5, Math.max(1, width / 1706)) : 1;
+        root.style.setProperty("--app-density-scale", scale.toFixed(3));
+        root.style.setProperty("--app-density-width", `${(100 / scale).toFixed(3)}vw`);
+        root.style.setProperty("--app-density-height", `${(100 / scale).toFixed(3)}vh`);
+        document.body.classList.toggle("density-upscaled", scale > 1.01);
+      };
+      const requestSync = () => {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(sync);
+      };
+      sync();
+      window.addEventListener("resize", requestSync);
+      window.matchMedia?.(`(resolution: ${window.devicePixelRatio || 1}dppx)`)?.addEventListener?.("change", requestSync, { once: true });
+    }
+
     function bindBaseUiEvents() {
-      bindClick("#openStoryboardShotCutBtn", () => openShotCutWorkbench([]));
-      bindClick("#openShotCutWorkbenchBtn", () => openShotCutWorkbench([]));
+      bindClick("#showOriginalVideoBtn", () => showStoryboardOriginalVideo());
+      bindClick("#shotCutAtCurrentBtn", () => addShotCutAtCurrentTime());
+      bindClick("#shotUndoCutBtn", () => undoCurrentShotCut());
+      bindClick("#shotSaveCutsBtn", () => saveCurrentShotCuts());
+      bindClick("#saveStoryboardBtn", () => saveStoryboardAndGoGenerate());
       bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
-      bindClick("#pickVideoBtn", () => pickPath("file", "#videoPathInput"));
+      bindClick("#sourceVideoPreviewBox", () => pickPath("file", "#videoPathInput"));
+      $("#sourceVideoPreviewBox")?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          pickPath("file", "#videoPathInput");
+        }
+      });
       bindClick("#pickProjectBtn", () => pickPath("dir", "#projectDirInput"));
       bindClick("#loadProjectBtn", loadProject);
       bindClick("#reverseStoryboardBtn", startStoryboardDraft);
       bindClick("#savePreDirectorConfigBtn", () => savePreDirectorConfig());
+      bindClick("#openAssetLibraryBtn", openAssetLibraryPanel);
       bindClick("#manualAssetBtn", openManualAssetCreator);
       bindClick("#organizeAssetsBtn", organizeStoryAssets);
       bindClick("#auditAssetsBtn", startAssetAudit);
       bindClick("#refineAssetsBtn", (event) => startAssetRefinement(Boolean(event.shiftKey)));
       bindClick("#splitAllMixedScenesBtn", () => splitMixedScenes({ allMixed: true }));
-      bindClick("#buildStoryboardBtn", startStoryboardDraft);
       bindClick("#timelinePrevBtn", () => moveTimeline(-1));
       bindClick("#timelineNextBtn", () => moveTimeline(1));
       document.querySelectorAll(".module-step").forEach((step) => {
@@ -15479,6 +16816,7 @@
       showFrontendBootError("运行时错误", event.error || event.message);
     });
 
+    runBootStep("初始化显示密度", initViewportDensityAdapter);
     runBootStep("恢复输入", restoreInputs);
     runBootStep("绑定基础按钮", bindBaseUiEvents);
     runBootStep("初始化旧项目策略", initStoryReferenceStrategy);

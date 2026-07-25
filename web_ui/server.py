@@ -176,7 +176,7 @@ STORYBOARD_REFERENCE_STRATEGIES: dict[str, dict[str, str]] = {
         "prompt": "当前阶段仍按软参考处理：旧项目提供故事和角色提示，新视频决定实际切法。",
     },
 }
-STORYBOARD_RATIO_OPTIONS = ("9:16", "16:9", "1:1", "4:3", "3:4", "21:9")
+STORYBOARD_RATIO_OPTIONS = ("9:16", "16:9")
 DEFAULT_STORYBOARD_PROJECT_CONFIG = {
     "rebuild_goal": "english_europe_foreign_cast",
     "style_preset": "short_drama_realism",
@@ -7911,6 +7911,31 @@ def _create_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
             f"{asset_id}_target",
         )
 
+    extra_ref_images: list[str] = []
+    target_source_values = {
+        str(payload.get("target_image") or "").strip(),
+        str(payload.get("target_image_path") or "").strip(),
+    }
+    for index, item in enumerate(_string_list(payload.get("extra_ref_image_data"))[:6], start=1):
+        saved = _save_manual_asset_data_url(item, manual_dir, f"{asset_id}_extra_{index}")
+        if saved and saved not in extra_ref_images and saved != target_image:
+            extra_ref_images.append(saved)
+    for index, item in enumerate(
+        (
+            _string_list(payload.get("extra_ref_images"))
+            + _string_list(payload.get("subject_extra_ref_images"))
+            + _string_list(payload.get("reference_images"))
+        )[:12],
+        start=1,
+    ):
+        if len(extra_ref_images) >= 6:
+            break
+        if item == target_image or item in target_source_values or item in extra_ref_images:
+            continue
+        saved = _copy_manual_asset_image(item, manual_dir, f"{asset_id}_extra_path_{index}")
+        if saved and saved not in extra_ref_images and saved != target_image:
+            extra_ref_images.append(saved)
+
     crop_rect = payload.get("source_rect") if isinstance(payload.get("source_rect"), dict) else {}
     shot_id = str(payload.get("shot_id") or payload.get("segment_id") or "").strip()
     source_segment_ids = [shot_id] if shot_id and bool(payload.get("bind_to_shot")) else []
@@ -7951,6 +7976,9 @@ def _create_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
         "representative_status": "manual",
         "representative_is_clean": True,
         "target_image": target_image,
+        "extra_ref_images": extra_ref_images,
+        "subject_extra_ref_images": extra_ref_images,
+        "reference_images": [path for path in [target_image, *extra_ref_images] if path],
         "target_asset": {
             "active_image": target_image,
             "source": "manual_upload",
@@ -11843,14 +11871,50 @@ def _seedance_a_output_dir(project_dir: str, source_video_path: str) -> Path:
 
 def _normalize_seedance_a_model(model: str) -> str:
     raw = str(model or "").strip()
-    if raw.startswith("doubao-seedance-"):
-        return raw
     lower = raw.lower()
+    channel2_models = {
+        "grok_video3_pro",
+        "grok_video3",
+        "openAiSora2Pro",
+        "videos",
+        "videos-mini",
+        "sd-2.0-r3",
+        "xinghe-2.0",
+        "videos_stable_fast",
+        "videos_stable",
+    }
+    if raw in channel2_models:
+        return raw
+    if "stable_fast" in lower or "480p-fast" in lower or "720p-fast" in lower or "fast" in lower:
+        return "videos_stable_fast"
+    if "stable" in lower or raw.startswith("A-seedance") or raw.startswith("doubao-seedance"):
+        return "videos_stable"
+    if "sora" in lower:
+        return "openAiSora2Pro"
     if "mini" in lower:
-        return "doubao-seedance-2-0-mini-260615"
-    if "fast" in lower:
-        return "doubao-seedance-2-0-fast-260128"
-    return "doubao-seedance-2-0-260128"
+        return "videos-mini"
+    if "grok" in lower:
+        return "grok_video3_pro"
+    return "videos_stable_fast"
+
+
+def _seedance_a_size_for_channel2(ratio: str, resolution: str) -> str:
+    raw_resolution = str(resolution or "").strip()
+    if re.fullmatch(r"\d+x\d+", raw_resolution):
+        return raw_resolution
+    ratio_text = str(ratio or "").strip() or "9:16"
+    is_480 = "480" in raw_resolution
+    if ratio_text == "16:9":
+        return "854x480" if is_480 else "1280x720"
+    if ratio_text == "1:1":
+        return "768x768" if is_480 else "1024x1024"
+    if ratio_text == "21:9":
+        return "1024x438" if is_480 else "1792x768"
+    if ratio_text == "9:21":
+        return "438x1024" if is_480 else "768x1792"
+    if ratio_text in {"4:3", "3:4"}:
+        return "640x480" if ratio_text == "4:3" else "480x640"
+    return "480x854" if is_480 else "720x1280"
 
 
 def _seedance_a_build_content(
@@ -11972,42 +12036,61 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             + "; Seedance receives no masks."
         )
 
-    content = _seedance_a_build_content(
-        prompt,
-        first_frame=first_frame,
-        last_frame=last_frame,
-        ref_images=ref_images,
-        videos=videos,
-        audios=audios,
-        api_key=api_key,
-    )
-    non_text_content = [item for item in content if item.get("type") != "text"]
-    metadata: dict[str, Any] = {
-        "content": non_text_content,
-        "ratio": ratio,
-        "resolution": resolution,
-        "generate_audio": generate_audio is not False,
-        "return_last_frame": return_last_frame is True,
-        "watermark": watermark is True,
-    }
-    if web_search is True:
-        metadata["tools"] = [{"type": "web_search"}]
-    if seed > 0:
-        metadata["seed"] = seed
+    uploaded_images: list[str] = []
+    for ref in [first_frame, *ref_images, last_frame]:
+        if not ref:
+            continue
+        url = _seedance_a_upload_ref(ref, api_key)
+        if url:
+            uploaded_images.append(url)
+    uploaded_images = uploaded_images[:4]
 
+    uploaded_videos: list[str] = []
+    for index, ref in enumerate(videos[:3], 1):
+        url = _seedance_a_upload_ref(ref, api_key)
+        if not url:
+            raise RuntimeError(f"Channel 2 reference_video {index} processing failed")
+        uploaded_videos.append(url)
+
+    uploaded_audios: list[str] = []
+    for ref in audios[:1]:
+        url = _seedance_a_upload_ref(ref, api_key)
+        if url:
+            uploaded_audios.append(url)
+
+    duration = min(15, max(6, duration))
+    non_text_content: list[dict[str, Any]] = []
     upstream_payload: dict[str, Any] = {
         "model": model,
         "prompt": prompt,
         "duration": duration,
-        "metadata": metadata,
+        "aspect_ratio": ratio,
+        "ratio": ratio,
+        "size": _seedance_a_size_for_channel2(ratio, resolution),
+        "async": True,
     }
+    if uploaded_images:
+        upstream_payload["images"] = uploaded_images
+        upstream_payload["image_urls"] = uploaded_images
+        if len(uploaded_images) == 1:
+            upstream_payload["image_url"] = uploaded_images[0]
+    if uploaded_videos:
+        upstream_payload["video_urls"] = uploaded_videos
+        if len(uploaded_videos) == 1:
+            upstream_payload["video_url"] = uploaded_videos[0]
+    if uploaded_audios:
+        upstream_payload["audio_url"] = uploaded_audios[0]
+    if generate_audio is not None:
+        upstream_payload["generate_audio"] = generate_audio is not False
+    if seed > 0:
+        upstream_payload["seed"] = seed
 
     base_url = _seedance_a_request_base_url(payload, request)
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     def post_generation() -> tuple[requests.Response, str, dict[str, Any]]:
         posted = requests.post(
-            f"{base_url}/v1/video/generations",
+            f"{base_url}/v1/videos",
             headers=headers,
             json=upstream_payload,
             timeout=600,
@@ -12062,6 +12145,7 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             "output_path": "",
             "raw_submit": data,
             "model": model,
+            "route": "channel2",
         }
 
     return {
@@ -12071,9 +12155,9 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         "status": "SUBMITTED",
         "model": model,
         "uploaded": {
-            "images": [item.get("image_url", {}).get("url") for item in non_text_content if item.get("type") == "image_url"],
-            "videos": [item.get("video_url", {}).get("url") for item in non_text_content if item.get("type") == "video_url"],
-            "audios": [item.get("audio_url", {}).get("url") for item in non_text_content if item.get("type") == "audio_url"],
+            "images": uploaded_images,
+            "videos": uploaded_videos,
+            "audios": uploaded_audios,
         },
         "warnings": warnings,
         "raw": data,
@@ -12092,7 +12176,7 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
     base_url = str(task_meta.get("base_url") or _seedance_a_base_url()).rstrip("/")
 
     response = requests.get(
-        f"{base_url}/v1/video/generations/{task_id}",
+        f"{base_url}/v1/videos/{task_id}",
         headers={"Authorization": f"Bearer {api_key}"},
         timeout=60,
     )
@@ -12187,14 +12271,33 @@ def _extract_seedance_a_result_url(data: dict[str, Any], base_url: str) -> str:
         inner.get("content_url"),
         inner.get("media_url"),
         inner.get("video_url"),
+        inner.get("videoUrl"),
         inner.get("url"),
         outer.get("result_url"),
+        outer.get("resultUrl"),
         outer.get("video_url"),
+        outer.get("videoUrl"),
         outer.get("content_url"),
+        outer.get("contentUrl"),
+        outer.get("url"),
         data.get("result_url"),
+        data.get("resultUrl"),
         data.get("video_url"),
+        data.get("videoUrl"),
         data.get("url"),
     ]
+    for list_value in (
+        inner.get("video_urls"),
+        inner.get("videoUrls"),
+        outer.get("video_urls"),
+        outer.get("videoUrls"),
+        data.get("video_urls"),
+        data.get("videoUrls"),
+        outer.get("result_urls"),
+        data.get("result_urls"),
+    ):
+        if isinstance(list_value, list):
+            candidates.extend(list_value[:3])
     for value in candidates:
         text = str(value or "").strip()
         if not text:
@@ -12218,7 +12321,7 @@ def _download_seedance_a_result(
     )
     task_name = _safe_output_name(str(task_meta.get("task_name") or "shot_retake"))
     segment_id = _safe_output_name(str(task_meta.get("segment_id") or "")) if task_meta.get("segment_id") else ""
-    stem = "_".join(part for part in ["seedance_a", task_name, segment_id, task_id[:8]] if part)
+    stem = "_".join(part for part in ["channel2", task_name, segment_id, task_id[:8]] if part)
     output_path = output_dir / f"{stem}.mp4"
     if output_path.exists() and output_path.stat().st_size > 0:
         return str(output_path)
