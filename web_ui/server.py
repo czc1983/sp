@@ -1377,6 +1377,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/generation-package/delete-mask-clip":
+            try:
+                self._send_json(_delete_generation_package_mask_clip(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/assets/characters":
             try:
                 payload = self._read_json()
@@ -14795,6 +14802,123 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     if state:
         restored["statePath"] = str(_generation_package_state_path(root, package_id))
     return restored
+
+
+def _generation_package_resolve_role_path(root: Path, package_id: str, output_role: str, value: Any, *, suffix: str) -> Path:
+    path_text = str(value or "").strip()
+    if not path_text:
+        raise ValueError("generation_package_path_required")
+    role_dir = (_generation_package_work_dir(root, package_id) / output_role).resolve()
+    root_resolved = root.resolve()
+    resolved = Path(path_text).resolve()
+    try:
+        resolved.relative_to(root_resolved)
+        resolved.relative_to(role_dir)
+    except Exception as exc:
+        raise ValueError("generation_package_path_outside_project") from exc
+    if suffix and resolved.suffix.lower() != suffix.lower():
+        raise ValueError(f"generation_package_path_must_be_{suffix.lstrip('.')}")
+    return resolved
+
+
+def _same_resolved_file_path(left: Any, right: Any) -> bool:
+    try:
+        return Path(str(left or "")).resolve() == Path(str(right or "")).resolve()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _generation_package_clean_state_runs(root: Path, package_id: str, output_role: str, runs: Any) -> list[dict[str, Any]]:
+    cleaned: list[dict[str, Any]] = []
+    if not isinstance(runs, list):
+        return cleaned
+    for item in runs:
+        if not isinstance(item, dict):
+            continue
+        manifest_path = _generation_package_file_exists(item.get("manifest_path") or item.get("manifestPath"))
+        if not manifest_path:
+            continue
+        try:
+            manifest = _generation_package_resolve_role_path(root, package_id, output_role, manifest_path, suffix=".json")
+        except ValueError:
+            continue
+        run = _generation_package_run_from_manifest(manifest, _read_generation_package_manifest(manifest), output_role)
+        if run:
+            cleaned.append(run)
+    return _dedupe_generation_package_runs(cleaned)
+
+
+def _delete_generation_package_mask_clip(payload: dict[str, Any]) -> dict[str, Any]:
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
+    clip_path = _generation_package_resolve_role_path(root, package_id, "mask", payload.get("clip_path") or payload.get("path"), suffix=".mp4")
+    manifest_text = str(payload.get("manifest_path") or "").strip()
+    manifest_path = (
+        _generation_package_resolve_role_path(root, package_id, "mask", manifest_text, suffix=".json")
+        if manifest_text
+        else None
+    )
+    if manifest_path is None:
+        role_dir = _generation_package_work_dir(root, package_id) / "mask"
+        for candidate in _generation_package_json_files(role_dir, "mask_*.json"):
+            data = _read_generation_package_manifest(candidate)
+            clips = data.get("clips") if isinstance(data.get("clips"), list) else []
+            if any(_same_resolved_file_path((clip or {}).get("path") or (clip or {}).get("video_path"), clip_path) for clip in clips if isinstance(clip, dict)):
+                manifest_path = candidate.resolve()
+                break
+
+    deleted_paths: list[str] = []
+    if clip_path.exists() and clip_path.is_file():
+        clip_path.unlink()
+        deleted_paths.append(str(clip_path))
+
+    manifest_updated = False
+    manifest_deleted = False
+    remaining_clips: list[dict[str, Any]] = []
+    if manifest_path and manifest_path.exists():
+        data = _read_generation_package_manifest(manifest_path)
+        clips = data.get("clips") if isinstance(data.get("clips"), list) else []
+        remaining_clips = [
+            clip for clip in clips
+            if isinstance(clip, dict)
+            and not _same_resolved_file_path(clip.get("path") or clip.get("video_path"), clip_path)
+        ]
+        if len(remaining_clips) != len(clips):
+            manifest_updated = True
+            if remaining_clips:
+                data["clips"] = remaining_clips
+                data["shot_count"] = len(remaining_clips)
+                data["updated_at"] = time.time()
+                manifest_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            else:
+                manifest_path.unlink()
+                deleted_paths.append(str(manifest_path))
+                manifest_deleted = True
+
+    state = _read_generation_package_state(root, package_id)
+    mask_runs = _generation_package_clean_state_runs(root, package_id, "mask", state.get("maskRuns"))
+    latest = mask_runs[0] if mask_runs else {}
+    status = "mask_done" if latest else ("result_done" if _generation_package_file_exists(state.get("resultPath")) else "idle")
+    next_state = _write_generation_package_state(root, package_id, {
+        "status": status,
+        "whiteMaskPath": latest.get("source_path", ""),
+        "maskSegments": latest.get("clips", []),
+        "maskSplitManifest": latest.get("manifest_path", ""),
+        "maskRuns": mask_runs,
+    })
+    return {
+        "success": True,
+        "package_id": package_id,
+        "clip_path": str(clip_path),
+        "manifest_path": str(manifest_path) if manifest_path else "",
+        "files_deleted": bool(deleted_paths),
+        "deleted_paths": deleted_paths,
+        "manifest_updated": manifest_updated,
+        "manifest_deleted": manifest_deleted,
+        "remaining_clips": len(remaining_clips),
+        "statePath": str(_generation_package_state_path(root, package_id)),
+        "state": next_state,
+    }
 
 
 def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:

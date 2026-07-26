@@ -8232,6 +8232,32 @@
       margin-left: 2px;
     }
 
+    .compose-mask-delete-btn {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      z-index: 3;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .48);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, .64);
+      color: #f2f2f2;
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      opacity: .82;
+    }
+
+    .compose-mask-delete-btn:hover {
+      border-color: #f2f2f2;
+      background: #202020;
+      opacity: 1;
+    }
+
     .compose-mask-preview-popover {
       position: fixed;
       z-index: 1200;
@@ -17374,13 +17400,25 @@
       });
     }
 
-    function composeMaskVideoThumbHtml(path, label = "") {
+    function composeMaskVideoThumbHtml(path, label = "", options = {}) {
       const source = String(path || "").trim();
       if (!source) return `<div class="compose-thumb compose-thumb-empty"></div>`;
+      const deleteButton = options.deletable ? `
+        <button class="compose-mask-delete-btn" type="button"
+          data-delete-white-mask-clip
+          data-package-id="${escapeHtml(options.packageId || "")}"
+          data-mask-id="${escapeHtml(options.maskId || "")}"
+          data-manifest-path="${escapeHtml(options.manifestPath || "")}"
+          data-clip-path="${escapeHtml(source)}"
+          data-shot-id="${escapeHtml(options.shotId || "")}"
+          title="删除这个白膜片段"
+          aria-label="删除这个白膜片段">×</button>
+      ` : "";
       return `
         <div class="compose-thumb compose-mask-video-thumb" data-compose-mask-video-thumb data-video-path="${escapeHtml(source)}" data-video-label="${escapeHtml(label || "白膜片段")}" title="${escapeHtml(label || source)}">
           <video muted playsinline loop preload="metadata" data-compose-mask-video src="${escapeHtml(mediaSrc(source, 0.1))}"></video>
           <span class="compose-mask-play" aria-hidden="true"></span>
+          ${deleteButton}
         </div>
       `;
     }
@@ -17395,9 +17433,10 @@
       const maskId = composeMaskShelfKey(item);
       const label = packId || `白膜包${(entry.packageIndex || 0) + 1}`;
       const selected = maskId && maskId === composeSelectedMaskShelfId;
+      const manifestPath = String(item.manifest_path || "").trim();
       return `
         <article class="compose-shot-card compose-mask-card${selected ? " selected" : ""}" data-compose-mask-card data-mask-id="${escapeHtml(maskId)}" data-pack="${escapeHtml(packId)}" title="${escapeHtml(label + " " + shotId + " - " + path)}">
-          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`)}
+          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { deletable: true, packageId: packId, maskId, manifestPath, shotId })}
           <div class="compose-shot-id"><b>${escapeHtml(shotId)}</b><span>${escapeHtml(label)}</span></div>
         </article>
       `;
@@ -17418,9 +17457,12 @@
         const rot = count <= 1 ? 0 : (index - center) * (spread / Math.max(1, center + 1));
         const delta = Math.round((index - center) * step);
         const x = options.center ? `calc(50% + ${delta}px)` : `${start + index * step}px`;
+        const packId = String(item.package_id || "").trim();
+        const maskId = composeMaskShelfKey(item);
+        const manifestPath = String(item.manifest_path || "").trim();
         return `
           <div class="compose-mini compose-mask-mini" title="${escapeHtml(shotId + " - " + path)}" style="--x:${x}; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
-            ${composeMaskVideoThumbHtml(path, shotId)}
+            ${composeMaskVideoThumbHtml(path, shotId, { deletable: true, packageId: packId, maskId, manifestPath, shotId })}
             <span>${escapeHtml(shotId)}</span>
           </div>
         `;
@@ -17508,6 +17550,169 @@
       }, true);
     }
 
+    function whiteMaskClipDeleteErrorText(error) {
+      const message = String(error?.message || error || "").trim();
+      if (/not_found|404|not found|cannot post/i.test(message)) {
+        return "当前后端还没有白膜片段删除接口，请重启 Web 服务后再试。";
+      }
+      if (/failed to fetch|networkerror|connection|empty response|unexpected/i.test(message)) {
+        return "白膜片段删除接口没有响应，请确认本地 Web 服务正在运行。";
+      }
+      return message || "删除白膜片段失败。";
+    }
+
+    function removeWhiteMaskClipFromShelf(maskId, clipPath) {
+      const id = String(maskId || "").trim();
+      const path = String(clipPath || "").trim();
+      const next = loadWhiteMaskShelf()
+        .map((item) => {
+          if (id && composeMaskShelfKey(item) !== id) return item;
+          const clips = (Array.isArray(item.clips) ? item.clips : [])
+            .filter((clip) => !sameLocalPath(clip?.path || clip?.video_path, path));
+          if (!clips.length) return null;
+          return { ...item, clips, shot_count: clips.length };
+        })
+        .filter(Boolean);
+      saveWhiteMaskShelf(next);
+      if (!next.some((item) => composeMaskShelfKey(item) === composeSelectedMaskShelfId)) {
+        composeSelectedMaskShelfId = composeMaskShelfKey(next[0] || {});
+      }
+      return next;
+    }
+
+    function removeWhiteMaskClipFromRuntime(packageId, maskId, clipPath) {
+      const id = String(packageId || "").trim();
+      if (!id) return;
+      const targetMaskId = String(maskId || "").trim();
+      const path = String(clipPath || "").trim();
+      const runtime = generationRuntimeForPack(id);
+      const filterClips = (clips = []) => (Array.isArray(clips) ? clips : [])
+        .filter((clip) => !sameLocalPath(clip?.path || clip?.video_path, path));
+      const maskRuns = (Array.isArray(runtime.maskRuns) ? runtime.maskRuns : [])
+        .map((run) => {
+          if (targetMaskId && composeMaskShelfKey(run) !== targetMaskId) return run;
+          const clips = filterClips(run?.clips);
+          if (!clips.length) return null;
+          return { ...run, clips, shot_count: clips.length };
+        })
+        .filter(Boolean);
+      const latest = maskRuns[0] || {};
+      patchGenerationPackRuntime(id, {
+        maskRuns,
+        whiteMaskPath: latest.source_path || "",
+        maskSegments: latest.clips || [],
+        maskSplitManifest: latest.manifest_path || "",
+        status: latest.source_path ? "mask_done" : (runtime.resultPath ? "result_done" : "idle"),
+      }, { render: false });
+    }
+
+    function openWhiteMaskClipDeleteDialog(detail = {}) {
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const packageId = String(detail.packageId || "").trim();
+      const maskId = String(detail.maskId || "").trim();
+      const manifestPath = String(detail.manifestPath || "").trim();
+      const clipPath = String(detail.clipPath || "").trim();
+      const shotId = String(detail.shotId || "").trim();
+      const label = [packageId, shotId].filter(Boolean).join(" ") || "白膜片段";
+      if (!projectDir || !clipPath) {
+        assistantSetStatus(["x 删除白膜片段失败", "> 当前项目或片段路径为空。"], "bad");
+        return;
+      }
+      document.querySelector(".white-mask-delete-confirm-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay white-mask-delete-confirm-overlay";
+      overlay.innerHTML = `
+        <div class="modal-box confirm-modal" role="dialog" aria-modal="true" aria-labelledby="whiteMaskDeleteConfirmTitle">
+          <h4 id="whiteMaskDeleteConfirmTitle">删除白膜片段</h4>
+          <p>从当前项目物理删除这个白膜 mp4，并从白膜包里移除。</p>
+          <strong class="confirm-target-name">${escapeHtml(label)}</strong>
+          <p class="confirm-modal-status" data-white-mask-delete-status></p>
+          <div class="asset-editor-actions">
+            <button class="tiny-btn" type="button" data-cancel-white-mask-delete>取消</button>
+            <button class="tiny-btn" type="button" data-confirm-white-mask-delete>删除</button>
+          </div>
+        </div>
+      `;
+      let submitting = false;
+      const status = overlay.querySelector("[data-white-mask-delete-status]");
+      const cancelBtn = overlay.querySelector("[data-cancel-white-mask-delete]");
+      const confirmBtn = overlay.querySelector("[data-confirm-white-mask-delete]");
+      const close = () => {
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const setBusy = (running) => {
+        submitting = Boolean(running);
+        if (cancelBtn) cancelBtn.disabled = submitting;
+        if (confirmBtn) {
+          confirmBtn.disabled = submitting;
+          confirmBtn.textContent = submitting ? "删除中" : "删除";
+        }
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape" && !submitting) close();
+      };
+      const runDelete = async () => {
+        if (submitting) return;
+        if (status) {
+          status.textContent = "正在删除白膜片段...";
+          status.classList.remove("bad");
+        }
+        setBusy(true);
+        try {
+          const response = await fetch("/api/generation-package/delete-mask-clip", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_dir: projectDir,
+              package_id: packageId,
+              manifest_path: manifestPath,
+              clip_path: clipPath,
+              shot_id: shotId,
+            }),
+          });
+          const raw = await response.text();
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (_) {
+            data = {};
+          }
+          if (!response.ok || data.error) {
+            throw new Error(data.error || raw || `HTTP ${response.status}`);
+          }
+          closeComposeMaskVideoPreview();
+          removeWhiteMaskClipFromShelf(maskId, clipPath);
+          removeWhiteMaskClipFromRuntime(packageId, maskId, clipPath);
+          renderComposePage();
+          const lines = [
+            "> 已删除白膜片段",
+            `> ${label}`,
+            data.files_deleted ? "> mp4 文件已物理删除" : "> 没有发现需要删除的 mp4 文件，已清理白膜包记录",
+          ];
+          assistantSetStatus(lines, "good");
+          addLogs(lines);
+          close();
+        } catch (error) {
+          const detailText = whiteMaskClipDeleteErrorText(error);
+          if (status) {
+            status.textContent = detailText;
+            status.classList.add("bad");
+          }
+          assistantSetStatus(["x 删除白膜片段失败", "> " + detailText], "bad");
+          setBusy(false);
+        }
+      };
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay && !submitting) close();
+      });
+      cancelBtn?.addEventListener("click", close);
+      confirmBtn?.addEventListener("click", runDelete);
+      document.addEventListener("keydown", onKeyDown);
+      document.body.appendChild(overlay);
+      cancelBtn?.focus();
+    }
+
     function bindComposeMaskVideoPlayback(root = document) {
       bindComposeMaskPreviewChrome();
       root.querySelectorAll("[data-compose-mask-video-thumb]").forEach((thumb) => {
@@ -17522,6 +17727,18 @@
           event.preventDefault();
           event.stopPropagation();
           openComposeMaskVideoPreview(thumb.dataset.videoPath || video.currentSrc || video.src, thumb.dataset.videoLabel || thumb.title || "白膜片段预览");
+        });
+        thumb.querySelector("[data-delete-white-mask-clip]")?.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const button = event.currentTarget;
+          openWhiteMaskClipDeleteDialog({
+            packageId: button.dataset.packageId,
+            maskId: button.dataset.maskId,
+            manifestPath: button.dataset.manifestPath,
+            clipPath: button.dataset.clipPath,
+            shotId: button.dataset.shotId,
+          });
         });
         video.addEventListener("play", syncPlayingState);
         video.addEventListener("pause", syncPlayingState);

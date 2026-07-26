@@ -10,6 +10,7 @@ from unittest.mock import patch
 from web_ui.server import (
     SEEDANCE_A_TASKS,
     SEEDANCE_A_TASKS_LOCK,
+    _delete_generation_package_mask_clip,
     _delete_storyboard_mode2_asset,
     _mode2_scail2_route_check,
     _restore_generation_package_state,
@@ -39,8 +40,10 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn('if parsed.path == "/api/generation-package/prepare"', server)
         self.assertIn('if parsed.path == "/api/generation-package/restore"', server)
         self.assertIn('if parsed.path == "/api/generation-package/split-output"', server)
+        self.assertIn('if parsed.path == "/api/generation-package/delete-mask-clip"', server)
         self.assertIn("def _prepare_generation_package_video", server)
         self.assertIn("def _restore_generation_package_state", server)
+        self.assertIn("def _delete_generation_package_mask_clip", server)
         self.assertIn("generation_state.json", server)
         self.assertIn("maskRuns", server)
         self.assertIn("def _split_generation_package_output", server)
@@ -112,6 +115,13 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn('document.addEventListener("pointerdown"', html)
         self.assertIn('target.closest("[data-compose-mask-video-thumb]")', html)
         self.assertIn("popover.contains(target)", html)
+        self.assertIn("function openWhiteMaskClipDeleteDialog", html)
+        self.assertIn("function removeWhiteMaskClipFromShelf", html)
+        self.assertIn("function removeWhiteMaskClipFromRuntime", html)
+        self.assertIn("data-delete-white-mask-clip", html)
+        self.assertIn("white-mask-delete-confirm-overlay", html)
+        self.assertIn("/api/generation-package/delete-mask-clip", html)
+        self.assertIn("从当前项目物理删除这个白膜 mp4", html)
         self.assertIn("function composeSelectedWhiteMaskShelfItem", html)
         self.assertIn("composeSelectedMaskShelfId", html)
         self.assertIn("renderComposeMaskStore()", html)
@@ -470,6 +480,68 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertEqual(len(restored["maskRuns"]), 2)
             self.assertEqual([run["id"] for run in restored["maskRuns"]], ["new", "old"])
             self.assertEqual([clip["shot_id"] for clip in restored["maskRuns"][0]["clips"]], ["S001", "S002"])
+
+    def test_generation_package_delete_mask_clip_removes_file_manifest_and_state(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            mask_dir = root / "04_AI输出成片" / "generation_packages" / "P001" / "mask"
+            mask_dir.mkdir(parents=True)
+            source = root / "04_AI输出成片" / "channel2_api_white_mask_P001.mp4"
+            source.parent.mkdir(parents=True, exist_ok=True)
+            clip_a = mask_dir / "mask_01_S001_run.mp4"
+            clip_b = mask_dir / "mask_02_S002_run.mp4"
+            for path in (source, clip_a, clip_b):
+                path.write_bytes(b"video")
+            clips = [
+                {"shot_id": "S001", "path": str(clip_a), "duration": 1.0},
+                {"shot_id": "S002", "path": str(clip_b), "duration": 1.0},
+            ]
+            manifest = mask_dir / "mask_P001_run.json"
+            manifest.write_text(json.dumps({
+                "package_id": "P001",
+                "run_id": "run",
+                "source_path": str(source),
+                "output_role": "mask",
+                "clips": clips,
+                "segments": [],
+                "shot_count": 2,
+                "created_at": 20.0,
+            }), encoding="utf-8")
+            state_path = root / "04_AI输出成片" / "generation_packages" / "P001" / "generation_state.json"
+            state_path.write_text(json.dumps({
+                "package_id": "P001",
+                "status": "mask_done",
+                "whiteMaskPath": str(source),
+                "maskSegments": clips,
+                "maskSplitManifest": str(manifest),
+                "maskRuns": [{
+                    "id": "run",
+                    "role": "mask",
+                    "source_path": str(source),
+                    "manifest_path": str(manifest),
+                    "clips": clips,
+                    "shot_count": 2,
+                    "created_at": 20.0,
+                }],
+            }), encoding="utf-8")
+
+            result = _delete_generation_package_mask_clip({
+                "project_dir": str(root),
+                "package_id": "P001",
+                "manifest_path": str(manifest),
+                "clip_path": str(clip_a),
+                "shot_id": "S001",
+            })
+
+            self.assertTrue(result["success"])
+            self.assertTrue(result["files_deleted"])
+            self.assertFalse(clip_a.exists())
+            self.assertTrue(clip_b.exists())
+            manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual([clip["shot_id"] for clip in manifest_data["clips"]], ["S002"])
+            state_data = json.loads(state_path.read_text(encoding="utf-8"))
+            self.assertEqual(state_data["status"], "mask_done")
+            self.assertEqual([clip["shot_id"] for clip in state_data["maskRuns"][0]["clips"]], ["S002"])
 
     def test_asset_delete_uses_in_app_confirm_not_browser_confirm(self) -> None:
         html = (ROOT / "web_ui" / "story_generate_dashboard.html").read_text(encoding="utf-8")
