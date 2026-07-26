@@ -8258,6 +8258,32 @@
       opacity: 1;
     }
 
+    .compose-mask-action-btn {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      z-index: 3;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .48);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, .64);
+      color: #f2f2f2;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      opacity: .82;
+    }
+
+    .compose-mask-action-btn:hover {
+      border-color: #f2f2f2;
+      background: #202020;
+      opacity: 1;
+    }
+
     .compose-mask-preview-popover {
       position: fixed;
       z-index: 1200;
@@ -17358,6 +17384,15 @@
       return String(item?.id || item?.manifest_path || item?.source_path || "").trim();
     }
 
+    function composeManualWhiteMaskHandId() {
+      const packId = String(composePlan.selectedPackId || "default").trim() || "default";
+      return `manual-white-mask-hand:${packId}`;
+    }
+
+    function composeIsManualWhiteMaskItem(item = {}) {
+      return Boolean(item?.manual) || composeMaskShelfKey(item).startsWith("manual-white-mask-hand:");
+    }
+
     function composeSelectedWhiteMaskShelfItem(items = composeWhiteMaskShelfItems()) {
       const rows = Array.isArray(items) ? items : [];
       if (!rows.length) {
@@ -17390,6 +17425,7 @@
 
     function composeWhiteMaskClipCards(items = []) {
       return (Array.isArray(items) ? items : []).flatMap((item, packageIndex) => {
+        if (composeIsManualWhiteMaskItem(item)) return [];
         const clips = Array.isArray(item.clips) ? item.clips : [];
         return clips.map((clip, clipIndex) => ({
           item,
@@ -17403,7 +17439,15 @@
     function composeMaskVideoThumbHtml(path, label = "", options = {}) {
       const source = String(path || "").trim();
       if (!source) return `<div class="compose-thumb compose-thumb-empty"></div>`;
-      const deleteButton = options.deletable ? `
+      const deleteButton = options.returnAsClose ? `
+        <button class="compose-mask-delete-btn compose-mask-return-btn" type="button"
+          data-return-white-mask-clip
+          data-mask-id="${escapeHtml(options.maskId || "")}"
+          data-clip-path="${escapeHtml(source)}"
+          data-shot-id="${escapeHtml(options.shotId || "")}"
+          title="放回白膜池"
+          aria-label="放回白膜池">×</button>
+      ` : (options.deletable ? `
         <button class="compose-mask-delete-btn" type="button"
           data-delete-white-mask-clip
           data-package-id="${escapeHtml(options.packageId || "")}"
@@ -17413,11 +17457,32 @@
           data-shot-id="${escapeHtml(options.shotId || "")}"
           title="删除这个白膜片段"
           aria-label="删除这个白膜片段">×</button>
-      ` : "";
+      ` : "");
+      const actionType = String(options.action || "").trim();
+      const actionButton = actionType === "grab" ? `
+        <button class="compose-mask-action-btn" type="button"
+          data-grab-white-mask-clip
+          data-package-id="${escapeHtml(options.packageId || "")}"
+          data-mask-id="${escapeHtml(options.maskId || "")}"
+          data-manifest-path="${escapeHtml(options.manifestPath || "")}"
+          data-clip-path="${escapeHtml(source)}"
+          data-shot-id="${escapeHtml(options.shotId || "")}"
+          title="抓到白膜手牌"
+          aria-label="抓到白膜手牌">+</button>
+      ` : (actionType === "return" && !options.returnAsClose ? `
+        <button class="compose-mask-action-btn" type="button"
+          data-return-white-mask-clip
+          data-mask-id="${escapeHtml(options.maskId || "")}"
+          data-clip-path="${escapeHtml(source)}"
+          data-shot-id="${escapeHtml(options.shotId || "")}"
+          title="放回白膜池"
+          aria-label="放回白膜池">↩</button>
+      ` : "");
       return `
         <div class="compose-thumb compose-mask-video-thumb" data-compose-mask-video-thumb data-video-path="${escapeHtml(source)}" data-video-label="${escapeHtml(label || "白膜片段")}" title="${escapeHtml(label || source)}">
           <video muted playsinline loop preload="metadata" data-compose-mask-video src="${escapeHtml(mediaSrc(source, 0.1))}"></video>
           <span class="compose-mask-play" aria-hidden="true"></span>
+          ${actionButton}
           ${deleteButton}
         </div>
       `;
@@ -17436,7 +17501,7 @@
       const manifestPath = String(item.manifest_path || "").trim();
       return `
         <article class="compose-shot-card compose-mask-card${selected ? " selected" : ""}" data-compose-mask-card data-mask-id="${escapeHtml(maskId)}" data-pack="${escapeHtml(packId)}" title="${escapeHtml(label + " " + shotId + " - " + path)}">
-          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { deletable: true, packageId: packId, maskId, manifestPath, shotId })}
+          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { action: "grab", deletable: true, packageId: packId, maskId, manifestPath, shotId })}
           <div class="compose-shot-id"><b>${escapeHtml(shotId)}</b><span>${escapeHtml(label)}</span></div>
         </article>
       `;
@@ -17460,9 +17525,11 @@
         const packId = String(item.package_id || "").trim();
         const maskId = composeMaskShelfKey(item);
         const manifestPath = String(item.manifest_path || "").trim();
+        const returnAttrs = ` data-return-white-mask-card data-mask-id="${escapeHtml(maskId)}" data-clip-path="${escapeHtml(path)}" data-shot-id="${escapeHtml(shotId)}"`;
+        const thumbOptions = { returnAsClose: true, packageId: packId, maskId, manifestPath, shotId };
         return `
-          <div class="compose-mini compose-mask-mini" title="${escapeHtml(shotId + " - " + path)}" style="--x:${x}; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
-            ${composeMaskVideoThumbHtml(path, shotId, { deletable: true, packageId: packId, maskId, manifestPath, shotId })}
+          <div class="compose-mini compose-mask-mini is-returnable"${returnAttrs} title="${escapeHtml(shotId + " - " + path)}" style="--x:${x}; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
+            ${composeMaskVideoThumbHtml(path, shotId, thumbOptions)}
             <span>${escapeHtml(shotId)}</span>
           </div>
         `;
@@ -17606,6 +17673,98 @@
       }, { render: false });
     }
 
+    function findWhiteMaskClipInItems(items = [], maskId = "", clipPath = "") {
+      const sourceId = String(maskId || "").trim();
+      const path = String(clipPath || "").trim();
+      for (const item of (Array.isArray(items) ? items : [])) {
+        if (composeIsManualWhiteMaskItem(item)) continue;
+        if (sourceId && composeMaskShelfKey(item) !== sourceId) continue;
+        const clip = (Array.isArray(item.clips) ? item.clips : [])
+          .find((entry) => sameLocalPath(entry?.path || entry?.video_path, path));
+        if (clip) return { item, clip };
+      }
+      return null;
+    }
+
+    function addWhiteMaskClipToManualHand(detail = {}) {
+      const sourceMaskId = String(detail.maskId || "").trim();
+      const clipPath = String(detail.clipPath || "").trim();
+      if (!clipPath) return;
+      const items = composeWhiteMaskShelfItems();
+      const found = findWhiteMaskClipInItems(items, sourceMaskId, clipPath);
+      if (!found) {
+        assistantSetStatus(["x 抓白膜卡失败", "> 没找到这张白膜卡。"], "bad");
+        return;
+      }
+      const manualId = composeManualWhiteMaskHandId();
+      const manualItem = items.find((item) => composeMaskShelfKey(item) === manualId) || {
+        id: manualId,
+        manual: true,
+        package_id: String(composePlan.selectedPackId || found.item.package_id || "").trim(),
+        package_label: "手动白膜包",
+        source_path: `manual:${manualId}`,
+        clips: [],
+        shot_ids: [],
+        created_at: Date.now() / 1000,
+      };
+      if ((manualItem.clips || []).some((clip) => sameLocalPath(clip?.path || clip?.video_path, clipPath))) {
+        composeSelectedMaskShelfId = manualId;
+        renderComposePage();
+        assistantSetStatus(["> 这张白膜卡已经在手牌里。"], "warn");
+        return;
+      }
+      const sourceClip = {
+        ...found.clip,
+        path: String(found.clip.path || found.clip.video_path || clipPath),
+        source_mask_id: composeMaskShelfKey(found.item),
+        source_package_id: String(found.item.package_id || ""),
+        source_manifest_path: String(found.item.manifest_path || ""),
+      };
+      const nextManual = {
+        ...manualItem,
+        manual: true,
+        package_label: "手动白膜包",
+        clips: [...(Array.isArray(manualItem.clips) ? manualItem.clips : []), sourceClip],
+      };
+      nextManual.shot_count = nextManual.clips.length;
+      nextManual.shot_ids = nextManual.clips.map((clip) => String(clip?.shot_id || "").trim()).filter(Boolean);
+      const withoutManual = items.filter((item) => composeMaskShelfKey(item) !== manualId);
+      saveWhiteMaskShelf([nextManual, ...withoutManual]);
+      composeSelectedMaskShelfId = manualId;
+      renderComposePage();
+      assistantSetStatus(["> 已抓到白膜手牌", `> ${sourceClip.shot_id || "白膜片段"}`], "good");
+    }
+
+    function returnWhiteMaskClipToTable(detail = {}) {
+      const maskId = String(detail.maskId || composeSelectedMaskShelfId || "").trim();
+      const clipPath = String(detail.clipPath || "").trim();
+      if (!maskId || !clipPath) return;
+      const items = composeWhiteMaskShelfItems();
+      const target = items.find((item) => composeMaskShelfKey(item) === maskId);
+      if (!target) {
+        assistantSetStatus(["x 放回白膜池失败", "> 没找到这张白膜卡。"], "bad");
+        return;
+      }
+      const clips = (Array.isArray(target.clips) ? target.clips : [])
+        .filter((clip) => !sameLocalPath(clip?.path || clip?.video_path, clipPath));
+      const next = items
+        .map((item) => {
+          if (composeMaskShelfKey(item) !== maskId) return item;
+          if (!clips.length && composeIsManualWhiteMaskItem(item)) return null;
+          return {
+            ...item,
+            clips,
+            shot_count: clips.length,
+            shot_ids: clips.map((clip) => String(clip?.shot_id || "").trim()).filter(Boolean),
+          };
+        })
+        .filter(Boolean);
+      saveWhiteMaskShelf(next);
+      if (!clips.length) composeSelectedMaskShelfId = composeMaskShelfKey(next.find((item) => !composeIsManualWhiteMaskItem(item)) || next[0] || {});
+      renderComposePage();
+      assistantSetStatus(["> 已放回白膜池", `> ${detail.shotId || "白膜片段"}`], "good");
+    }
+
     function openWhiteMaskClipDeleteDialog(detail = {}) {
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const packageId = String(detail.packageId || "").trim();
@@ -17740,9 +17899,43 @@
             shotId: button.dataset.shotId,
           });
         });
+        thumb.querySelector("[data-grab-white-mask-clip]")?.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const button = event.currentTarget;
+          addWhiteMaskClipToManualHand({
+            maskId: button.dataset.maskId,
+            clipPath: button.dataset.clipPath,
+            shotId: button.dataset.shotId,
+          });
+        });
+        thumb.querySelector("[data-return-white-mask-clip]")?.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const button = event.currentTarget;
+          returnWhiteMaskClipToTable({
+            maskId: button.dataset.maskId,
+            clipPath: button.dataset.clipPath,
+            shotId: button.dataset.shotId,
+          });
+        });
         video.addEventListener("play", syncPlayingState);
         video.addEventListener("pause", syncPlayingState);
         video.addEventListener("ended", syncPlayingState);
+      });
+      root.querySelectorAll("[data-return-white-mask-card]").forEach((card) => {
+        if (card.dataset.returnBound === "1") return;
+        card.dataset.returnBound = "1";
+        card.addEventListener("click", (event) => {
+          if (event.target.closest("[data-compose-mask-video-thumb]")) return;
+          event.preventDefault();
+          event.stopPropagation();
+          returnWhiteMaskClipToTable({
+            maskId: card.dataset.maskId,
+            clipPath: card.dataset.clipPath,
+            shotId: card.dataset.shotId,
+          });
+        });
       });
     }
 
@@ -18943,6 +19136,7 @@
         clips,
         shot_count: Number(item?.shot_count || clips.length || 0),
         created_at: Number(item?.created_at || Date.now() / 1000),
+        manual: Boolean(item?.manual),
       };
     }
 
