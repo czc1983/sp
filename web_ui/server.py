@@ -681,7 +681,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "error": "legacy_mode1_removed",
-                    "message": "Mode1/SAM3/white-mask/color-mask generation has been removed from the fixed Mode2 workflow.",
+                    "message": "Mode1/SAM3/local white-mask/color-mask generation has been removed from the fixed Mode2 workflow.",
                 },
                 status=410,
             )
@@ -1352,6 +1352,27 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 )
                 thread.start()
                 self._send_json({"job_id": job_id})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/generation-package/prepare":
+            try:
+                self._send_json(_prepare_generation_package_video(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/generation-package/restore":
+            try:
+                self._send_json(_restore_generation_package_state(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/generation-package/split-output":
+            try:
+                self._send_json(_split_generation_package_output(self._read_json()))
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
             return
@@ -2525,6 +2546,11 @@ def _mode2_asset_layers_summary(assets: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _mode2_mask_candidate_summary(root: Path, data: dict[str, Any]) -> dict[str, Any]:
     annotations = [item for item in (data.get("identity_annotations") or []) if isinstance(item, dict)]
+    active_asset_ids = {
+        str(item.get("id") or "").strip()
+        for item in (data.get("assets") or [])
+        if isinstance(item, dict) and str(item.get("id") or "").strip()
+    }
     selected_ids = {
         str(item.get("mask_candidate_id") or "").strip()
         for item in annotations
@@ -2556,6 +2582,9 @@ def _mode2_mask_candidate_summary(root: Path, data: dict[str, Any]) -> dict[str,
         if not isinstance(item, dict):
             continue
         candidate_id = str(item.get("candidate_id") or result_path.parent.name).strip()
+        asset_id = str(item.get("asset_id") or "").strip()
+        if asset_id and active_asset_ids and asset_id not in active_asset_ids:
+            continue
         objects = [obj for obj in (item.get("objects") or []) if isinstance(obj, dict)]
         selected_objects = [
             obj for obj in objects
@@ -2569,7 +2598,6 @@ def _mode2_mask_candidate_summary(root: Path, data: dict[str, Any]) -> dict[str,
             summary["selected_candidate_count"] += 1
         if ready:
             summary["ready_count"] += 1
-        asset_id = str(item.get("asset_id") or "").strip()
         if asset_id:
             per_asset = summary["by_asset"].setdefault(asset_id, {
                 "candidate_count": 0,
@@ -7736,46 +7764,117 @@ def _delete_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
     if target is None:
         raise ValueError(f"asset_not_found: {asset_id}")
 
-    def without_asset_id(value: Any) -> list[str]:
-        return [item for item in _string_list(value) if item != asset_id]
+    id_list_keys = {
+        "asset_ids",
+        "role_asset_ids",
+        "scene_asset_ids",
+        "prop_asset_ids",
+        "deduplicated_asset_ids",
+        "related_asset_ids",
+        "split_child_asset_ids",
+        "superseded_by_asset_ids",
+    }
 
-    remaining_assets = [
-        item for item in assets
-        if str(item.get("id") or "") != asset_id
-    ]
-    for asset in remaining_assets:
-        for key in (
-            "deduplicated_asset_ids",
-            "related_asset_ids",
-            "split_child_asset_ids",
-            "superseded_by_asset_ids",
-        ):
-            if key in asset:
-                asset[key] = without_asset_id(asset.get(key))
+    def purge_asset_refs(value: Any, *, parent_key: str = "") -> Any:
+        if isinstance(value, dict):
+            current_id = str(value.get("id") or value.get("asset_id") or "")
+            if current_id == asset_id:
+                return None
+            cleaned: dict[str, Any] = {}
+            for key, item in value.items():
+                if key == "legacy_reference_segments":
+                    continue
+                if key in id_list_keys:
+                    cleaned[key] = [ref for ref in _string_list(item) if ref != asset_id]
+                    continue
+                next_value = purge_asset_refs(item, parent_key=key)
+                if next_value is None and isinstance(item, (dict, list)):
+                    continue
+                cleaned[key] = next_value
+            return cleaned
+        if isinstance(value, list):
+            cleaned_items: list[Any] = []
+            seen_ids: set[str] = set()
+            for item in value:
+                next_value = purge_asset_refs(item, parent_key=parent_key)
+                if next_value is None:
+                    continue
+                if parent_key in {"assets", "asset_refs"} and isinstance(next_value, dict):
+                    next_id = str(next_value.get("id") or next_value.get("asset_id") or "")
+                    if next_id and next_id in seen_ids:
+                        continue
+                    if next_id:
+                        seen_ids.add(next_id)
+                cleaned_items.append(next_value)
+            return cleaned_items
+        if isinstance(value, str) and value == asset_id:
+            return None
+        return value
 
+    data = purge_asset_refs(data) or {}
+    data.pop("legacy_reference_segments", None)
+    remaining_assets = [item for item in (data.get("assets") or []) if isinstance(item, dict)]
     shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
-    for shot in shots:
-        for key in ("asset_ids", "role_asset_ids", "scene_asset_ids", "prop_asset_ids"):
-            if key in shot:
-                shot[key] = without_asset_id(shot.get(key))
-
-    aliases = data.get("scene_asset_aliases")
-    if isinstance(aliases, dict):
-        data["scene_asset_aliases"] = {
-            str(key): str(value)
-            for key, value in aliases.items()
-            if str(key) != asset_id and str(value) != asset_id
-        }
-
     data["assets"] = remaining_assets
     data["shots"] = shots
+
+    deleted_paths: list[str] = []
+
+    def collect_file_refs(item: Any) -> list[str]:
+        refs: list[str] = []
+        if isinstance(item, str):
+            refs.append(item)
+        elif isinstance(item, list):
+            for entry in item:
+                refs.extend(collect_file_refs(entry))
+        return refs
+
+    file_refs: list[str] = []
+    for key in (
+        "target_image",
+        "seedance_reference_image",
+        "representative_image",
+        "refined_source_image",
+        "source_image",
+        "source_image_path",
+        "reference_images",
+        "extra_ref_images",
+        "subject_extra_ref_images",
+        "source_crop_paths",
+    ):
+        file_refs.extend(collect_file_refs(target.get(key)))
+    file_candidates = [Path(path) for path in file_refs if str(path or "").strip()]
+    file_candidates.extend([
+        root / "assets" / "manual_assets" / asset_id,
+        root / "assets" / "role_tracks" / asset_id,
+    ])
+
+    root_resolved = root.resolve()
+    for candidate in file_candidates:
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root_resolved)
+        except Exception:
+            continue
+        if not resolved.exists():
+            continue
+        try:
+            if resolved.is_dir():
+                shutil.rmtree(resolved)
+            else:
+                resolved.unlink()
+            deleted_paths.append(str(resolved))
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("Mode2 asset file delete skipped for %s: %s", resolved, exc)
+
     deleted_at = time.time()
     data.setdefault("asset_manual_history", [])
     if isinstance(data["asset_manual_history"], list):
         data["asset_manual_history"].append({
-            "asset_id": asset_id,
             "action": "delete_current_project_asset",
-            "files_deleted": False,
+            "asset_name": str(target.get("name") or target.get("tag") or asset_id),
+            "files_deleted": bool(deleted_paths),
+            "deleted_paths": deleted_paths,
             "deleted_at": deleted_at,
         })
         data["asset_manual_history"] = data["asset_manual_history"][-200:]
@@ -7789,7 +7888,8 @@ def _delete_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
         logging.warning("Mode2 asset audit skipped after current-project asset delete: %s", exc)
     result = _load_mode2_storyboard_result(root, store_path)
     result["deleted_asset_id"] = asset_id
-    result["files_deleted"] = False
+    result["files_deleted"] = bool(deleted_paths)
+    result["deleted_paths"] = deleted_paths
     return result
 
 
@@ -12110,6 +12210,42 @@ def _seedance_a_output_dir(project_dir: str, source_video_path: str) -> Path:
     return output_dir
 
 
+def _seedance_a_debug_dir(project_dir: str, source_video_path: str, package_id: str = "") -> Path:
+    output_dir = _seedance_a_output_dir(project_dir, source_video_path)
+    safe_package = _safe_output_name(str(package_id or ""))
+    if safe_package:
+        debug_dir = output_dir / "generation_packages" / safe_package / "debug"
+    else:
+        debug_dir = output_dir / "seedance_a_debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    return debug_dir
+
+
+def _seedance_a_redacted(value: Any) -> Any:
+    if isinstance(value, dict):
+        redacted: dict[str, Any] = {}
+        for key, item in value.items():
+            lower = str(key).lower()
+            if any(token in lower for token in ("api_key", "apikey", "authorization", "bearer", "token", "secret")):
+                redacted[str(key)] = "***"
+            else:
+                redacted[str(key)] = _seedance_a_redacted(item)
+        return redacted
+    if isinstance(value, list):
+        return [_seedance_a_redacted(item) for item in value]
+    return value
+
+
+def _seedance_a_write_debug_json(debug_dir: Path, prefix: str, data: dict[str, Any]) -> str:
+    safe_prefix = _safe_output_name(prefix or "seedance")
+    path = debug_dir / f"{safe_prefix}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+    path.write_text(
+        json.dumps(_seedance_a_redacted(data), ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
 def _normalize_seedance_a_model(model: str) -> str:
     raw = str(model or "").strip()
     lower = raw.lower()
@@ -12228,9 +12364,19 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("缺少 Seedance 通道A API Key，请在 Mode2 04 视频生成填写通道A API Key，或设置本项目环境变量 SEEDANCE_A_API_KEY。")
 
     warnings: list[str] = []
-    duration = max(1, int(float(request.get("seconds") or request.get("duration") or 5)))
-    ratio = str(request.get("ratio") or request.get("size") or "9:16").strip() or "9:16"
-    resolution = str(request.get("resolution") or ("720p" if "720p" in model else "480p")).strip() or "480p"
+    duration = max(1, int(float(request.get("duration") or request.get("seconds") or 5)))
+    raw_size = str(request.get("size") or "").strip()
+    ratio = str(request.get("ratio") or request.get("aspect_ratio") or "").strip()
+    if not ratio and re.fullmatch(r"\d+:\d+", raw_size):
+        ratio = raw_size
+    ratio = ratio or "9:16"
+    resolution = str(request.get("resolution") or "").strip()
+    if not resolution and re.fullmatch(r"\d+x\d+", raw_size):
+        resolution = raw_size
+    if not resolution:
+        resolution = "1280x720" if ratio == "16:9" else "720x1280"
+    if model == "sd-2.0-r3" and re.fullmatch(r"\d+p", resolution, flags=re.IGNORECASE):
+        resolution = "1280x720" if ratio == "16:9" else "720x1280"
     try:
         seed = int(request.get("seed") or 0)
     except (TypeError, ValueError):
@@ -12241,9 +12387,48 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
     web_search = request.get("web_search", request.get("webSearch", False))
     first_frame = str(request.get("first_frame") or request.get("firstFrame") or "").strip()
     last_frame = str(request.get("last_frame") or request.get("lastFrame") or "").strip()
-    ref_images = _string_list(request.get("images") or request.get("refImages"))
-    videos = _string_list(request.get("videos"))
-    audios = _string_list(request.get("audios"))
+    def collect_refs(*values: Any) -> list[str]:
+        refs: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            for item in _string_list(value):
+                key = item.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                refs.append(item)
+        return refs
+
+    ref_images = collect_refs(
+        request.get("images"),
+        request.get("refImages"),
+        request.get("image_urls"),
+        request.get("imageUrls"),
+        request.get("reference_images"),
+        request.get("referenceImages"),
+        request.get("reference_image_urls"),
+        request.get("referenceImageUrls"),
+    )
+    videos = collect_refs(
+        request.get("videos"),
+        request.get("video_urls"),
+        request.get("videoUrls"),
+        request.get("video_url"),
+        request.get("videoUrl"),
+        request.get("referenceVideos"),
+        request.get("reference_videos"),
+        request.get("referenceVideoUrls"),
+        request.get("reference_video_urls"),
+    )
+    audios = collect_refs(
+        request.get("audios"),
+        request.get("audio_urls"),
+        request.get("audioUrls"),
+        request.get("audio_url"),
+        request.get("audioUrl"),
+        request.get("referenceAudios"),
+        request.get("reference_audios"),
+    )
     project_dir = str(payload.get("project_dir") or payload.get("projectDir") or "").strip()
     image_deny_keys = _mode2_seedance_generation_image_deny_keys(project_dir)
     first_candidates = _mode2_filter_seedance_generation_images(
@@ -12301,37 +12486,74 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
 
     duration = min(15, max(6, duration))
     non_text_content: list[dict[str, Any]] = []
+    for url in uploaded_images:
+        non_text_content.append({"type": "image_url", "image_url": {"url": url}, "role": "reference_image"})
+    for url in uploaded_videos:
+        non_text_content.append({"type": "video_url", "video_url": {"url": url}, "role": "reference_video"})
+    for url in uploaded_audios:
+        non_text_content.append({"type": "audio_url", "audio_url": {"url": url}, "role": "reference_audio"})
+    metadata: dict[str, Any] = {
+        "content": non_text_content,
+        "ratio": ratio,
+        "resolution": resolution,
+        "generate_audio": generate_audio is not False,
+        "return_last_frame": return_last_frame is True,
+        "watermark": watermark is True,
+    }
+    if web_search is True:
+        metadata["tools"] = [{"type": "web_search"}]
+    if seed > 0:
+        metadata["seed"] = seed
+
+    use_video_v2_payload = logic_variant == "video-v2" or model == "sd-2.0-r3"
     upstream_payload: dict[str, Any] = {
         "model": model,
         "prompt": prompt,
         "duration": duration,
         "aspect_ratio": ratio,
-        "ratio": ratio,
         "size": _seedance_a_size_for_channel2(ratio, resolution),
-        "async": True,
     }
+    if not use_video_v2_payload:
+        upstream_payload["ratio"] = ratio
+        upstream_payload["async"] = True
+        upstream_payload["metadata"] = metadata
     if uploaded_images:
         upstream_payload["images"] = uploaded_images
         upstream_payload["image_urls"] = uploaded_images
-        if len(uploaded_images) == 1:
+        if not use_video_v2_payload and len(uploaded_images) == 1:
             upstream_payload["image_url"] = uploaded_images[0]
     if uploaded_videos:
         upstream_payload["video_urls"] = uploaded_videos
-        if len(uploaded_videos) == 1:
+        if not use_video_v2_payload:
+            upstream_payload["videos"] = uploaded_videos
+            upstream_payload["referenceVideos"] = uploaded_videos
+            upstream_payload["reference_videos"] = uploaded_videos
+            upstream_payload["video_reference"] = [{"url": url} for url in uploaded_videos]
+        if not use_video_v2_payload and len(uploaded_videos) == 1:
             upstream_payload["video_url"] = uploaded_videos[0]
-    if uploaded_audios:
+    if uploaded_audios and not use_video_v2_payload:
         upstream_payload["audio_url"] = uploaded_audios[0]
-    if generate_audio is not None:
+        upstream_payload["audio_urls"] = uploaded_audios
+        upstream_payload["referenceAudios"] = uploaded_audios
+        upstream_payload["reference_audios"] = uploaded_audios
+        upstream_payload["audio_reference"] = [{"url": url} for url in uploaded_audios]
+    if generate_audio is not None and not use_video_v2_payload:
         upstream_payload["generate_audio"] = generate_audio is not False
-    if seed > 0:
+    if seed > 0 and not use_video_v2_payload:
         upstream_payload["seed"] = seed
 
     base_url = _seedance_a_request_base_url(payload, request)
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    source_video_path = str(payload.get("source_video_path") or payload.get("video_path") or "").strip()
+    package_id = str(payload.get("package_id") or payload.get("packageId") or "").strip()
+    task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
+    debug_dir = _seedance_a_debug_dir(project_dir, source_video_path, package_id)
+    submit_path = "/v1/videos"
+    debug_prefix = _safe_output_name("_".join(part for part in [task_name, "submit"] if part))
 
     def post_generation() -> tuple[requests.Response, str, dict[str, Any]]:
         posted = requests.post(
-            f"{base_url}/v1/videos",
+            f"{base_url}{submit_path}",
             headers=headers,
             json=upstream_payload,
             timeout=600,
@@ -12343,6 +12565,27 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             posted_data = {"_raw": posted_text}
         return posted, posted_text, posted_data
 
+    debug_path = _seedance_a_write_debug_json(debug_dir, debug_prefix, {
+        "stage": "submit_request",
+        "submit_url": f"{base_url}{submit_path}",
+        "task_name": task_name,
+        "package_id": package_id,
+        "project_dir": project_dir,
+        "source_video_path": source_video_path,
+        "local_inputs": {
+            "images": ref_images,
+            "videos": videos,
+            "audios": audios,
+            "first_frame": first_frame,
+            "last_frame": last_frame,
+        },
+        "uploaded": {
+            "images": uploaded_images,
+            "videos": uploaded_videos,
+            "audios": uploaded_audios,
+        },
+        "upstream_payload": upstream_payload,
+    })
     response, text, data = post_generation()
     image_content = [item for item in non_text_content if item.get("type") == "image_url"]
     if (
@@ -12352,17 +12595,35 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         and request.get("auto_drop_sensitive_images", request.get("autoDropSensitiveImages", True)) is not False
     ):
         image_count = len(image_content)
-        content = [item for item in content if item.get("type") != "image_url"]
-        non_text_content = [item for item in content if item.get("type") != "text"]
+        non_text_content = [item for item in non_text_content if item.get("type") != "image_url"]
         metadata["content"] = non_text_content
-        upstream_payload["metadata"] = metadata
+        if "metadata" in upstream_payload:
+            upstream_payload["metadata"] = metadata
+        for key in ("images", "image_urls", "image_url"):
+            upstream_payload.pop(key, None)
         warnings.append(
             f"上游拒绝 {image_count} 张参考图：疑似真人隐私图片。已自动移除图片，仅用视频/音频/提示词重试。"
         )
+        _seedance_a_write_debug_json(debug_dir, f"{debug_prefix}_retry_without_images", {
+            "stage": "submit_retry_without_images",
+            "submit_url": f"{base_url}{submit_path}",
+            "warning": warnings[-1],
+            "upstream_payload": upstream_payload,
+            "previous_response": data,
+        })
         response, text, data = post_generation()
+    _seedance_a_write_debug_json(debug_dir, f"{debug_prefix}_response", {
+        "stage": "submit_response",
+        "submit_url": f"{base_url}{submit_path}",
+        "http_status": response.status_code,
+        "response_ok": response.ok,
+        "response": data,
+        "debug_request_path": debug_path,
+    })
     if not response.ok:
         message = _seedance_a_response_error_message(data, text, response.status_code)
-        raise RuntimeError(_seedance_a_friendly_error(str(message)[:800], response.status_code, api_key_hint))
+        friendly = _seedance_a_friendly_error(str(message)[:800], response.status_code, api_key_hint)
+        raise RuntimeError(f"{friendly}\n调试记录: {debug_path}")
 
     task_id = str(
         ((data.get("data") or {}).get("task_id") if isinstance(data.get("data"), dict) else "")
@@ -12371,20 +12632,22 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         or ""
     ).strip()
     if not task_id:
-        raise RuntimeError(f"天悦A未返回 task_id: {str(data)[:500]}")
+        raise RuntimeError(f"天悦A未返回 task_id: {str(data)[:500]}\n调试记录: {debug_path}")
 
-    task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
     with SEEDANCE_A_TASKS_LOCK:
         SEEDANCE_A_TASKS[task_id] = {
             "api_key": api_key,
             "base_url": base_url,
-            "project_dir": str(payload.get("project_dir") or payload.get("projectDir") or "").strip(),
-            "source_video_path": str(payload.get("source_video_path") or payload.get("video_path") or "").strip(),
+            "project_dir": project_dir,
+            "source_video_path": source_video_path,
             "task_name": task_name,
             "segment_id": str(payload.get("segment_id") or "").strip(),
+            "package_id": package_id,
             "submitted_at": time.time(),
             "output_path": "",
             "raw_submit": data,
+            "debug_path": debug_path,
+            "submit_url": f"{base_url}{submit_path}",
             "model": model,
             "route": "channel2",
         }
@@ -12400,6 +12663,7 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             "videos": uploaded_videos,
             "audios": uploaded_audios,
         },
+        "debug_path": debug_path,
         "warnings": warnings,
         "raw": data,
     }
@@ -12411,13 +12675,31 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("缺少 task_id")
     with SEEDANCE_A_TASKS_LOCK:
         task_meta = dict(SEEDANCE_A_TASKS.get(task_id) or {})
-    api_key = str(task_meta.get("api_key") or _seedance_a_api_key()).strip()
+    api_key = str(task_meta.get("api_key") or payload.get("relay_api_key") or payload.get("api_key") or _seedance_a_api_key()).strip()
     if not api_key:
         raise ValueError("缺少天悦A/Seedance API Key")
-    base_url = str(task_meta.get("base_url") or _seedance_a_base_url()).rstrip("/")
+    base_url = str(task_meta.get("base_url") or payload.get("relay_base_url") or payload.get("base_url") or _seedance_a_base_url()).rstrip("/")
+    query_path = f"/v1/videos/{task_id}"
+    project_dir = str(task_meta.get("project_dir") or payload.get("project_dir") or payload.get("projectDir") or "")
+    source_video_path = str(task_meta.get("source_video_path") or payload.get("source_video_path") or payload.get("video_path") or "")
+    package_id = str(task_meta.get("package_id") or payload.get("package_id") or payload.get("packageId") or "")
+    task_meta.update({
+        "api_key": api_key,
+        "base_url": base_url,
+        "project_dir": project_dir,
+        "source_video_path": source_video_path,
+        "package_id": package_id,
+        "task_name": str(task_meta.get("task_name") or payload.get("taskName") or payload.get("task_name") or "shot_retake").strip(),
+        "segment_id": str(task_meta.get("segment_id") or payload.get("segment_id") or "").strip(),
+    })
+    debug_dir = _seedance_a_debug_dir(
+        project_dir,
+        source_video_path,
+        package_id,
+    )
 
     response = requests.get(
-        f"{base_url}/v1/videos/{task_id}",
+        f"{base_url}{query_path}",
         headers={"Authorization": f"Bearer {api_key}"},
         timeout=60,
     )
@@ -12426,6 +12708,14 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         data = response.json()
     except ValueError:
         data = {"_raw": text}
+    query_debug_path = _seedance_a_write_debug_json(debug_dir, f"query_{task_id[:8]}", {
+        "stage": "query_response",
+        "query_url": f"{base_url}{query_path}",
+        "task_id": task_id,
+        "http_status": response.status_code,
+        "response_ok": response.ok,
+        "response": data,
+    })
     if not response.ok:
         message = (
             (data.get("error") or {}).get("message")
@@ -12451,6 +12741,11 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         "video_url": output_path or result_url,
         "videoUrl": output_path or result_url,
         "output_path": output_path,
+        "result_url": result_url,
+        "result_url_found": bool(result_url),
+        "downloaded": bool(output_path),
+        "debug_path": str(task_meta.get("debug_path") or ""),
+        "query_debug_path": query_debug_path,
         "fail_reason": fail_reason,
         "raw": data,
     }
@@ -12459,16 +12754,13 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
 def _parse_seedance_a_status(data: dict[str, Any]) -> tuple[str, str, str]:
     outer = data.get("data") if isinstance(data.get("data"), dict) else data
     inner = outer.get("data") if isinstance(outer.get("data"), dict) else {}
+    status_objects = [inner, outer, data]
     candidates = [
-        inner.get("status"),
-        outer.get("status"),
-        data.get("status"),
-        inner.get("task_status"),
-        outer.get("task_status"),
-        data.get("task_status"),
-        inner.get("state"),
-        outer.get("state"),
-        data.get("state"),
+        *(obj.get("task_status") for obj in status_objects if isinstance(obj, dict)),
+        *(obj.get("taskStatus") for obj in status_objects if isinstance(obj, dict)),
+        *(obj.get("statusText") for obj in status_objects if isinstance(obj, dict)),
+        *(obj.get("state") for obj in status_objects if isinstance(obj, dict)),
+        *(obj.get("status") for obj in status_objects if isinstance(obj, dict)),
     ]
     raw_status = ""
     for item in candidates:
@@ -12497,6 +12789,80 @@ def _parse_seedance_a_status(data: dict[str, Any]) -> tuple[str, str, str]:
     if _extract_seedance_a_result_url(data, _seedance_a_base_url()):
         return "SUCCESS", progress or "100%", ""
     return "RUNNING", progress, ""
+
+
+def _looks_like_video_result_url(value: str) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    lower = text.lower()
+    if not (text.startswith(("http://", "https://")) or text.startswith("/")):
+        return False
+    return (
+        ".mp4" in lower
+        or ".mov" in lower
+        or ".webm" in lower
+        or "video" in lower
+        or "download" in lower
+        or "output" in lower
+        or "result" in lower
+    )
+
+
+def _recursive_seedance_a_result_urls(value: Any, *, depth: int = 0) -> list[str]:
+    if depth > 8:
+        return []
+    urls: list[str] = []
+    if isinstance(value, str):
+        if _looks_like_video_result_url(value):
+            urls.append(value.strip())
+        return urls
+    if isinstance(value, list):
+        for item in value:
+            urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
+        return urls
+    if isinstance(value, dict):
+        preferred_keys = (
+            "video_url",
+            "videoUrl",
+            "video_urls",
+            "videoUrls",
+            "result_url",
+            "resultUrl",
+            "result_urls",
+            "content_url",
+            "contentUrl",
+            "media_url",
+            "mediaUrl",
+            "download_url",
+            "downloadUrl",
+            "url",
+        )
+        for key in preferred_keys:
+            if key in value:
+                urls.extend(_recursive_seedance_a_result_urls(value.get(key), depth=depth + 1))
+        for key, item in value.items():
+            if key in preferred_keys:
+                continue
+            key_text = str(key).lower()
+            if any(token in key_text for token in ("video", "result", "output", "download", "media", "content", "url")):
+                urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
+        if not urls:
+            for item in value.values():
+                urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
+        return urls
+    return urls
+
+
+def _absolute_seedance_a_result_url(value: str, base_url: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.startswith("/"):
+        return f"{base_url.rstrip('/')}{text}"
+    if text.startswith(("http://", "https://")):
+        return text
+    return ""
 
 
 def _extract_seedance_a_result_url(data: dict[str, Any], base_url: str) -> str:
@@ -12543,10 +12909,13 @@ def _extract_seedance_a_result_url(data: dict[str, Any], base_url: str) -> str:
         text = str(value or "").strip()
         if not text:
             continue
-        if text.startswith("/"):
-            return f"{base_url.rstrip('/')}{text}"
-        if text.startswith(("http://", "https://")):
-            return text
+        resolved = _absolute_seedance_a_result_url(text, base_url)
+        if resolved:
+            return resolved
+    for text in _recursive_seedance_a_result_urls(data):
+        resolved = _absolute_seedance_a_result_url(text, base_url)
+        if resolved:
+            return resolved
     return ""
 
 
@@ -14096,6 +14465,429 @@ def _mode2_safe_asset_slug(value: Any, fallback: str = "asset") -> str:
     text = str(value or "").strip() or fallback
     slug = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in text).strip("_")
     return (slug or fallback)[:56]
+
+
+def _generation_package_work_dir(root: Path, package_id: str) -> Path:
+    safe_id = _mode2_safe_asset_slug(package_id, fallback="package")
+    return root / "04_AI输出成片" / "generation_packages" / safe_id
+
+
+def _generation_package_state_path(root: Path, package_id: str) -> Path:
+    return _generation_package_work_dir(root, package_id) / "generation_state.json"
+
+
+def _read_generation_package_state(root: Path, package_id: str) -> dict[str, Any]:
+    state_path = _generation_package_state_path(root, package_id)
+    if not state_path.exists():
+        return {}
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_generation_package_state(root: Path, package_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+    state_path = _generation_package_state_path(root, package_id)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    current = _read_generation_package_state(root, package_id)
+    current.update({key: value for key, value in patch.items() if value is not None})
+    current["package_id"] = package_id
+    current["updated_at"] = time.time()
+    state_path.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    current["state_path"] = str(state_path)
+    return current
+
+
+def _generation_package_file_exists(value: Any) -> str:
+    path_text = str(value or "").strip()
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    if path.exists() and path.is_file() and path.stat().st_size > 0:
+        return str(path)
+    return ""
+
+
+def _generation_package_segments_match(saved: Any, current: list[dict[str, Any]]) -> bool:
+    if not isinstance(saved, list) or len(saved) != len(current):
+        return False
+    for saved_item, current_item in zip(saved, current):
+        saved_id = str((saved_item or {}).get("shot_id") or (saved_item or {}).get("id") or "").strip()
+        current_id = str((current_item or {}).get("shot_id") or (current_item or {}).get("id") or "").strip()
+        if saved_id != current_id:
+            return False
+    return True
+
+
+def _generation_package_existing_clips(clips: Any) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    if not isinstance(clips, list):
+        return result
+    for item in clips:
+        if not isinstance(item, dict):
+            continue
+        path = _generation_package_file_exists(item.get("path") or item.get("video_path"))
+        if path:
+            result.append({**item, "path": path})
+    return result
+
+
+def _generation_package_json_files(path: Path, pattern: str) -> list[Path]:
+    if not path.exists() or not path.is_dir():
+        return []
+    return sorted(path.glob(pattern), key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True)
+
+
+def _read_generation_package_manifest(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _generation_package_run_from_manifest(
+    manifest_path: Path,
+    data: dict[str, Any],
+    output_role: str,
+) -> dict[str, Any]:
+    clips = _generation_package_existing_clips(data.get("clips"))
+    source_path = _generation_package_file_exists(data.get("source_path") or data.get("output_path"))
+    if not source_path or not clips:
+        return {}
+    stat = manifest_path.stat()
+    return {
+        "id": str(data.get("run_id") or manifest_path.stem).strip(),
+        "role": output_role,
+        "source_path": source_path,
+        "manifest_path": str(manifest_path),
+        "clips": clips,
+        "shot_count": len(clips),
+        "created_at": _mode2_float(data.get("created_at"), stat.st_mtime),
+        "timeline_duration": _mode2_float(data.get("timeline_duration"), 0.0),
+        "source_duration": _mode2_float(data.get("source_duration"), 0.0),
+        "duration_scale": _mode2_float(data.get("duration_scale"), 1.0),
+    }
+
+
+def _generation_package_runs_from_state(state: dict[str, Any], output_role: str, segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    raw_key = "maskRuns" if output_role == "mask" else "resultRuns"
+    runs: list[dict[str, Any]] = []
+    raw_runs = state.get(raw_key)
+    for item in raw_runs if isinstance(raw_runs, list) else []:
+        if not isinstance(item, dict):
+            continue
+        manifest_path = _generation_package_file_exists(item.get("manifest_path") or item.get("manifestPath"))
+        if not manifest_path:
+            continue
+        data = _read_generation_package_manifest(Path(manifest_path))
+        if not _generation_package_segments_match(data.get("segments"), segments):
+            continue
+        run = _generation_package_run_from_manifest(Path(manifest_path), data, output_role)
+        if run:
+            runs.append(run)
+    return runs
+
+
+def _generation_package_runs_from_dir(root: Path, package_id: str, output_role: str, segments: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    runs: list[dict[str, Any]] = []
+    role_dir = _generation_package_work_dir(root, package_id) / output_role
+    for manifest_path in _generation_package_json_files(role_dir, f"{output_role}_*.json"):
+        data = _read_generation_package_manifest(manifest_path)
+        if not _generation_package_segments_match(data.get("segments"), segments):
+            continue
+        run = _generation_package_run_from_manifest(manifest_path, data, output_role)
+        if run:
+            runs.append(run)
+    return runs
+
+
+def _dedupe_generation_package_runs(runs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for run in sorted(runs, key=lambda item: _mode2_float(item.get("created_at"), 0.0), reverse=True):
+        key = str(run.get("manifest_path") or run.get("source_path") or run.get("id") or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(run)
+    return deduped
+
+
+def _restore_generation_package_source(root: Path, package_id: str, segments: list[dict[str, Any]], state: dict[str, Any]) -> dict[str, Any]:
+    state_path = _generation_package_file_exists(state.get("packageSourcePath") or state.get("sourcePath"))
+    state_segments = state.get("packageSegments") or state.get("segments")
+    if state_path and _generation_package_segments_match(state_segments, segments):
+        return {
+            "sourcePath": state_path,
+            "packageSourcePath": state_path,
+            "packageSegments": state_segments,
+            "packageDuration": _mode2_float(state.get("packageDuration"), sum(float(item["duration"]) for item in segments)),
+        }
+
+    work_dir = _generation_package_work_dir(root, package_id)
+    for manifest_path in _generation_package_json_files(work_dir, "*_source_*shot_*.json"):
+        data = _read_generation_package_manifest(manifest_path)
+        if not _generation_package_segments_match(data.get("segments"), segments):
+            continue
+        output_path = _generation_package_file_exists(data.get("output_path") or data.get("source_path"))
+        if not output_path:
+            continue
+        return {
+            "sourcePath": output_path,
+            "packageSourcePath": output_path,
+            "packageSegments": data.get("segments") or segments,
+            "packageDuration": _mode2_float(data.get("duration"), sum(float(item["duration"]) for item in segments)),
+        }
+    return {}
+
+
+def _generation_package_role_fields(output_role: str) -> tuple[str, str, str]:
+    if output_role == "mask":
+        return "whiteMaskPath", "maskSegments", "maskSplitManifest"
+    return "resultPath", "resultSegments", "resultSplitManifest"
+
+
+def _restore_generation_package_role(
+    root: Path,
+    package_id: str,
+    output_role: str,
+    segments: list[dict[str, Any]],
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    path_key, clips_key, manifest_key = _generation_package_role_fields(output_role)
+    runs_key = "maskRuns" if output_role == "mask" else "resultRuns"
+    runs = _dedupe_generation_package_runs([
+        *_generation_package_runs_from_state(state, output_role, segments),
+        *_generation_package_runs_from_dir(root, package_id, output_role, segments),
+    ])
+    if runs:
+        latest = runs[0]
+        return {
+            path_key: latest["source_path"],
+            clips_key: latest["clips"],
+            manifest_key: latest["manifest_path"],
+            runs_key: runs,
+        }
+
+    state_path = _generation_package_file_exists(state.get(path_key))
+    state_clips = _generation_package_existing_clips(state.get(clips_key))
+    state_manifest = _generation_package_file_exists(state.get(manifest_key))
+    if state_path and state_clips and state_manifest:
+        manifest_data = _read_generation_package_manifest(Path(state_manifest))
+        if _generation_package_segments_match(manifest_data.get("segments"), segments):
+            return {
+                path_key: state_path,
+                clips_key: state_clips,
+                manifest_key: state_manifest,
+            }
+
+    role_dir = _generation_package_work_dir(root, package_id) / output_role
+    for manifest_path in _generation_package_json_files(role_dir, f"{output_role}_*.json"):
+        data = _read_generation_package_manifest(manifest_path)
+        if not _generation_package_segments_match(data.get("segments"), segments):
+            continue
+        source_path = _generation_package_file_exists(data.get("source_path") or data.get("output_path"))
+        clips = _generation_package_existing_clips(data.get("clips"))
+        if not source_path or not clips:
+            continue
+        return {
+            path_key: source_path,
+            clips_key: clips,
+            manifest_key: str(manifest_path),
+        }
+    return {}
+
+
+def _generation_package_segments(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = payload.get("shots") if isinstance(payload.get("shots"), list) else []
+    segments: list[dict[str, Any]] = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            continue
+        path_text = str(item.get("video_path") or item.get("path") or "").strip()
+        if not path_text:
+            continue
+        path = Path(path_text)
+        if not path.exists() or not path.is_file():
+            raise ValueError(f"package_shot_video_not_found: {path_text}")
+        shot_id = str(item.get("shot_id") or item.get("id") or f"S{index + 1:03d}").strip() or f"S{index + 1:03d}"
+        duration = _mode2_float(item.get("duration"), 0.0)
+        if duration <= 0:
+            try:
+                from spvideo.ffmpeg_tools import probe_video
+
+                duration = max(0.01, float(probe_video(path).duration or 0.0))
+            except Exception:  # noqa: BLE001
+                duration = 0.01
+        segments.append({
+            "shot_id": shot_id,
+            "video_path": str(path),
+            "duration": round(max(0.01, duration), 3),
+        })
+    if not segments:
+        raise ValueError("generation_package_requires_shot_videos")
+    start = 0.0
+    for segment in segments:
+        end = start + float(segment["duration"])
+        segment["start"] = round(start, 3)
+        segment["end"] = round(end, 3)
+        start = end
+    return segments
+
+
+def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]:
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
+    segments = _generation_package_segments(payload)
+    output_dir = _generation_package_work_dir(root, package_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    safe_id = _mode2_safe_asset_slug(package_id, fallback="package")
+    token = uuid.uuid4().hex[:8]
+    output_path = output_dir / f"{safe_id}_source_{len(segments)}shot_{token}.mp4"
+    concat_videos([segment["video_path"] for segment in segments], output_path)
+    result = {
+        "package_id": package_id,
+        "output_path": str(output_path),
+        "source_path": str(output_path),
+        "segments": segments,
+        "duration": round(sum(float(segment["duration"]) for segment in segments), 3),
+        "shot_count": len(segments),
+    }
+    (output_path.with_suffix(".json")).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    _write_generation_package_state(root, package_id, {
+        "sourcePath": str(output_path),
+        "packageSourcePath": str(output_path),
+        "packageSegments": segments,
+        "packageDuration": result["duration"],
+    })
+    return result
+
+
+def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]:
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
+    segments = _generation_package_segments(payload)
+    state = _read_generation_package_state(root, package_id)
+    restored: dict[str, Any] = {
+        "success": True,
+        "package_id": package_id,
+        "restored": False,
+    }
+    restored.update(_restore_generation_package_source(root, package_id, segments, state))
+    restored.update(_restore_generation_package_role(root, package_id, "mask", segments, state))
+    restored.update(_restore_generation_package_role(root, package_id, "result", segments, state))
+    if restored.get("resultPath"):
+        restored["status"] = "result_done"
+    elif restored.get("whiteMaskPath"):
+        restored["status"] = "mask_done"
+    else:
+        restored["status"] = "idle"
+    restored["restored"] = bool(
+        restored.get("packageSourcePath")
+        or restored.get("whiteMaskPath")
+        or restored.get("resultPath")
+    )
+    if restored["restored"]:
+        restored["lastTone"] = "good" if restored.get("whiteMaskPath") or restored.get("resultPath") else "warn"
+        restored["lastMessage"] = "已从本地项目恢复生成记录"
+    if state:
+        restored["statePath"] = str(_generation_package_state_path(root, package_id))
+    return restored
+
+
+def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
+    output_role = _mode2_safe_asset_slug(payload.get("output_role") or "result", fallback="result")
+    video_path = str(payload.get("video_path") or payload.get("output_path") or "").strip()
+    if not video_path:
+        raise ValueError("generation_package_output_path_required")
+    source = Path(video_path)
+    if not source.exists() or not source.is_file():
+        raise ValueError(f"generation_package_output_not_found: {video_path}")
+    segments = _generation_package_segments(payload)
+    output_dir = _generation_package_work_dir(root, package_id) / output_role
+    output_dir.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex[:8]
+    clips: list[dict[str, Any]] = []
+    from spvideo.ffmpeg_tools import cut_segment, probe_video
+
+    original_total = max(0.01, sum(float(segment["duration"]) for segment in segments))
+    try:
+        output_duration = max(0.01, float(probe_video(source).duration or 0.0))
+    except Exception:  # noqa: BLE001
+        output_duration = original_total
+    scale = output_duration / original_total if original_total > 0 else 1.0
+
+    for index, segment in enumerate(segments, start=1):
+        shot_slug = _mode2_safe_asset_slug(segment["shot_id"], fallback=f"S{index:03d}")
+        clip_path = output_dir / f"{output_role}_{index:02d}_{shot_slug}_{token}.mp4"
+        cut_start = max(0.0, float(segment["start"]) * scale)
+        cut_end = output_duration if index == len(segments) else max(cut_start + 0.01, float(segment["end"]) * scale)
+        cut_segment(source, cut_start, cut_end, clip_path)
+        clip = {
+            "shot_id": segment["shot_id"],
+            "path": str(clip_path),
+            "start": round(cut_start, 3),
+            "end": round(cut_end, 3),
+            "duration": round(max(0.01, cut_end - cut_start), 3),
+            "original_start": segment["start"],
+            "original_end": segment["end"],
+            "original_duration": segment["duration"],
+            "index": index - 1,
+        }
+        clips.append(clip)
+    result = {
+        "package_id": package_id,
+        "run_id": token,
+        "source_path": str(source),
+        "output_role": output_role,
+        "clips": clips,
+        "segments": segments,
+        "source_duration": round(output_duration, 3),
+        "timeline_duration": round(original_total, 3),
+        "duration_scale": round(scale, 6),
+        "shot_count": len(clips),
+        "created_at": time.time(),
+    }
+    manifest_path = output_dir / f"{output_role}_{_mode2_safe_asset_slug(package_id, fallback='package')}_{token}.json"
+    manifest_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    result["manifest_path"] = str(manifest_path)
+    run = {
+        "id": token,
+        "role": output_role,
+        "source_path": str(source),
+        "manifest_path": str(manifest_path),
+        "clips": clips,
+        "shot_count": len(clips),
+        "created_at": result["created_at"],
+        "timeline_duration": result["timeline_duration"],
+        "source_duration": result["source_duration"],
+        "duration_scale": result["duration_scale"],
+    }
+    result["run"] = run
+    current_state = _read_generation_package_state(root, package_id)
+    if output_role == "mask":
+        mask_runs = _dedupe_generation_package_runs([run, *(current_state.get("maskRuns") if isinstance(current_state.get("maskRuns"), list) else [])])
+        _write_generation_package_state(root, package_id, {
+            "status": "mask_done",
+            "whiteMaskPath": str(source),
+            "maskSegments": clips,
+            "maskSplitManifest": str(manifest_path),
+            "maskRuns": mask_runs,
+        })
+    elif output_role == "result":
+        result_runs = _dedupe_generation_package_runs([run, *(current_state.get("resultRuns") if isinstance(current_state.get("resultRuns"), list) else [])])
+        _write_generation_package_state(root, package_id, {
+            "status": "result_done",
+            "resultPath": str(source),
+            "resultSegments": clips,
+            "resultSplitManifest": str(manifest_path),
+            "resultRuns": result_runs,
+        })
+    return result
 
 
 def _storyboard_existing_paths(values: list[Any]) -> list[Path]:
@@ -16469,10 +17261,6 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
         else:
             add_log(f"> Understanding fallback status: {understanding_status}")
 
-        legacy_reference_segments = [
-            item for item in (reference_result.get("segments") or [])
-            if isinstance(item, dict)
-        ]
         reference_frames: list[dict[str, Any]] = []
         legacy_reference_frames = [
             item for item in (reference_result.get("frames") or [])
@@ -16559,11 +17347,6 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
                 visual_segments,
                 understanding,
                 duration=duration,
-            )
-        if legacy_reference_segments:
-            add_log(
-                f"> Old project segments kept as soft reference only: {len(legacy_reference_segments)}; "
-                f"Mode2 timeline uses {len(visual_segments)} visual segments"
             )
         auto_director_plan = (
             reference_result.get("auto_director")
@@ -16725,7 +17508,6 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
             "sam3_identity_snapshots": sam3_identity_snapshots,
             "sam3_boundary_hints": sam3_boundary_hints,
             "semantic_segments": _storyboard_reference_segments_from_understanding(understanding, duration=duration),
-            "legacy_reference_segments": legacy_reference_segments,
             "reference_segments": reference_segments,
             "auto_director": auto_director_plan,
             "assets": assets,
