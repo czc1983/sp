@@ -17498,6 +17498,14 @@
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && !popover.hidden) closeComposeMaskVideoPreview();
       });
+      document.addEventListener("pointerdown", (event) => {
+        if (popover.hidden) return;
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (popover.contains(target)) return;
+        if (target.closest("[data-compose-mask-video-thumb]")) return;
+        closeComposeMaskVideoPreview();
+      }, true);
     }
 
     function bindComposeMaskVideoPlayback(root = document) {
