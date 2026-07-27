@@ -498,6 +498,56 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertNotIn("async", upstream)
             self.assertTrue(Path(result["debug_path"]).exists())
 
+    def test_channel2_submit_keeps_fractional_duration(self) -> None:
+        class FakeResponse:
+            ok = True
+            status_code = 200
+            text = '{"data":{"task_id":"task_fractional_duration"}}'
+
+            def json(self):
+                return {"data": {"task_id": "task_fractional_duration"}}
+
+        calls: list[dict] = []
+
+        def fake_post(url, **kwargs):
+            calls.append({"url": url, "json": kwargs.get("json")})
+            return FakeResponse()
+
+        try:
+            with patch("web_ui.server.requests.post", side_effect=fake_post):
+                result = _submit_seedance_a_task({
+                    "taskName": "api_white_mask_P001",
+                    "relay_api_key": "sk-test",
+                    "relay_base_url": "https://upstream.example",
+                    "payload": {
+                        "model": "sd-2.0-r3",
+                        "prompt": "测试白膜",
+                        "duration": 6.6,
+                        "ratio": "9:16",
+                        "resolution": "720x1280",
+                    },
+                })
+        finally:
+            with SEEDANCE_A_TASKS_LOCK:
+                SEEDANCE_A_TASKS.pop("task_fractional_duration", None)
+
+        self.assertEqual(result["task_id"], "task_fractional_duration")
+        self.assertEqual(calls[0]["json"]["duration"], 6.6)
+
+    def test_channel2_submit_rejects_duration_outside_range(self) -> None:
+        with self.assertRaisesRegex(ValueError, "5-15"):
+            _submit_seedance_a_task({
+                "relay_api_key": "sk-test",
+                "relay_base_url": "https://upstream.example",
+                "payload": {
+                    "model": "sd-2.0-r3",
+                    "prompt": "测试白膜",
+                    "duration": 15.1,
+                    "ratio": "9:16",
+                    "resolution": "720x1280",
+                },
+            })
+
     def test_generation_package_restore_keeps_all_mask_runs(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -563,6 +613,40 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertEqual(len(restored["maskRuns"]), 2)
             self.assertEqual([run["id"] for run in restored["maskRuns"]], ["new", "old"])
             self.assertEqual([clip["shot_id"] for clip in restored["maskRuns"][0]["clips"]], ["S001", "S002"])
+
+    def test_generation_package_restore_keeps_running_mask_task(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shot_a = root / "shot_a.mp4"
+            shot_b = root / "shot_b.mp4"
+            for path in (shot_a, shot_b):
+                path.write_bytes(b"video")
+            state_dir = root / "04_AI输出成片" / "generation_packages" / "P001"
+            state_dir.mkdir(parents=True)
+            (state_dir / "generation_state.json").write_text(json.dumps({
+                "status": "mask_running",
+                "maskTaskId": "task-mask-001",
+                "maskPollContext": {
+                    "packageId": "P001",
+                    "outputRole": "mask",
+                    "sourcePath": str(root / "P001_source.mp4"),
+                    "outputLabel": "白膜视频",
+                },
+            }), encoding="utf-8")
+
+            restored = _restore_generation_package_state({
+                "project_dir": str(root),
+                "package_id": "P001",
+                "shots": [
+                    {"shot_id": "S001", "video_path": str(shot_a), "duration": 1.0},
+                    {"shot_id": "S002", "video_path": str(shot_b), "duration": 1.0},
+                ],
+            })
+
+            self.assertTrue(restored["restored"])
+            self.assertEqual(restored["status"], "mask_running")
+            self.assertEqual(restored["maskTaskId"], "task-mask-001")
+            self.assertEqual(restored["maskPollContext"]["outputRole"], "mask")
 
     def test_generation_package_delete_mask_clip_removes_file_manifest_and_state(self) -> None:
         with TemporaryDirectory() as tmp:

@@ -12617,7 +12617,10 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("缺少 Seedance 通道A API Key，请在 Mode2 04 视频生成填写通道A API Key，或设置本项目环境变量 SEEDANCE_A_API_KEY。")
 
     warnings: list[str] = []
-    duration = max(1, int(float(request.get("duration") or request.get("seconds") or 5)))
+    duration = round(_mode2_float(request.get("duration") or request.get("seconds"), 5.0), 3)
+    if duration < 5 or duration > 15:
+        raise ValueError(f"Seedance 时长必须在 5-15 秒内，当前 {duration:g} 秒")
+    duration_payload: int | float = int(duration) if float(duration).is_integer() else duration
     raw_size = str(request.get("size") or "").strip()
     ratio = str(request.get("ratio") or request.get("aspect_ratio") or "").strip()
     if not ratio and re.fullmatch(r"\d+:\d+", raw_size):
@@ -12737,7 +12740,6 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         if url:
             uploaded_audios.append(url)
 
-    duration = min(15, max(6, duration))
     non_text_content: list[dict[str, Any]] = []
     for url in uploaded_images:
         non_text_content.append({"type": "image_url", "image_url": {"url": url}, "role": "reference_image"})
@@ -12762,7 +12764,7 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
     upstream_payload: dict[str, Any] = {
         "model": model,
         "prompt": prompt,
-        "duration": duration,
+        "duration": duration_payload,
         "aspect_ratio": ratio,
         "size": _seedance_a_size_for_channel2(ratio, resolution),
     }
@@ -12799,6 +12801,16 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     source_video_path = str(payload.get("source_video_path") or payload.get("video_path") or "").strip()
     package_id = str(payload.get("package_id") or payload.get("packageId") or "").strip()
+    output_role = _mode2_safe_asset_slug(
+        payload.get("output_role")
+        or payload.get("outputRole")
+        or request.get("output_role")
+        or request.get("outputRole")
+        or "result",
+        fallback="result",
+    )
+    if output_role not in {"mask", "result"}:
+        output_role = "result"
     task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
     debug_dir = _seedance_a_debug_dir(project_dir, source_video_path, package_id)
     submit_path = "/v1/videos"
@@ -12896,6 +12908,7 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             "task_name": task_name,
             "segment_id": str(payload.get("segment_id") or "").strip(),
             "package_id": package_id,
+            "output_role": output_role,
             "submitted_at": time.time(),
             "output_path": "",
             "raw_submit": data,
@@ -12904,6 +12917,27 @@ def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
             "model": model,
             "route": "channel2",
         }
+    if package_id and project_dir:
+        try:
+            root = _resolve_storyboard_mode2_project_dir(project_dir)
+            task_field = "maskTaskId" if output_role == "mask" else "resultTaskId"
+            context_field = "maskPollContext" if output_role == "mask" else "resultPollContext"
+            _write_generation_package_state(root, package_id, {
+                "status": "mask_running" if output_role == "mask" else "result_running",
+                task_field: task_id,
+                context_field: {
+                    "packageId": package_id,
+                    "outputRole": output_role,
+                    "sourcePath": source_video_path,
+                    "outputLabel": "白膜视频" if output_role == "mask" else "结果视频",
+                },
+                "sourcePath": source_video_path,
+                "lastMessage": f"通道2任务已提交\ntask_id: {task_id}",
+                "lastTone": "warn",
+                "errorMessage": "",
+            })
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"生成包运行态写入失败：{exc}")
 
     return {
         "success": True,
@@ -12936,12 +12970,22 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
     project_dir = str(task_meta.get("project_dir") or payload.get("project_dir") or payload.get("projectDir") or "")
     source_video_path = str(task_meta.get("source_video_path") or payload.get("source_video_path") or payload.get("video_path") or "")
     package_id = str(task_meta.get("package_id") or payload.get("package_id") or payload.get("packageId") or "")
+    output_role = _mode2_safe_asset_slug(
+        task_meta.get("output_role")
+        or payload.get("output_role")
+        or payload.get("outputRole")
+        or "result",
+        fallback="result",
+    )
+    if output_role not in {"mask", "result"}:
+        output_role = "result"
     task_meta.update({
         "api_key": api_key,
         "base_url": base_url,
         "project_dir": project_dir,
         "source_video_path": source_video_path,
         "package_id": package_id,
+        "output_role": output_role,
         "task_name": str(task_meta.get("task_name") or payload.get("taskName") or payload.get("task_name") or "shot_retake").strip(),
         "segment_id": str(task_meta.get("segment_id") or payload.get("segment_id") or "").strip(),
     })
@@ -12984,6 +13028,17 @@ def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
         output_path = _download_seedance_a_result(result_url, task_id, task_meta, api_key)
         with SEEDANCE_A_TASKS_LOCK:
             SEEDANCE_A_TASKS.setdefault(task_id, {}).update({"output_path": output_path, "finished_at": time.time()})
+    if status == "FAILED" and package_id and project_dir:
+        try:
+            root = _resolve_storyboard_mode2_project_dir(project_dir)
+            _write_generation_package_state(root, package_id, {
+                "status": "failed",
+                "lastMessage": f"通道2任务失败\ntask_id: {task_id}",
+                "lastTone": "bad",
+                "errorMessage": fail_reason or "任务失败",
+            })
+        except Exception:  # noqa: BLE001
+            pass
 
     return {
         "success": status != "FAILED",
@@ -15090,20 +15145,52 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     restored.update(_restore_generation_package_source(root, package_id, segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "mask", segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "result", segments, state))
+    for key in (
+        "maskTaskId",
+        "maskJobId",
+        "maskPollContext",
+        "resultTaskId",
+        "resultPollContext",
+        "pendingAutoResult",
+        "lastMessage",
+        "lastTone",
+        "errorMessage",
+    ):
+        if key in state:
+            restored[key] = state.get(key)
+    state_status = str(state.get("status") or "").strip()
+    mask_task_id = str(restored.get("maskTaskId") or restored.get("maskJobId") or "").strip()
+    result_task_id = str(restored.get("resultTaskId") or "").strip()
     if restored.get("resultPath"):
         restored["status"] = "result_done"
     elif restored.get("whiteMaskPath"):
         restored["status"] = "mask_done"
+    elif state_status == "result_running" and result_task_id:
+        restored["status"] = "result_running"
+    elif state_status == "mask_running" and mask_task_id:
+        restored["status"] = "mask_running"
+    elif state_status == "failed":
+        restored["status"] = "failed"
     else:
         restored["status"] = "idle"
     restored["restored"] = bool(
         restored.get("packageSourcePath")
         or restored.get("whiteMaskPath")
         or restored.get("resultPath")
+        or restored.get("maskTaskId")
+        or restored.get("maskJobId")
+        or restored.get("resultTaskId")
     )
     if restored["restored"]:
-        restored["lastTone"] = "good" if restored.get("whiteMaskPath") or restored.get("resultPath") else "warn"
-        restored["lastMessage"] = "已从本地项目恢复生成记录"
+        if restored["status"] == "failed":
+            restored["lastTone"] = str(restored.get("lastTone") or "bad")
+            restored["lastMessage"] = str(restored.get("lastMessage") or "已从本地项目恢复失败记录")
+        elif restored["status"] in {"mask_running", "result_running"}:
+            restored["lastTone"] = str(restored.get("lastTone") or "warn")
+            restored["lastMessage"] = str(restored.get("lastMessage") or "已从本地项目恢复运行中任务")
+        else:
+            restored["lastTone"] = "good" if restored.get("whiteMaskPath") or restored.get("resultPath") else "warn"
+            restored["lastMessage"] = "已从本地项目恢复生成记录"
     if state:
         restored["statePath"] = str(_generation_package_state_path(root, package_id))
     return restored

@@ -19467,11 +19467,13 @@
         "maskSplitManifest",
         "maskTaskId",
         "maskJobId",
+        "maskPollContext",
         "maskRuns",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
         "resultTaskId",
+        "resultPollContext",
         "resultRuns",
         "pendingAutoResult",
         "promptOverrides",
@@ -19484,7 +19486,14 @@
       keys.forEach((key) => {
         if (runtime[key] !== undefined) next[key] = cloneGenerationRuntimeValue(runtime[key]);
       });
-      if (["mask_running", "result_running", "scail2_running"].includes(String(next.status || ""))) {
+      const status = String(next.status || "");
+      const hasMaskTask = Boolean(String(next.maskTaskId || next.maskJobId || "").trim());
+      const hasResultTask = Boolean(String(next.resultTaskId || "").trim());
+      const missingRunningTask =
+        (status === "mask_running" && !hasMaskTask)
+        || (status === "result_running" && !hasResultTask)
+        || status === "scail2_running";
+      if (missingRunningTask) {
         next.status = String(next.resultPath || "").trim()
           ? "result_done"
           : (String(next.whiteMaskPath || next.maskPath || "").trim() ? "mask_done" : "idle");
@@ -20005,7 +20014,7 @@
     }
 
     function generationPackApiWhiteMaskPrompt(pack = {}) {
-      return "把参考图替换原视频中的人物，并把原视频转绘成白膜视频，人物站位、方向、动作表情保持不变。";
+      return "请以我上传的参考视频，完美复刻原视频中所有人物的站位、动作、节奏卡点、运动轨迹、和镜头构图。人物形象使用3D动画制作中的基础白模形象:无脸、无五官、无头发、无服装、无纹理、皮肤光滑，只保留简洁的人形身体结构和清晰关节。动作必须严格跟随参考视频。";
     }
 
     function generationPackShotPayload(pack = {}) {
@@ -20316,6 +20325,57 @@
       if (composeBoardMode === "mask") renderComposePage();
     }
 
+    function generationRuntimeHasActivePackageTask(runtime = {}) {
+      const status = String(runtime.status || "");
+      const hasMaskTask = Boolean(String(runtime.maskTaskId || runtime.maskJobId || "").trim());
+      const hasResultTask = Boolean(String(runtime.resultTaskId || "").trim());
+      if (status === "mask_running" && hasMaskTask) return true;
+      if (status === "result_running" && hasResultTask) return true;
+      if (status && status !== "idle" && status !== "failed") return false;
+      if (!String(runtime.whiteMaskPath || runtime.maskPath || runtime.resultPath || "").trim() && hasMaskTask) return true;
+      if (!String(runtime.resultPath || "").trim() && hasResultTask) return true;
+      return false;
+    }
+
+    function restoreGenerationPackageRuntimeFromWhiteMaskShelf(pack = {}) {
+      const id = String(pack?.id || "").trim();
+      if (!id) return false;
+      const runtime = generationRuntimeForPack(id);
+      if (String(runtime.whiteMaskPath || runtime.maskPath || "").trim()) return false;
+      const packShotKey = composeSortedShotIds(pack.shotIds).join("|");
+      const item = loadWhiteMaskShelf()
+        .filter((entry) => String(entry?.package_id || "") === id && String(entry?.source_path || "").trim())
+        .filter((entry) => {
+          const entryShotKey = composeSortedShotIds(entry?.shot_ids || []).join("|");
+          return !entryShotKey || !packShotKey || entryShotKey === packShotKey;
+        })
+        .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0))[0];
+      if (!item) return false;
+      const maskRun = {
+        id: String(item.id || item.manifest_path || item.source_path || Date.now()).trim(),
+        role: "mask",
+        source_path: String(item.source_path || "").trim(),
+        manifest_path: String(item.manifest_path || "").trim(),
+        clips: Array.isArray(item.clips) ? item.clips : [],
+        shot_count: Number(item.shot_count || item.clips?.length || 0),
+        created_at: Number(item.created_at || Date.now() / 1000),
+      };
+      generationWorkbench.packageRuntime[id] = {
+        ...runtime,
+        status: "mask_done",
+        whiteMaskPath: maskRun.source_path,
+        maskSegments: maskRun.clips,
+        maskSplitManifest: maskRun.manifest_path,
+        maskRuns: appendGenerationRun(runtime.maskRuns, maskRun),
+        lastMessage: "已从白膜结果包恢复白膜视频",
+        lastTone: "good",
+        errorMessage: "",
+        updatedAt: Date.now(),
+      };
+      saveGenerationRuntimeDraft();
+      return true;
+    }
+
     async function restoreGenerationPackageRuntime(pack = {}) {
       const id = String(pack?.id || "").trim();
       if (!id) return null;
@@ -20347,11 +20407,16 @@
         "whiteMaskPath",
         "maskSegments",
         "maskSplitManifest",
+        "maskTaskId",
+        "maskPollContext",
         "maskRuns",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
+        "resultTaskId",
+        "resultPollContext",
         "resultRuns",
+        "pendingAutoResult",
         "lastMessage",
         "lastTone",
         "errorMessage",
@@ -20371,6 +20436,8 @@
       const runtime = generationRuntimeForPack(id);
       if (runtime.restoreRequested || runtime.restoreDone) return;
       if (String(runtime.whiteMaskPath || runtime.resultPath || "").trim()) return;
+      if (generationRuntimeHasActivePackageTask(runtime)) return;
+      if (restoreGenerationPackageRuntimeFromWhiteMaskShelf(pack)) return;
       generationWorkbench.packageRuntime[id] = {
         ...runtime,
         restoreRequested: true,
@@ -20412,6 +20479,41 @@
       }
     }
 
+    function generationPackageSeedanceDuration(pack = {}, fallback = COMPOSE_PACK_MIN_SECONDS) {
+      const duration = Number(pack.duration || composePackDuration(pack) || fallback);
+      return normalizeSeedanceDurationValue(duration, fallback);
+    }
+
+    function applyGenerationPackageDurationToSeedance(pack = {}) {
+      const duration = generationPackageSeedanceDuration(pack);
+      seedanceDraft.duration = duration;
+      syncSeedanceDurationSelect(duration);
+      return duration;
+    }
+
+    function ensureGenerationPackageDurationInRange(pack = {}, actionLabel = "生成") {
+      const duration = generationPackageSeedanceDuration(pack);
+      const error = seedanceDurationRangeError(duration);
+      if (!error) return true;
+      const lines = [
+        `x ${actionLabel}已停止：时长不符合通道2范围`,
+        "> " + error,
+        `> 请把卡包调整到 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒内，再重新生成。`,
+      ];
+      setSeedanceSubmitStatus(lines, "bad");
+      assistantSetStatus(lines, "bad");
+      addLogs(lines);
+      if (pack?.id) {
+        patchGenerationPackRuntime(pack.id, {
+          status: "failed",
+          lastMessage: seedanceStatusVisibleText(lines),
+          lastTone: "bad",
+          errorMessage: error,
+        });
+      }
+      return false;
+    }
+
     function syncGenerationPackageToSeedanceDraft(pack = {}, options = {}) {
       const shots = generationPackShots(pack);
       const first = shots[0];
@@ -20435,11 +20537,11 @@
         return null;
       }
       const refs = generationManualReferenceImages();
-      const duration = Number(pack.duration || composePackDuration(pack) || composeShotDuration(first.seg) || COMPOSE_PACK_MIN_SECONDS);
+      const duration = generationPackageSeedanceDuration(pack, composeShotDuration(first.seg) || COMPOSE_PACK_MIN_SECONDS);
       seedanceDraft.model = "sd-2.0-r3";
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio || "9:16";
       seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
-      seedanceDraft.duration = Math.max(COMPOSE_PACK_MIN_SECONDS, Math.min(COMPOSE_PACK_MAX_SECONDS, Math.ceil(duration)));
+      seedanceDraft.duration = duration;
       seedanceDraft.taskName = `${useMask ? "result" : "mask"}_${pack.id || "P000"}`;
       seedanceDraft.prompt = generationEditorPromptText(pack, generationPromptStage(pack, { useMask }));
       seedanceDraft.images = normalizeMaterialList(seedanceDraft.images, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
@@ -20451,7 +20553,7 @@
       const resolutionSelect = $("#seedanceResolutionSelect");
       if (promptInput) promptInput.value = seedanceDraft.prompt;
       if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
-      if (durationSelect) durationSelect.value = String(seedanceDraft.duration);
+      if (durationSelect) syncSeedanceDurationSelect(seedanceDraft.duration);
       if (ratioSelect) ratioSelect.value = seedanceDraft.ratio;
       if (resolutionSelect) resolutionSelect.value = seedanceDraft.resolution;
       renderSeedanceMaterialSlots("images");
@@ -20721,7 +20823,10 @@
         });
         return;
       }
-      packs.forEach((pack) => ensureGenerationPackageRuntimeRestored(pack));
+      packs.forEach((pack) => {
+        ensureGenerationPackageRuntimeRestored(pack);
+        resumeGenerationPackageTaskPolling(pack);
+      });
       if (composePlan.selectedPackId && generationPackById(composePlan.selectedPackId)) {
         generationWorkbench.selectedPackId = composePlan.selectedPackId;
       }
@@ -20942,6 +21047,7 @@
       generationWorkbench.selectedPackId = pack.id;
       composePlan.selectedPackId = pack.id;
       saveComposePlanDraft();
+      applyGenerationPackageDurationToSeedance(pack);
       const first = generationPackShots(pack)[0];
       if (first && selectedTimelineIndex !== first.index) {
         selectTimelineSegment(first.index, { previewMode: "segment" });
@@ -20985,6 +21091,7 @@
         assistantSetStatus(["单人包走 Scail2，不需要白膜。"], "warn");
         return;
       }
+      if (!ensureGenerationPackageDurationInRange(pack, "生成白膜")) return;
       if (!ensureGenerationPackageManualReferences(pack, "生成白膜")) return;
       patchGenerationPackRuntime(pack.id, {
         status: "mask_running",
@@ -21055,6 +21162,7 @@
       if (generationPackBackend(pack) === "scail2") {
         return startGenerationPackageScail2(pack.id);
       }
+      if (!ensureGenerationPackageDurationInRange(pack, "生成结果")) return;
       if (!generationPackMaskVideo(pack)) {
         const lines = ["x 先生成白膜视频", "> 多人接口需要先用原视频生成白膜，再用白膜生成结果。"];
         setSeedanceSubmitStatus(lines, "warn");
@@ -21098,6 +21206,7 @@
       const pack = generationPackById(packId);
       if (!pack) return;
       if (generationPackBackend(pack) === "scail2") return startGenerationPackageScail2(pack.id);
+      if (!ensureGenerationPackageDurationInRange(pack, "全流程生成")) return;
       if (generationPackMaskVideo(pack)) return startGenerationPackageResult(pack.id);
       return startGenerationPackageMask(pack.id, { autoGenerateResult: true });
     }
@@ -21231,6 +21340,38 @@
       el.value = String(current ?? values[0] ?? "");
     }
 
+    function normalizeSeedanceDurationValue(value, fallback = COMPOSE_PACK_MIN_SECONDS) {
+      const duration = Number(value);
+      const safe = Number.isFinite(duration) && duration > 0 ? duration : Number(fallback || COMPOSE_PACK_MIN_SECONDS);
+      return Math.round(safe * 1000) / 1000;
+    }
+
+    function formatSeedanceDurationValue(value) {
+      const duration = normalizeSeedanceDurationValue(value);
+      return duration.toFixed(3).replace(/\.?0+$/, "");
+    }
+
+    function seedanceDurationSelectValues(current = seedanceDraft.duration) {
+      const values = SEEDANCE_A_DURATIONS.map((value) => formatSeedanceDurationValue(value));
+      const currentValue = formatSeedanceDurationValue(current);
+      if (currentValue && !values.includes(currentValue)) values.push(currentValue);
+      return values.sort((left, right) => Number(left) - Number(right));
+    }
+
+    function syncSeedanceDurationSelect(current = seedanceDraft.duration) {
+      const value = formatSeedanceDurationValue(current);
+      fillSelect("seedanceDurationSelect", seedanceDurationSelectValues(value), value, (item) => `${item}s`);
+      seedanceDraft.duration = normalizeSeedanceDurationValue(value);
+    }
+
+    function seedanceDurationRangeError(duration) {
+      const value = normalizeSeedanceDurationValue(duration);
+      if (value < COMPOSE_PACK_MIN_SECONDS || value > COMPOSE_PACK_MAX_SECONDS) {
+        return `当前包 ${formatSeedanceDurationValue(value)} 秒，不在 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒范围内。`;
+      }
+      return "";
+    }
+
     function loadSeedanceDraft() {
       try {
         const saved = JSON.parse(localStorage.getItem(SEEDANCE_A_DRAFT_KEY) || "{}");
@@ -21252,7 +21393,8 @@
       if (!SEEDANCE_A_MODELS.includes(seedanceDraft.model)) {
         seedanceDraft.model = "sd-2.0-r3";
       }
-      if (!SEEDANCE_A_DURATIONS.map(String).includes(String(seedanceDraft.duration))) {
+      seedanceDraft.duration = normalizeSeedanceDurationValue(seedanceDraft.duration, 6);
+      if (seedanceDraft.duration < COMPOSE_PACK_MIN_SECONDS || seedanceDraft.duration > COMPOSE_PACK_MAX_SECONDS) {
         seedanceDraft.duration = 6;
       }
       if (!SEEDANCE_A_RATIOS.includes(seedanceDraft.ratio)) {
@@ -21286,7 +21428,7 @@
     function syncSeedanceControls() {
       fillSelect("seedanceModelSelect", SEEDANCE_A_MODELS, seedanceDraft.model);
       fillSelect("seedanceRatioSelect", SEEDANCE_A_RATIOS, seedanceDraft.ratio);
-      fillSelect("seedanceDurationSelect", SEEDANCE_A_DURATIONS.map(String), String(seedanceDraft.duration), (value) => value + "s");
+      syncSeedanceDurationSelect(seedanceDraft.duration);
       fillSelect("seedanceResolutionSelect", SEEDANCE_A_RESOLUTIONS, seedanceDraft.resolution);
       const prompt = $("#seedancePromptInput");
       if (prompt) prompt.value = seedanceDraft.prompt || seedanceTemplate("remake");
@@ -21303,7 +21445,7 @@
     function pullSeedanceControls() {
       seedanceDraft.model = $("#seedanceModelSelect")?.value || seedanceDraft.model;
       seedanceDraft.ratio = $("#seedanceRatioSelect")?.value || seedanceDraft.ratio;
-      seedanceDraft.duration = Number($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 6);
+      seedanceDraft.duration = normalizeSeedanceDurationValue($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 6, 6);
       seedanceDraft.resolution = $("#seedanceResolutionSelect")?.value || seedanceDraft.resolution;
       seedanceDraft.prompt = $("#seedancePromptInput")?.value || "";
       seedanceDraft.taskName = $("#seedanceTaskNameInput")?.value || "shot_retake_001";
@@ -24152,7 +24294,7 @@
       }
       return true;
     }
-    function seedanceAssetPreflight() {
+    function seedanceAssetPreflight(options = {}) {
       const assets = currentGenerationAssets();
       const errors = [];
       const warnings = [];
@@ -24163,7 +24305,12 @@
         warnings.push("当前镜头没有关联资产，Seedance 将只依赖提示词和参考视频/参考图，角色稳定性可能变弱。");
       }
       if (roleAssets.length && availableRoleReferenceCount < roleAssets.length) {
-        errors.push(`当前镜头有 ${roleAssets.length} 个角色，但只手动选择了 ${availableRoleReferenceCount} 张参考图。`);
+        const message = `当前镜头有 ${roleAssets.length} 个角色，但只手动选择了 ${availableRoleReferenceCount} 张参考图。`;
+        if (options.allowReferenceCountMismatch === true) {
+          warnings.push(`${message} 本次按“会上传的参考图”继续提交。`);
+        } else {
+          errors.push(message);
+        }
       }
       assets.forEach((asset) => {
         const name = asset.name || asset.id;
@@ -24190,6 +24337,59 @@
 
     function seedancePackageTaskRoleLabel(outputRole = "result") {
       return String(outputRole || "result") === "mask" ? "白膜" : "结果";
+    }
+
+    function generationPackagePollContextFromRuntime(pack = {}, outputRole = "result") {
+      const role = String(outputRole || "result") === "mask" ? "mask" : "result";
+      const runtime = generationRuntimeForPack(pack.id);
+      const stored = runtime[role === "mask" ? "maskPollContext" : "resultPollContext"];
+      const base = stored && typeof stored === "object" ? stored : {};
+      const fallbackSource = role === "mask"
+        ? String(runtime.packageSourcePath || runtime.sourcePath || generationPackSourceVideo(pack) || "").trim()
+        : String(base.sourcePath || runtime.sourcePath || generationPackMaskVideo(pack) || "").trim();
+      return {
+        ...base,
+        packageId: String(pack.id || base.packageId || "").trim(),
+        outputRole: role,
+        sourcePath: String(base.sourcePath || fallbackSource || "").trim(),
+        outputLabel: String(base.outputLabel || (role === "mask" ? "白膜视频" : "结果视频")).trim(),
+        autoGenerateResult: role === "mask" && (base.autoGenerateResult === true || runtime.pendingAutoResult === true),
+        timelineIndex: Number.isFinite(Number(base.timelineIndex)) ? Number(base.timelineIndex) : -1,
+      };
+    }
+
+    function resumeGenerationPackageTaskPolling(pack = {}) {
+      const id = String(pack?.id || "").trim();
+      if (!id) return;
+      const runtime = generationRuntimeForPack(id);
+      const status = String(runtime.status || "");
+      const hasMaskOutput = Boolean(String(runtime.whiteMaskPath || runtime.maskPath || "").trim());
+      const hasResultOutput = Boolean(String(runtime.resultPath || "").trim());
+      const maskTaskId = String(runtime.maskTaskId || "").trim();
+      const resultTaskId = String(runtime.resultTaskId || "").trim();
+      let outputRole = "";
+      let taskId = "";
+      if (status === "mask_running" && maskTaskId) {
+        outputRole = "mask";
+        taskId = maskTaskId;
+      } else if (status === "result_running" && resultTaskId) {
+        outputRole = "result";
+        taskId = resultTaskId;
+      } else if (!hasResultOutput && resultTaskId && status !== "failed") {
+        outputRole = "result";
+        taskId = resultTaskId;
+      } else if (!hasMaskOutput && maskTaskId && status !== "failed") {
+        outputRole = "mask";
+        taskId = maskTaskId;
+      }
+      if (!taskId || seedancePackagePollTimers[taskId]) return;
+      patchGenerationPackRuntime(id, {
+        status: outputRole === "mask" ? "mask_running" : "result_running",
+        lastMessage: `已恢复${seedancePackageTaskRoleLabel(outputRole)}任务轮询\ntask_id: ${taskId}`,
+        lastTone: "warn",
+        errorMessage: "",
+      }, { render: false });
+      startSeedancePackageTaskPolling(taskId, generationPackagePollContextFromRuntime(pack, outputRole));
     }
 
     function clearSeedancePackagePoll(taskId) {
@@ -24227,6 +24427,7 @@
             project_dir: $("#projectDirInput")?.value.trim() || "",
             source_video_path: String(context.sourcePath || $("#videoPathInput")?.value.trim() || "").trim(),
             package_id: packageId,
+            output_role: outputRole,
           }),
         });
         const data = await response.json();
@@ -24289,6 +24490,7 @@
                 maskSplitManifest: String(splitData?.manifest_path || "").trim(),
                 maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
                 maskTaskId: id,
+                maskPollContext: null,
                 lastMessage: outputPath
                   ? `API 白膜生成完成\n${splitData?.clips?.length ? `已拆分 ${splitData.clips.length} 段\n` : ""}输出: ${outputPath}`
                   : "API 白膜没有返回本地视频路径",
@@ -24310,6 +24512,7 @@
                 resultSplitManifest: String(splitData?.manifest_path || "").trim(),
                 resultRuns: appendGenerationRun(generationRuntimeForPack(packageId).resultRuns, resultRun),
                 resultTaskId: id,
+                resultPollContext: null,
                 lastMessage: outputPath ? `通道2生成完成\n输出: ${outputPath}` : "通道2没有返回本地视频路径",
                 lastTone: outputPath && !splitWarning ? "good" : "warn",
                 errorMessage: outputPath ? "" : "通道2没有返回本地视频路径",
@@ -24327,21 +24530,24 @@
               lastMessage: seedanceStatusVisibleText(lines),
               lastTone: "bad",
               errorMessage: seedanceStatusVisibleText(lines),
+              [isMaskOutput ? "maskPollContext" : "resultPollContext"]: null,
             });
           }
         }
       } catch (error) {
-        clearSeedancePackagePoll(id);
         const lines = [`x 查询 ${packageId || "生成包"} ${roleLabel}任务失败`, `> task_id: ${id}`, "> " + (error.message || error)];
-        setSeedanceSubmitStatus(lines, "bad");
-        addLogs(lines);
+        const statusText = `ERROR ${error.message || error}`;
+        if (statusText !== seedancePackageLastStatusText[id]) {
+          seedancePackageLastStatusText[id] = statusText;
+          setSeedanceSubmitStatus([...lines, "> 会继续轮询，不会丢弃任务"], "warn");
+          addLogs([...lines, "> 会继续轮询，不会丢弃任务"]);
+        }
         if (packageId) {
           patchGenerationPackRuntime(packageId, {
-            status: "failed",
+            status: isMaskOutput ? "mask_running" : "result_running",
             lastMessage: seedanceStatusVisibleText(lines),
-            lastTone: "bad",
-            errorMessage: seedanceStatusVisibleText(lines),
-          });
+            lastTone: "warn",
+          }, { render: false });
         }
       }
     }
@@ -24384,6 +24590,24 @@
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = $("#videoPathInput")?.value.trim() || "";
       const draft = buildSeedancePayload();
+      if (isPackageTask) {
+        const durationError = seedanceDurationRangeError(draft.payload?.duration);
+        if (durationError) {
+          const lines = [
+            "x 通道2提交已拦截：时长不符合范围",
+            "> " + durationError,
+            `> 允许范围是 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒。`,
+          ];
+          setSeedanceSubmitStatus(lines, "bad");
+          patchGenerationPackRuntime(optionPackageId, {
+            status: "failed",
+            lastMessage: seedanceStatusVisibleText(lines),
+            lastTone: "bad",
+            errorMessage: durationError,
+          });
+          return addLogs(lines);
+        }
+      }
       if (!draft.payload?.prompt) {
         const lines = ["x Seedance 提示词为空", "> 请先刷新任务草稿，或补完整当前镜头提示词"];
         setSeedanceSubmitStatus(lines, "bad");
@@ -24406,7 +24630,9 @@
         if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
         return addLogs(lines);
       }
-      const preflight = seedanceAssetPreflight();
+      const preflight = seedanceAssetPreflight({
+        allowReferenceCountMismatch: isPackageTask,
+      });
       if (!preflight.ok) {
         const lines = [
           "x Seedance 提交已拦截：缺少必要替换图",
@@ -24440,6 +24666,7 @@
         video_path: videoPath,
         source_video_path: String(options.compareSourcePath || shotVideoPath(seg) || videoPath).trim(),
         package_id: optionPackageId,
+        output_role: String(options.outputRole || seedancePendingCompare?.outputRole || "result").trim(),
         segment_id: seg.segment_id || "",
         selected_timeline_index: selectedTimelineIndex,
       };
@@ -24494,6 +24721,8 @@
           };
           if (compareContext.outputRole === "mask") taskPatch.maskTaskId = submittedTaskId;
           else taskPatch.resultTaskId = submittedTaskId;
+          if (compareContext.outputRole === "mask") taskPatch.maskPollContext = compareContext;
+          else taskPatch.resultPollContext = compareContext;
           patchGenerationPackRuntime(optionPackageId, taskPatch);
           startSeedancePackageTaskPolling(submittedTaskId, compareContext);
           return;
