@@ -12,10 +12,15 @@ from web_ui.server import (
     SEEDANCE_A_TASKS_LOCK,
     _delete_generation_package_mask_clip,
     _delete_storyboard_mode2_asset,
+    _mode2_ensure_shot_preview_clips,
+    _mode2_renumber_timeline_shots,
     _mode2_scail2_route_check,
+    _mode2_split_timeline_shot,
     _restore_generation_package_state,
     _submit_seedance_a_task,
     _storyboard_mode2_shot_subclips,
+    _storyboard_build_class_pure_shots,
+    _storyboard_enrich_reference_segments_with_understanding,
 )
 
 
@@ -23,6 +28,47 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Mode2OnlyWorkflowTests(unittest.TestCase):
+    def test_storyboard_shots_keep_scene_single_multi_as_separate_units(self) -> None:
+        reference_segments = [
+            {"segment_id": "V001", "start": 0.0, "end": 1.2, "person_count": 0, "is_pure_background": True},
+            {"segment_id": "V002", "start": 1.2, "end": 2.7, "person_count": 1},
+            {"segment_id": "V003", "start": 2.7, "end": 4.4, "person_count": 2},
+            {"segment_id": "V004", "start": 4.4, "end": 5.8, "person_count": 1},
+        ]
+
+        shots = _storyboard_build_class_pure_shots(
+            reference_segments,
+            video_path="source.mp4",
+            understanding_status="fallback",
+            boundary_hints=[],
+        )
+
+        self.assertEqual([shot["shot_class"] for shot in shots], ["scene", "single", "multi", "single"])
+        self.assertEqual([shot["shot_class_label"] for shot in shots], ["场景", "单人", "多人", "单人"])
+        self.assertEqual([(shot["start"], shot["end"]) for shot in shots], [
+            (0.0, 1.2),
+            (1.2, 2.7),
+            (2.7, 4.4),
+            (4.4, 5.8),
+        ])
+
+    def test_semantic_characters_do_not_turn_visual_scene_into_person_shot(self) -> None:
+        enriched = _storyboard_enrich_reference_segments_with_understanding(
+            [{
+                "segment_id": "V001",
+                "start": 0.0,
+                "end": 2.0,
+                "person_count": 0,
+                "is_pure_background": True,
+            }],
+            {"scenes": [{"start": 0.0, "end": 2.0, "characters": ["角色A"]}]},
+            duration=2.0,
+        )
+
+        self.assertEqual(enriched[0]["person_count"], 0)
+        self.assertEqual(enriched[0]["shot_class"], "scene")
+        self.assertEqual(enriched[0]["shot_class_label"], "场景")
+
     def test_legacy_mode1_dashboard_removed(self) -> None:
         self.assertFalse((ROOT / "web_ui" / "splitter_dashboard.html").exists())
 
@@ -84,12 +130,12 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("resetGenerationRuntimeForConfirmedPlan(composeConfirmedPlan.packs)", html)
         self.assertIn("function composePackStackHtml", html)
         self.assertIn("function composePackShotListText", html)
+        self.assertIn("function composePackCardTitle", html)
         self.assertIn("compose-pack-shot-list", html)
-        self.assertIn("段：", html)
         self.assertIn("function confirmComposePlan", html)
         self.assertIn('openComposePage({ rebuild: true })', html)
-        self.assertIn("5-10 秒最佳", html)
-        self.assertIn("超过 15 秒禁止", html)
+        self.assertIn("5-15 秒", html)
+        self.assertIn("超过 15 秒", html)
         self.assertIn("卡包架", html)
         self.assertIn("compose-pack-shelf", html)
         self.assertIn("compose-pack-stack-card", html)
@@ -167,6 +213,31 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("drop-after", html)
         self.assertIn("afterId", html)
         self.assertIn("swapId", html)
+        self.assertIn("function storyboardFrameAlignedCutTime", html)
+        self.assertIn("function storyboardLeftRelativeTime", html)
+        self.assertIn("function localStoryboardShotCutResult", html)
+        self.assertIn("function applyLocalShotCutWorkbench", html)
+        self.assertIn("applyLocalShotCutWorkbench(cutTimes", html)
+        self.assertIn("function storyboardApiUrl", html)
+        self.assertIn('window.location?.protocol === "file:"', html)
+        self.assertIn('window.location.replace("http://127.0.0.1:7861/story_generate_dashboard.html")', html)
+        self.assertIn('fetch(storyboardApiUrl("/api/pick-path")', html)
+        self.assertIn('fetch(storyboardApiUrl("/api/storyboard-draft")', html)
+        self.assertIn('fetch(storyboardApiUrl("/api/jobs/" + encodeURIComponent(currentStoryJobId)))', html)
+        self.assertIn('await pickPath("file", "#videoPathInput")', html)
+        self.assertIn('fetch(storyboardApiUrl("/api/storyboard-shot-subclips")', html)
+        self.assertIn("aligned.frameStep", html)
+        self.assertIn("virtual_subclips: !save", html)
+        self.assertIn("segment_start", html)
+        self.assertIn("video_offset", html)
+        self.assertIn("media_start", html)
+        self.assertIn("parentMediaStart", html)
+        self.assertIn("function bindStoryboardSegmentPlayback", html)
+        self.assertIn("configureStoryboardSegmentPlayback(sourceVideo, previewStart, previewEnd)", html)
+        self.assertIn("setStoryboardVideoSource(generatedVideo, path, previewStart, previewEnd)", html)
+        self.assertIn("shotVideoEndTime(seg)", html)
+        self.assertIn("storyboardDurationLabel(seg)", html)
+        self.assertNotIn("Math.abs(value - rounded) < 0.08", html)
         self.assertIn("last.rect.left + last.rect.width * 0.35", html)
         self.assertIn("selectedItems.concat", html)
         self.assertIn('event.dataTransfer.setData("text/plain"', html)
@@ -611,7 +682,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             video.write_bytes(b"placeholder")
             captured_ranges: list[list[tuple[float, float]]] = []
 
-            def fake_create(_video_path, ranges, existing_subshots=None):
+            def fake_create(_video_path, ranges, *, media_offset=0.0, existing_subshots=None):
                 captured_ranges.append(list(ranges))
                 return [
                     {
@@ -649,7 +720,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             video.write_bytes(b"placeholder")
             captured_ranges: list[list[tuple[float, float]]] = []
 
-            def fake_create(_video_path, ranges, existing_subshots=None):
+            def fake_create(_video_path, ranges, *, media_offset=0.0, existing_subshots=None):
                 captured_ranges.append(list(ranges))
                 return [
                     {
@@ -685,7 +756,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             video.write_bytes(b"placeholder")
             captured_ranges: list[list[tuple[float, float]]] = []
 
-            def fake_create(_video_path, ranges, existing_subshots=None):
+            def fake_create(_video_path, ranges, *, media_offset=0.0, existing_subshots=None):
                 captured_ranges.append(list(ranges))
                 return [
                     {
@@ -714,6 +785,339 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertEqual(result["source"], "local_hardcut")
             self.assertEqual(result["cut_times"], [1.0])
             self.assertEqual(captured_ranges, [[(0.0, 1.0), (1.0, 7.0)]])
+
+    def test_manual_shot_cut_snaps_to_last_valid_frame(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+            captured_ranges: list[list[tuple[float, float]]] = []
+
+            def fake_create(_video_path, ranges, *, media_offset=0.0, existing_subshots=None):
+                captured_ranges.append(list(ranges))
+                return [
+                    {
+                        "index": index,
+                        "start": start,
+                        "end": end,
+                        "duration": round(end - start, 3),
+                        "path": str(root / f"sub{index}.mp4"),
+                    }
+                    for index, (start, end) in enumerate(ranges, 1)
+                ]
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=1.0, fps=30.0)),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=fake_create),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [0.99],
+                    "manual_cut": True,
+                })
+
+            self.assertEqual(result["cut_times"], [round(29 / 30, 6)])
+            self.assertEqual(captured_ranges, [[(0.0, round(29 / 30, 6)), (round(29 / 30, 6), 1.0)]])
+
+    def test_manual_virtual_shot_cuts_do_not_write_preview_videos(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "shot.mp4"
+            video.write_bytes(b"placeholder")
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=1.0, fps=30.0)),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=AssertionError("ffmpeg preview cuts should not run")),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S001",
+                    "cut_times": [0.99],
+                    "manual_cut": True,
+                    "virtual_subclips": True,
+                })
+
+            self.assertEqual(result["cut_times"], [round(29 / 30, 6)])
+            self.assertEqual([item["path"] for item in result["subclips"]], [str(video), str(video)])
+            self.assertTrue(all(item["virtual_subclip"] for item in result["subclips"]))
+
+    def test_virtual_shot_cut_uses_segment_window_inside_full_source(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            video = root / "source.mp4"
+            video.write_bytes(b"placeholder")
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=120.0, fps=30.0)),
+                patch("web_ui.server._mode2_create_reference_mask_subclips", side_effect=AssertionError("ffmpeg preview cuts should not run")),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(video),
+                    "segment_id": "S015",
+                    "segment_start": 65.0,
+                    "segment_end": 66.0,
+                    "segment_duration": 1.0,
+                    "video_offset": 65.0,
+                    "cut_times": [0.99],
+                    "manual_cut": True,
+                    "virtual_subclips": True,
+                })
+
+            self.assertEqual(result["cut_times"], [round(29 / 30, 6)])
+            self.assertEqual(
+                [(item["start"], item["end"], item["media_start"], item["media_end"]) for item in result["subclips"]],
+                [(0.0, round(29 / 30, 6), 65.0, round(65 + 29 / 30, 6)), (round(29 / 30, 6), 1.0, round(65 + 29 / 30, 6), 66.0)],
+            )
+
+    def test_saved_manual_cut_payload_requests_physical_subclips(self) -> None:
+        html = (ROOT / "web_ui" / "story_generate_dashboard.html").read_text(encoding="utf-8")
+        payload_fn = html.split("function currentShotCutPayload", 1)[1].split(
+            "async function openShotCutWorkbench",
+            1,
+        )[0]
+
+        self.assertNotIn("virtual_subclips: true", payload_fn)
+        self.assertIn("virtual_subclips: !save", payload_fn)
+
+    def test_saved_real_subclips_cut_full_source_with_media_offset(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"placeholder")
+            store_path = root / "assets" / "storyboard_assets.json"
+            store_path.parent.mkdir(parents=True)
+            store_path.write_text(json.dumps({
+                "video_path": str(source),
+                "shots": [{
+                    "segment_id": "S015",
+                    "start": 65.0,
+                    "end": 67.0,
+                    "duration": 2.0,
+                }],
+            }), encoding="utf-8")
+            cut_calls: list[tuple[Path, float, float, Path]] = []
+
+            def fake_cut(video_path, start, end, output_path):
+                cut_calls.append((Path(video_path), float(start), float(end), Path(output_path)))
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=120.0, fps=30.0)),
+                patch("spvideo.ffmpeg_tools.cut_segment_precise", side_effect=fake_cut),
+                patch("web_ui.server._mode2_ensure_shot_preview_clips", return_value=False),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(source),
+                    "segment_id": "S015",
+                    "segment_start": 65.0,
+                    "segment_end": 67.0,
+                    "segment_duration": 2.0,
+                    "video_offset": 65.0,
+                    "cut_times": [0.5],
+                    "manual_cut": True,
+                    "save": True,
+                })
+
+            self.assertEqual(
+                [(video_path, start, end) for video_path, start, end, _target in cut_calls],
+                [(source, 65.0, 65.5), (source, 65.5, 67.0)],
+            )
+            self.assertEqual(
+                [(item["media_start"], item["media_end"]) for item in result["subclips"]],
+                [(65.0, 65.5), (65.5, 67.0)],
+            )
+            self.assertTrue(all(not item.get("virtual_subclip") for item in result["subclips"]))
+            self.assertEqual(len({target for _video, _start, _end, target in cut_calls}), 2)
+
+    def test_promoted_physical_subclips_keep_independent_preview_paths(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"placeholder")
+            store_path = root / "assets" / "storyboard_assets.json"
+            store_path.parent.mkdir(parents=True)
+            store_path.write_text(json.dumps({
+                "video_path": str(source),
+                "assets": [],
+                "shots": [{
+                    "segment_id": "S001",
+                    "start": 10.0,
+                    "end": 12.0,
+                    "duration": 2.0,
+                }],
+            }), encoding="utf-8")
+            cut_targets: list[Path] = []
+
+            def fake_cut(_video_path, _start, _end, output_path):
+                cut_targets.append(Path(output_path))
+
+            with (
+                patch("spvideo.ffmpeg_tools.probe_video", return_value=SimpleNamespace(duration=20.0, fps=30.0)),
+                patch("spvideo.ffmpeg_tools.cut_segment_precise", side_effect=fake_cut),
+                patch("web_ui.server._mode2_ensure_shot_preview_clips", return_value=False),
+            ):
+                result = _storyboard_mode2_shot_subclips({
+                    "project_dir": str(root),
+                    "video_path": str(source),
+                    "segment_id": "S001",
+                    "segment_start": 10.0,
+                    "segment_end": 12.0,
+                    "segment_duration": 2.0,
+                    "video_offset": 10.0,
+                    "cut_times": [0.5],
+                    "manual_cut": True,
+                    "save": True,
+                    "promote_to_timeline": True,
+                })
+
+            self.assertTrue(result["promoted_to_timeline"])
+            self.assertEqual(len(result["segments"]), 2)
+            self.assertEqual(len(cut_targets), 2)
+            self.assertNotEqual(cut_targets[0], cut_targets[1])
+            for child, target in zip(result["segments"], cut_targets):
+                target_text = str(target)
+                self.assertEqual(child.get("preview_clip_path"), target_text)
+                self.assertEqual(child.get("clip_output_path"), target_text)
+                self.assertEqual(child.get("output_path"), target_text)
+                self.assertNotEqual(child.get("output_path"), str(source))
+                self.assertFalse(child.get("virtual_subclip"))
+
+            saved = json.loads(store_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                [shot["output_path"] for shot in saved["shots"]],
+                [str(target) for target in cut_targets],
+            )
+
+    def test_renumbering_ordinary_shot_preserves_preview_paths_but_clears_generated_outputs(self) -> None:
+        preview_path = str(ROOT / "clips" / "mode2_shots" / "S009_00010000_00012000.mp4")
+        shots = [{
+            "segment_id": "S009",
+            "start": 10.0,
+            "end": 12.0,
+            "duration": 2.0,
+            "preview_clip_path": preview_path,
+            "clip_output_path": preview_path,
+            "output_path": preview_path,
+            "generated_path": "generated.mp4",
+            "seedance_output_path": "seedance.mp4",
+            "seedance_task_id": "task-1",
+        }]
+
+        renumbered, shot_id_map = _mode2_renumber_timeline_shots(shots)
+
+        self.assertEqual(shot_id_map, {"S009": ["S001"]})
+        self.assertEqual(renumbered[0]["segment_id"], "S001")
+        for key in ("preview_clip_path", "clip_output_path", "output_path"):
+            self.assertEqual(renumbered[0].get(key), preview_path)
+        for key in ("generated_path", "seedance_output_path", "seedance_task_id"):
+            self.assertNotIn(key, renumbered[0])
+
+    def test_ensure_shot_preview_clips_preserves_existing_physical_subclip(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"source")
+            physical_subclip = root / "subshots" / "source" / "source_sub01_00010000_00012000_p1.mp4"
+            physical_subclip.parent.mkdir(parents=True)
+            physical_subclip.write_bytes(b"physical-subclip")
+            shot = {
+                "segment_id": "S001",
+                "start": 10.0,
+                "end": 12.0,
+                "duration": 2.0,
+                "full_source_video_path": str(source),
+                "source_video_path": str(source),
+                "preview_clip_path": str(physical_subclip),
+                "clip_output_path": str(physical_subclip),
+                "output_path": str(physical_subclip),
+                "manual_timeline_edit": {"action": "promote_subclips_to_timeline"},
+            }
+            data = {"video_path": str(source), "shots": [shot]}
+
+            with patch("spvideo.ffmpeg_tools.cut_segment") as cut_mock:
+                changed = _mode2_ensure_shot_preview_clips(root, data)
+
+            cut_mock.assert_not_called()
+            self.assertFalse(changed)
+            for key in ("preview_clip_path", "clip_output_path", "output_path"):
+                self.assertEqual(shot.get(key), str(physical_subclip))
+
+    def test_ensure_shot_preview_clips_reuses_old_numbered_matching_range(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"source")
+            clips_dir = root / "clips" / "mode2_shots"
+            clips_dir.mkdir(parents=True)
+            old_numbered_clip = clips_dir / "S011_00010000_00012000.mp4"
+            old_numbered_clip.write_bytes(b"existing-preview")
+            shot = {
+                "segment_id": "S012",
+                "start": 10.0,
+                "end": 12.0,
+                "duration": 2.0,
+            }
+            data = {"video_path": str(source), "shots": [shot]}
+
+            with patch("spvideo.ffmpeg_tools.cut_segment") as cut_mock:
+                changed = _mode2_ensure_shot_preview_clips(root, data)
+
+            cut_mock.assert_not_called()
+            self.assertTrue(changed)
+            for key in ("preview_clip_path", "clip_output_path", "output_path"):
+                self.assertEqual(shot.get(key), str(old_numbered_clip))
+            self.assertEqual(data.get("clips_dir"), str(clips_dir))
+
+    def test_ensure_shot_preview_clips_cuts_when_no_reusable_preview_exists(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.mp4"
+            source.write_bytes(b"source")
+            shot = {
+                "segment_id": "S003",
+                "start": 10.0,
+                "end": 12.0,
+                "duration": 2.0,
+            }
+            data = {"video_path": str(source), "shots": [shot]}
+
+            def fake_cut(_source, _start, _end, output_path):
+                target = Path(output_path)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"new-preview")
+
+            with patch("spvideo.ffmpeg_tools.cut_segment", side_effect=fake_cut) as cut_mock:
+                changed = _mode2_ensure_shot_preview_clips(root, data)
+
+            cut_mock.assert_called_once()
+            source_arg, start_arg, end_arg, target_arg = cut_mock.call_args.args
+            expected = root / "clips" / "mode2_shots" / "S003_00010000_00012000.mp4"
+            self.assertEqual(Path(source_arg), source)
+            self.assertEqual((start_arg, end_arg), (10.0, 12.0))
+            self.assertEqual(Path(target_arg), expected)
+            self.assertTrue(changed)
+            for key in ("preview_clip_path", "clip_output_path", "output_path"):
+                self.assertEqual(shot.get(key), str(expected))
+
+    def test_timeline_split_snaps_to_frame_instead_of_rejecting_near_edge(self) -> None:
+        shots = [{
+            "segment_id": "S001",
+            "start": 0.0,
+            "end": 1.0,
+            "duration": 1.0,
+            "fps": 30.0,
+        }]
+
+        next_shots, summary, selected_id, selected_index = _mode2_split_timeline_shot(shots, 0, 0.99)
+
+        self.assertEqual(selected_id, "S001")
+        self.assertEqual(selected_index, 0)
+        self.assertEqual(summary["split_time"], 0.967)
+        self.assertEqual([(shot["start"], shot["end"]) for shot in next_shots], [(0.0, 0.967), (0.967, 1.0)])
 
     def test_clear_shot_subclips_removes_saved_cut_data(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -774,7 +1178,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
                 }],
             }), encoding="utf-8")
 
-            def fake_create(_video_path, ranges, existing_subshots=None):
+            def fake_create(_video_path, ranges, *, media_offset=0.0, existing_subshots=None):
                 return [
                     {
                         "index": index,

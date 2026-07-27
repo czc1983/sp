@@ -83,9 +83,11 @@ DEFAULT_WAN22_FOCUS_BACKGROUND_BLUR_PIXELS = 0
 DEFAULT_WAN22_ALLOW_LOCAL_MASK_FALLBACK = False
 STORYBOARD_MODE2_PROJECT_ROOT = ROOT.parent / ".storyboard_mode2_projects"
 STORYBOARD_MODE2_JOB_ROOT = ROOT.parent / ".storyboard_mode2_jobs"
+STORYBOARD_MODE2_UPLOAD_ROOT = ROOT.parent / ".storyboard_mode2_uploads"
 DEFAULT_SINGLE_ROLE_TRANSFER_BACKEND = "wan22"
 DEFAULT_MULTI_ROLE_TRANSFER_BACKEND = "scail2"
 TRANSFER_BACKENDS = {"wan22", "scail2", "scail2_colored", "scail2_masked", "bernini", "runninghub_bernini"}
+MODE2_MIN_SHOT_CUT_SECONDS = 1.0
 
 
 def _backend_uses_scail2_worker(transfer_backend: Any) -> bool:
@@ -547,6 +549,16 @@ class SplitterHandler(BaseHTTPRequestHandler):
             target = unquote((query.get("path") or [""])[0])
             self._send_media(Path(target))
             return
+        if parsed.path == "/api/video-frame":
+            query = parse_qs(parsed.query)
+            target = unquote((query.get("path") or [""])[0])
+            time_text = (query.get("time") or ["0.1"])[0]
+            try:
+                time_seconds = max(0.0, float(time_text))
+            except ValueError:
+                time_seconds = 0.1
+            self._send_video_frame(Path(target), time_seconds)
+            return
         if parsed.path == "/api/server-status":
             self._send_json({
                 "pid": os.getpid(),
@@ -654,7 +666,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
-        print(f"[web] POST {parsed.path!r}", flush=True)
+        logging.debug("[web] POST %r", parsed.path)
         if parsed.path.startswith("/api/jobs/") and parsed.path.endswith("/cancel"):
             job_id = parsed.path.rsplit("/", 2)[-2]
             with JOBS_LOCK:
@@ -739,6 +751,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 initial = str(payload.get("initial") or "").strip()
                 picked = _pick_path(kind=kind, initial=initial)
                 self._send_json({"path": picked})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/upload-source-video":
+            try:
+                self._send_json(_save_uploaded_source_video(self))
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
             return
@@ -2314,6 +2333,28 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 if not chunk:
                     break
                 self.wfile.write(chunk)
+
+    def _send_video_frame(self, path: Path, time_seconds: float) -> None:
+        if not path.exists() or not path.is_file():
+            self._send_json({"error": "video_not_found"}, status=404)
+            return
+        try:
+            stat = path.stat()
+            rounded_time = round(max(0.0, float(time_seconds)), 2)
+            digest = hashlib.sha1(
+                f"{path.resolve()}|{stat.st_mtime_ns}|{stat.st_size}|{rounded_time:.2f}".encode("utf-8", errors="ignore")
+            ).hexdigest()[:24]
+            cache_path = STORYBOARD_MODE2_JOB_ROOT / "video_frame_cache" / f"{digest}.jpg"
+            if not cache_path.exists() or cache_path.stat().st_size <= 0:
+                try:
+                    extract_frame(path, rounded_time, cache_path)
+                except Exception:
+                    if rounded_time <= 0:
+                        raise
+                    extract_frame(path, 0.0, cache_path)
+            self._send_file(cache_path)
+        except Exception as exc:  # noqa: BLE001
+            self._send_json({"error": f"video_frame_failed: {exc}"}, status=500)
 
 
 def _latest_result_child(root: Path) -> Path | None:
@@ -4563,6 +4604,7 @@ def _refresh_mode2_structured_fields(root: Path, data: dict[str, Any]) -> dict[s
     shots = [item for item in (data.get("shots") or []) if isinstance(item, dict)]
     data["assets"] = assets
     data["shots"] = shots
+    data.pop("skip_preview_clip_refresh", None)
     _mode2_ensure_shot_preview_clips(root, data)
     _mode2_backfill_semantic_scene_prop_assets(root, data)
     _mode2_dedupe_scene_assets(data)
@@ -4733,9 +4775,35 @@ def _mode2_ensure_shot_preview_clips(root: Path, data: dict[str, Any]) -> bool:
     for shot in shots:
         start = max(0.0, _mode2_float(shot.get("start"), 0.0))
         end = _mode2_float(shot.get("end"), start + _mode2_float(shot.get("duration"), 0.0))
-        if end <= start + 0.05:
+        if end <= start + 0.001:
             continue
-        clip_path = _mode2_shot_preview_clip_path(root, shot)
+        existing_preview = next(
+            (
+                Path(value)
+                for value in (
+                    shot.get("preview_clip_path"),
+                    shot.get("clip_output_path"),
+                )
+                if str(value or "").strip()
+                and Path(str(value)).exists()
+                and Path(str(value)).stat().st_size > 0
+            ),
+            None,
+        )
+        clip_path = existing_preview or _mode2_shot_preview_clip_path(root, shot)
+        if existing_preview is None and not (clip_path.exists() and clip_path.stat().st_size > 0):
+            start_ms = max(0, int(round(start * 1000)))
+            end_ms = max(start_ms + 10, int(round(end * 1000)))
+            old_numbered_clip = next(
+                (
+                    candidate
+                    for candidate in sorted(clips_dir.glob(f"*_{start_ms:08d}_{end_ms:08d}.mp4"))
+                    if candidate.is_file() and candidate.stat().st_size > 0
+                ),
+                None,
+            )
+            if old_numbered_clip is not None:
+                clip_path = old_numbered_clip
         if not (clip_path.exists() and clip_path.stat().st_size > 0):
             try:
                 from spvideo.ffmpeg_tools import cut_segment
@@ -4758,8 +4826,16 @@ def _mode2_ensure_shot_preview_clips(root: Path, data: dict[str, Any]) -> bool:
             "source_video_path": video_path,
             "preview_clip_path": clip_text,
             "clip_output_path": clip_text,
-            "output_path": clip_text,
         }
+        current_output = str(shot.get("output_path") or "").strip()
+        previous_preview_values = {
+            str(shot.get("preview_clip_path") or "").strip(),
+            str(shot.get("clip_output_path") or "").strip(),
+            video_path,
+        }
+        has_generated_output = any(str(shot.get(key) or "").strip() for key in MODE2_TIMELINE_GENERATED_KEYS)
+        if not has_generated_output and (not current_output or current_output in previous_preview_values):
+            updates["output_path"] = clip_text
         for key, value in updates.items():
             if shot.get(key) != value:
                 shot[key] = value
@@ -5440,6 +5516,28 @@ def _mode2_shot_time_range(shot: dict[str, Any]) -> tuple[float, float]:
     return start, end
 
 
+def _mode2_frame_rate_value(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, str) and "/" in value:
+        left, right = value.split("/", 1)
+        try:
+            numerator = float(left)
+            denominator = float(right)
+            if denominator > 0:
+                return numerator / denominator
+        except (TypeError, ValueError):
+            return default
+    fps = _mode2_float(value, default)
+    return fps if fps > 0 else default
+
+
+def _mode2_shot_frame_rate(shot: dict[str, Any], default: float = 30.0) -> float:
+    for key in ("fps", "frame_rate", "frameRate", "source_fps", "video_fps", "track_fps"):
+        fps = _mode2_frame_rate_value(shot.get(key), 0.0)
+        if fps > 0:
+            return fps
+    return default
+
+
 def _mode2_clear_timeline_outputs(shot: dict[str, Any], *, clear_preview: bool = True) -> None:
     for key in MODE2_TIMELINE_GENERATED_KEYS:
         shot.pop(key, None)
@@ -5526,6 +5624,11 @@ def _mode2_renumber_timeline_shots(
     for index, shot in enumerate(shots, start=1):
         old_id = str(shot.get("segment_id") or "").strip()
         new_id = f"S{index:03d}"
+        preserved_preview = {
+            key: shot.get(key)
+            for key in MODE2_TIMELINE_PREVIEW_KEYS
+            if str(shot.get(key) or "").strip()
+        }
         source_ids = [old_id]
         parent_id = str(shot.get("manual_parent_segment_id") or "").strip()
         if parent_id:
@@ -5534,6 +5637,7 @@ def _mode2_renumber_timeline_shots(
             source_to_new.setdefault(source_id, []).append(new_id)
         if old_id != new_id:
             _mode2_clear_timeline_outputs(shot)
+            shot.update(preserved_preview)
         shot["segment_id"] = new_id
     return shots, source_to_new
 
@@ -5592,9 +5696,14 @@ def _mode2_split_timeline_shot(
     parent = shots[index]
     parent_id = str(parent.get("segment_id") or "").strip()
     start, end = _mode2_shot_time_range(parent)
-    min_piece = 0.3
-    if split_time <= start + min_piece or split_time >= end - min_piece:
-        raise ValueError(f"split_time_too_close_to_edge: {split_time:.3f}, shot={start:.3f}-{end:.3f}")
+    fps = _mode2_shot_frame_rate(parent)
+    start_frame = int(round(start * fps))
+    end_frame = int(round(end * fps))
+    if end_frame - start_frame < 2:
+        raise ValueError(f"shot_too_short_to_split_by_frame: shot={start:.3f}-{end:.3f}, fps={fps:.3f}")
+    split_frame = int(round(split_time * fps))
+    split_frame = max(start_frame + 1, min(end_frame - 1, split_frame))
+    split_time = split_frame / fps
 
     left = copy.deepcopy(parent)
     right = copy.deepcopy(parent)
@@ -7646,6 +7755,7 @@ def _build_storyboard_mode2_role_mask_candidates(
 def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
     project_dir = str(payload.get("project_dir") or "").strip()
     asset_id = str(payload.get("asset_id") or payload.get("id") or "").strip()
+    lightweight = bool(payload.get("lightweight") or payload.get("lightweight_response"))
     if not project_dir:
         raise ValueError("missing_project_dir")
     if not asset_id:
@@ -7746,6 +7856,13 @@ def _update_storyboard_mode2_asset(payload: dict[str, Any]) -> dict[str, Any]:
     project_config = _normalize_storyboard_project_config(data.get("project_config") or {})
     _compile_storyboard_prompts(assets, shots, project_config=project_config)
     _write_storyboard_mode2_store(root, data)
+    if lightweight:
+        return {
+            "ok": True,
+            "project_dir": str(root),
+            "updated_asset_id": asset_id,
+            "asset": target,
+        }
     try:
         _audit_storyboard_mode2_assets({"project_dir": str(root)})
     except Exception as exc:  # noqa: BLE001
@@ -9567,6 +9684,8 @@ def _mode2_reference_mask_subclip_dir(video_path: str) -> Path:
 def _mode2_create_reference_mask_subclips(
     video_path: str,
     hard_cuts: list[tuple[float, float]],
+    *,
+    media_offset: float = 0.0,
     existing_subshots: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     from spvideo.ffmpeg_tools import cut_segment_precise
@@ -9589,10 +9708,14 @@ def _mode2_create_reference_mask_subclips(
         duration = max(0.01, end - start)
         start_ms = max(0, int(round(start * 1000)))
         end_ms = max(start_ms + 10, int(round(end * 1000)))
+        source_start = max(0.0, media_offset + start)
+        source_end = max(source_start + 0.01, media_offset + end)
+        source_start_ms = max(0, int(round(source_start * 1000)))
+        source_end_ms = max(source_start_ms + 10, int(round(source_end * 1000)))
         previous = existing_by_range.get((start_ms, end_ms), {})
-        target = output_dir / f"{safe_stem}_sub{index:02d}_{start_ms:08d}_{end_ms:08d}_p1.mp4"
+        target = output_dir / f"{safe_stem}_sub{index:02d}_{source_start_ms:08d}_{source_end_ms:08d}_p1.mp4"
         target.unlink(missing_ok=True)
-        cut_segment_precise(source, start, end, target)
+        cut_segment_precise(source, source_start, source_end, target)
         subclip = {
             "index": index,
             "label": f"子镜头{index}",
@@ -9601,6 +9724,51 @@ def _mode2_create_reference_mask_subclips(
             "duration": round(duration, 3),
             "path": str(target),
             "source_video_path": str(source),
+            "media_start": round(source_start, 6),
+            "media_end": round(source_end, 6),
+        }
+        previous_overrides = previous.get("role_ref_overrides")
+        if isinstance(previous_overrides, dict) and previous_overrides:
+            subclip["role_ref_overrides"] = previous_overrides
+        subclips.append(subclip)
+    return subclips
+
+
+def _mode2_create_virtual_reference_subclips(
+    video_path: str,
+    ranges: list[tuple[float, float]],
+    *,
+    fps: float = 30.0,
+    media_offset: float = 0.0,
+    existing_subshots: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    source = Path(video_path)
+    subclips: list[dict[str, Any]] = []
+    existing_by_range: dict[tuple[int, int], dict[str, Any]] = {}
+    for item in existing_subshots or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            key = (int(round(float(item.get("start") or 0.0) * 1000)), int(round(float(item.get("end") or 0.0) * 1000)))
+        except (TypeError, ValueError):
+            continue
+        existing_by_range[key] = item
+    for index, (start, end) in enumerate(ranges, 1):
+        start_ms = max(0, int(round(start * 1000)))
+        end_ms = max(start_ms + 1, int(round(end * 1000)))
+        previous = existing_by_range.get((start_ms, end_ms), {})
+        subclip = {
+            "index": index,
+            "label": f"子镜头 {index}",
+            "start": round(start, 6),
+            "end": round(end, 6),
+            "duration": round(max(0.001, end - start), 6),
+            "media_start": round(max(0.0, media_offset + start), 6),
+            "media_end": round(max(0.0, media_offset + end), 6),
+            "path": str(source),
+            "source_video_path": str(source),
+            "virtual_subclip": True,
+            "fps": round(float(fps or 30.0), 6),
         }
         previous_overrides = previous.get("role_ref_overrides")
         if isinstance(previous_overrides, dict) and previous_overrides:
@@ -9645,7 +9813,7 @@ def _mode2_promote_subclips_to_timeline(
             continue
         rel_start = min(parent_duration, rel_start)
         rel_end = min(parent_duration, rel_end)
-        if rel_end <= rel_start + 0.01:
+        if rel_end <= rel_start + 0.001:
             continue
         child = copy.deepcopy(parent)
         child_index = len(children)
@@ -9658,6 +9826,8 @@ def _mode2_promote_subclips_to_timeline(
         child["duration"] = round(child_end - child_start, 3)
         child["source_segment_ids"] = _mode2_unique_list(parent.get("source_segment_ids"), [parent_id])
         child["manual_parent_segment_id"] = parent_id
+        if bool(item.get("virtual_subclip")):
+            child["fps"] = item.get("fps") or parent.get("fps") or parent.get("frame_rate") or parent.get("source_fps")
         child["manual_timeline_edit"] = {
             "action": "promote_subclips_to_timeline",
             "parent_segment_id": parent_id,
@@ -9677,6 +9847,20 @@ def _mode2_promote_subclips_to_timeline(
         if isinstance(item.get("role_ref_overrides"), dict):
             child["subshot_role_ref_overrides"] = copy.deepcopy(item["role_ref_overrides"])
         _mode2_prune_timeline_fields(child)
+        if bool(item.get("virtual_subclip")):
+            source_path = str(item.get("source_video_path") or parent.get("full_source_video_path") or parent.get("source_video_path") or "").strip()
+            if source_path:
+                child["full_source_video_path"] = source_path
+                child["source_video_path"] = source_path
+                child["output_path"] = source_path
+            child["virtual_subclip"] = True
+        else:
+            clip_path = str(item.get("path") or "").strip()
+            if clip_path:
+                child["preview_clip_path"] = clip_path
+                child["clip_output_path"] = clip_path
+                child["output_path"] = clip_path
+            child.pop("virtual_subclip", None)
         children.append(child)
         new_ranges.append([child_start, child_end])
 
@@ -9711,6 +9895,7 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("missing_project_dir")
     root = _resolve_storyboard_mode2_project_dir(project_dir)
     clear_subclips = bool(payload.get("clear_subclips") or payload.get("clearSubclips"))
+    virtual_subclips = bool(payload.get("virtual_subclips") or payload.get("virtualSubclips"))
     if clear_subclips:
         if not segment_id:
             raise ValueError("missing_segment_id")
@@ -9752,34 +9937,82 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
     if not video_path or not Path(video_path).exists():
         raise ValueError("video_not_found")
     meta = probe_video(video_path)
-    duration = max(0.01, float(meta.duration or 0.0))
+    probed_duration = max(0.01, float(meta.duration or 0.0))
+    fps = float(getattr(meta, "fps", 0.0) or 0.0) or 30.0
+    payload_segment_duration = _mode2_float(payload.get("segment_duration") or payload.get("segmentDuration"), 0.0)
+    segment_start = _mode2_float(payload.get("segment_start") or payload.get("segmentStart"), 0.0)
+    segment_end = _mode2_float(payload.get("segment_end") or payload.get("segmentEnd"), 0.0)
+    if payload_segment_duration <= 0 and segment_end > segment_start:
+        payload_segment_duration = segment_end - segment_start
+    media_offset = _mode2_float(payload.get("video_offset") or payload.get("videoOffset"), 0.0)
+    available_duration = max(0.01, probed_duration - max(0.0, media_offset))
+    duration = max(
+        0.01,
+        min(payload_segment_duration, available_duration)
+        if payload_segment_duration > 0
+        else available_duration,
+    )
+    total_frames = max(1, int(round(duration * fps)))
+    max_cut_frame = max(0, total_frames - 1)
 
     raw_cut_times = payload.get("cut_times")
     cut_times_provided = "cut_times" in payload
     auto_cut = bool(payload.get("auto_cut") or payload.get("autoCut"))
     manual_cut = bool(payload.get("manual_cut") or payload.get("manualCut")) or (cut_times_provided and not auto_cut)
     cut_times: list[float] = []
+    seen_cut_frames: set[int] = set()
     if isinstance(raw_cut_times, list):
         for value in raw_cut_times:
             try:
                 cut_time = float(value)
             except (TypeError, ValueError):
                 continue
-            if 0.05 < cut_time < duration - 0.05:
-                cut_times.append(round(cut_time, 3))
+            if max_cut_frame < 1:
+                continue
+            cut_frame = int(round(cut_time * fps))
+            cut_frame = max(1, min(max_cut_frame, cut_frame))
+            if cut_frame in seen_cut_frames:
+                continue
+            seen_cut_frames.add(cut_frame)
+            cut_times.append(round(cut_frame / fps, 6))
     cut_times = sorted(set(cut_times))
+    if manual_cut and cut_times:
+        if duration < MODE2_MIN_SHOT_CUT_SECONDS * 2:
+            raise ValueError(
+                f"shot_too_short_to_cut: 当前镜头 {duration:.2f}s，小于 {MODE2_MIN_SHOT_CUT_SECONDS * 2:.0f}s，不能切分"
+            )
+        guarded_points = [0.0] + cut_times + [duration]
+        too_short_ranges = [
+            (start, end)
+            for start, end in zip(guarded_points, guarded_points[1:])
+            if end - start < MODE2_MIN_SHOT_CUT_SECONDS
+        ]
+        if too_short_ranges:
+            detail = ", ".join(f"{start:.2f}-{end:.2f}s" for start, end in too_short_ranges[:3])
+            raise ValueError(
+                f"subclip_too_short: 切分后存在小于 {MODE2_MIN_SHOT_CUT_SECONDS:.0f}s 的片段：{detail}"
+            )
     source = "manual" if manual_cut or cut_times else "local_hardcut"
     cut_error = ""
     if not manual_cut and not cut_times:
         hard_cuts, cut_error = _mode2_reference_video_hard_cuts(video_path)
         if hard_cuts:
             cut_times = [round(float(end), 3) for _start, end in hard_cuts[:-1]]
+    if not manual_cut and cut_times:
+        guarded: list[float] = []
+        last = 0.0
+        for cut_time in cut_times:
+            if cut_time - last >= MODE2_MIN_SHOT_CUT_SECONDS and duration - cut_time >= MODE2_MIN_SHOT_CUT_SECONDS:
+                guarded.append(cut_time)
+                last = cut_time
+        cut_times = guarded
 
     points = [0.0] + cut_times + [duration]
     ranges: list[tuple[float, float]] = []
+    min_range = MODE2_MIN_SHOT_CUT_SECONDS
     for start, end in zip(points, points[1:]):
-        if end > start + 0.05:
-            ranges.append((round(start, 3), round(end, 3)))
+        if end >= start + min_range:
+            ranges.append((round(start, 6), round(end, 6)))
     if not ranges:
         ranges = [(0.0, round(duration, 3))]
 
@@ -9802,9 +10035,19 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
         except Exception:  # noqa: BLE001
             existing_subshots = []
 
-    subclips = _mode2_create_reference_mask_subclips(video_path, ranges, existing_subshots=existing_subshots)
+    subclips = (
+        _mode2_create_virtual_reference_subclips(video_path, ranges, fps=fps, media_offset=media_offset, existing_subshots=existing_subshots)
+        if virtual_subclips
+        else _mode2_create_reference_mask_subclips(
+            video_path,
+            ranges,
+            media_offset=media_offset,
+            existing_subshots=existing_subshots,
+        )
+    )
     for item in subclips:
         item["source"] = source
+        item["fps"] = round(fps, 6)
         item["needs_scail2_padding"] = float(item.get("duration") or 0.0) < 2.05
         if item["needs_scail2_padding"]:
             item["scail2_repeat_count"] = max(2, int(math.ceil(2.05 / max(0.01, float(item.get("duration") or 0.01)))))
@@ -9830,6 +10073,9 @@ def _storyboard_mode2_shot_subclips(payload: dict[str, Any]) -> dict[str, Any]:
                 "end": item["end"],
                 "duration": item["duration"],
                 "path": item["path"],
+                "source_video_path": item.get("source_video_path") or video_path,
+                "virtual_subclip": bool(item.get("virtual_subclip")),
+                "fps": item.get("fps") or round(fps, 6),
                 "source": source,
                 "needs_scail2_padding": item.get("needs_scail2_padding", False),
                 "scail2_repeat_count": item.get("scail2_repeat_count", 1),
@@ -14516,15 +14762,61 @@ def _generation_package_file_exists(value: Any) -> str:
     return ""
 
 
+def _generation_package_resolved_path_key(value: Any) -> str:
+    path_text = str(value or "").strip()
+    if not path_text:
+        return ""
+    try:
+        return str(Path(path_text).resolve()).lower()
+    except Exception:  # noqa: BLE001
+        return path_text.lower()
+
+
 def _generation_package_segments_match(saved: Any, current: list[dict[str, Any]]) -> bool:
     if not isinstance(saved, list) or len(saved) != len(current):
         return False
     for saved_item, current_item in zip(saved, current):
-        saved_id = str((saved_item or {}).get("shot_id") or (saved_item or {}).get("id") or "").strip()
-        current_id = str((current_item or {}).get("shot_id") or (current_item or {}).get("id") or "").strip()
+        saved_data = saved_item or {}
+        current_data = current_item or {}
+        if not isinstance(saved_data, dict) or not isinstance(current_data, dict):
+            return False
+        saved_id = str(saved_data.get("shot_id") or saved_data.get("id") or "").strip()
+        current_id = str(current_data.get("shot_id") or current_data.get("id") or "").strip()
         if saved_id != current_id:
             return False
+        saved_path = _generation_package_resolved_path_key(saved_data.get("video_path") or saved_data.get("path"))
+        current_path = _generation_package_resolved_path_key(current_data.get("video_path") or current_data.get("path"))
+        if saved_path or current_path:
+            if not saved_path or not current_path or saved_path != current_path:
+                return False
+        saved_duration = _mode2_float(saved_data.get("duration"), -1.0)
+        current_duration = _mode2_float(current_data.get("duration"), -1.0)
+        if saved_duration > 0 and current_duration > 0:
+            tolerance = max(0.05, current_duration * 0.05)
+            if abs(saved_duration - current_duration) > tolerance:
+                return False
     return True
+
+
+def _generation_package_timeline_duration(segments: list[dict[str, Any]]) -> float:
+    return round(sum(max(0.0, _mode2_float(segment.get("duration"), 0.0)) for segment in segments), 3)
+
+
+def _generation_package_source_duration_valid(path_text: str, segments: list[dict[str, Any]]) -> bool:
+    expected_duration = _generation_package_timeline_duration(segments)
+    if expected_duration <= 0:
+        return True
+    try:
+        from spvideo.ffmpeg_tools import probe_video
+
+        meta = probe_video(Path(path_text))
+        actual_duration = float(meta.duration or 0.0)
+        if actual_duration <= 0 or int(meta.width or 0) <= 0 or int(meta.height or 0) <= 0:
+            return False
+        tolerance = max(0.35, expected_duration * 0.08)
+        return abs(actual_duration - expected_duration) <= tolerance
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _generation_package_existing_clips(clips: Any) -> list[dict[str, Any]]:
@@ -14625,12 +14917,16 @@ def _dedupe_generation_package_runs(runs: list[dict[str, Any]]) -> list[dict[str
 def _restore_generation_package_source(root: Path, package_id: str, segments: list[dict[str, Any]], state: dict[str, Any]) -> dict[str, Any]:
     state_path = _generation_package_file_exists(state.get("packageSourcePath") or state.get("sourcePath"))
     state_segments = state.get("packageSegments") or state.get("segments")
-    if state_path and _generation_package_segments_match(state_segments, segments):
+    if (
+        state_path
+        and _generation_package_segments_match(state_segments, segments)
+        and _generation_package_source_duration_valid(state_path, segments)
+    ):
         return {
             "sourcePath": state_path,
             "packageSourcePath": state_path,
             "packageSegments": state_segments,
-            "packageDuration": _mode2_float(state.get("packageDuration"), sum(float(item["duration"]) for item in segments)),
+            "packageDuration": _mode2_float(state.get("packageDuration"), _generation_package_timeline_duration(segments)),
         }
 
     work_dir = _generation_package_work_dir(root, package_id)
@@ -14641,11 +14937,13 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
         output_path = _generation_package_file_exists(data.get("output_path") or data.get("source_path"))
         if not output_path:
             continue
+        if not _generation_package_source_duration_valid(output_path, segments):
+            continue
         return {
             "sourcePath": output_path,
             "packageSourcePath": output_path,
             "packageSegments": data.get("segments") or segments,
-            "packageDuration": _mode2_float(data.get("duration"), sum(float(item["duration"]) for item in segments)),
+            "packageDuration": _mode2_float(data.get("duration"), _generation_package_timeline_duration(segments)),
         }
     return {}
 
@@ -14753,13 +15051,20 @@ def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]
     safe_id = _mode2_safe_asset_slug(package_id, fallback="package")
     token = uuid.uuid4().hex[:8]
     output_path = output_dir / f"{safe_id}_source_{len(segments)}shot_{token}.mp4"
-    concat_videos([segment["video_path"] for segment in segments], output_path)
+    timeline_duration = _generation_package_timeline_duration(segments)
+    concat_videos(
+        [segment["video_path"] for segment in segments],
+        output_path,
+        force_reencode=True,
+        expected_duration=timeline_duration,
+        duration_tolerance=max(0.35, timeline_duration * 0.08),
+    )
     result = {
         "package_id": package_id,
         "output_path": str(output_path),
         "source_path": str(output_path),
         "segments": segments,
-        "duration": round(sum(float(segment["duration"]) for segment in segments), 3),
+        "duration": timeline_duration,
         "shot_count": len(segments),
     }
     (output_path.with_suffix(".json")).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -15939,6 +16244,105 @@ def _storyboard_seedance_target_seconds(
     return round(max(min_seconds, min(max_seconds, target)), 3)
 
 
+MODE2_PERSON_CLASS_TIMELINE_VERSION = 3
+
+
+def _storyboard_person_count(value: Any, default: int = -1) -> int:
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _storyboard_person_class(item: dict[str, Any]) -> str:
+    count = _storyboard_person_count(item.get("person_count"), -1)
+    if bool(item.get("is_pure_background")) or count == 0:
+        return "scene"
+    if count == 1:
+        return "single"
+    if count >= 2:
+        return "multi"
+    return "unknown"
+
+
+def _storyboard_person_class_label(value: str) -> str:
+    return {
+        "scene": "场景",
+        "single": "单人",
+        "multi": "多人",
+        "unknown": "待确认",
+    }.get(str(value or "").strip(), "待确认")
+
+
+def _storyboard_build_class_pure_shots(
+    reference_segments: list[dict[str, Any]],
+    *,
+    video_path: str,
+    understanding_status: str,
+    boundary_hints: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    shots: list[dict[str, Any]] = []
+    ordered = sorted(
+        (dict(item) for item in reference_segments if isinstance(item, dict)),
+        key=lambda item: (
+            _mode2_float(item.get("start"), 0.0),
+            _mode2_float(item.get("end"), 0.0),
+        ),
+    )
+    for item in ordered:
+        start = max(0.0, _mode2_float(item.get("start"), 0.0))
+        end = max(start, _mode2_float(item.get("end"), start))
+        if end <= start + 0.001:
+            continue
+        count = _storyboard_person_count(item.get("person_count"), -1)
+        shot_class = _storyboard_person_class(item)
+        if shot_class == "scene":
+            count = 0
+        descriptions = [str(item.get("description") or "").strip()]
+        semantic_scenes: list[dict[str, Any]] = []
+        for scene in item.get("semantic_scenes") or []:
+            if not isinstance(scene, dict):
+                continue
+            semantic_scenes.append(scene)
+            text = str(scene.get("description") or scene.get("key_action") or "").strip()
+            if text:
+                descriptions.append(text)
+        description = " ".join(dict.fromkeys(value for value in descriptions if value)).strip()
+        source_ids = _mode2_unique_list(
+            item.get("source_segment_ids"),
+            item.get("visual_source_segment_ids"),
+            [item.get("segment_id")],
+        )
+        shots.append({
+            "segment_id": f"S{len(shots) + 1:03d}",
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "duration": round(end - start, 3),
+            "source_segment_ids": source_ids,
+            "person_count": count,
+            "shot_class": shot_class,
+            "shot_class_label": _storyboard_person_class_label(shot_class),
+            "is_pure_background": shot_class == "scene",
+            "person_count_source": str(item.get("person_count_source") or "visual_detector"),
+            "segment_type": "storyboard_visual_shot",
+            "source_video_path": video_path,
+            "output_path": video_path,
+            "description": description,
+            "prompt": "",
+            "status": "draft",
+            "understanding_status": understanding_status,
+            "semantic_scenes": semantic_scenes[:4],
+            "boundary_hints": _storyboard_boundary_hints_for_window(
+                boundary_hints,
+                start=start,
+                end=end,
+            ),
+        })
+    return shots
+
+
 def _storyboard_mode2_video_hash(video_path: str) -> str:
     path = Path(video_path)
     try:
@@ -16586,12 +16990,18 @@ def _storyboard_enrich_reference_segments_with_understanding(
                 for scene in overlaps[:4]
             ]
             item["semantic_characters"] = characters
-            try:
-                person_count = int(item.get("person_count") or -1)
-            except (TypeError, ValueError):
-                person_count = -1
-            if person_count < 0 and characters:
+            person_count = _storyboard_person_count(item.get("person_count"), -1)
+            has_visual_person_count = "person_count" in item or "is_pure_background" in item
+            if person_count < 0 and characters and not has_visual_person_count:
                 item["person_count"] = len(characters)
+                item["person_count_source"] = "semantic_fallback"
+            elif person_count >= 0:
+                item["person_count"] = person_count
+                item["person_count_source"] = str(item.get("person_count_source") or "visual_detector")
+            shot_class = _storyboard_person_class(item)
+            item["shot_class"] = shot_class
+            item["shot_class_label"] = _storyboard_person_class_label(shot_class)
+            item["is_pure_background"] = shot_class == "scene"
         enriched.append(item)
     return enriched
 
@@ -16704,14 +17114,17 @@ def _storyboard_mode2_visual_reference_segments(
                 end = max(start, min(float(item.get("end") or start), duration))
             except (TypeError, ValueError):
                 continue
-            if end - start < 0.05:
+            if end - start < 0.001:
                 continue
             segments.append({
                 "segment_id": f"V{index:03d}",
                 "start": round(start, 3),
                 "end": round(end, 3),
                 "duration": round(end - start, 3),
-                "person_count": int(item.get("person_count") or -1),
+                "person_count": _storyboard_person_count(item.get("person_count"), -1),
+                "shot_class": _storyboard_person_class(item),
+                "shot_class_label": _storyboard_person_class_label(_storyboard_person_class(item)),
+                "person_count_source": "visual_detector",
                 "segment_type": "visual_shot",
                 "source": "mode2_visual_detector",
                 "source_video_path": video_path,
@@ -16993,7 +17406,7 @@ def _storyboard_refine_visual_segments_with_hints(
 
     raw_boundaries.sort(key=lambda item: (float(item.get("time") or 0.0), -int(item.get("priority") or 0)))
     merged: list[dict[str, Any]] = []
-    tolerance = 0.35
+    tolerance = 0.035
     for boundary in raw_boundaries:
         time_value = float(boundary.get("time") or 0.0)
         if not merged:
@@ -17029,7 +17442,7 @@ def _storyboard_refine_visual_segments_with_hints(
             boundaries.append(item)
             continue
         previous_time = float(boundaries[-1].get("time") or 0.0)
-        if time_value - previous_time < 0.65 and 0.0 < time_value < total:
+        if time_value - previous_time < 0.035 and 0.0 < time_value < total:
             if int(boundary.get("priority") or 0) > int(boundaries[-1].get("priority") or 0):
                 item = dict(boundary)
                 item["time"] = round(time_value, 3)
@@ -17052,7 +17465,7 @@ def _storyboard_refine_visual_segments_with_hints(
     for index, (left, right) in enumerate(zip(boundaries, boundaries[1:]), 1):
         start = float(left.get("time") or 0.0)
         end = float(right.get("time") or start)
-        if end - start < 0.05:
+        if end - start < 0.001:
             continue
         overlapping_visual: list[dict[str, Any]] = []
         for item in original_segments:
@@ -17073,21 +17486,28 @@ def _storyboard_refine_visual_segments_with_hints(
                 continue
             if start <= frame_time < end:
                 frame_hits.append(item)
-        person_counts: list[int] = []
-        for item in overlapping_visual:
-            try:
-                count = int(item.get("person_count") or -1)
-            except (TypeError, ValueError):
-                count = -1
-            if count >= 0:
-                person_counts.append(count)
-        for frame in frame_hits:
-            try:
-                count = int(frame.get("person_count") or -1)
-            except (TypeError, ValueError):
-                count = -1
-            if count >= 0:
-                person_counts.append(count)
+        person_counts = [
+            _storyboard_person_count(item.get("person_count"), -1)
+            for item in overlapping_visual
+            if _storyboard_person_count(item.get("person_count"), -1) >= 0
+        ]
+        midpoint = (start + end) / 2.0
+        primary_visual = min(
+            overlapping_visual,
+            key=lambda item: abs(
+                ((_mode2_float(item.get("start"), start) + _mode2_float(item.get("end"), end)) / 2.0)
+                - midpoint
+            ),
+            default={},
+        )
+        primary_count = _storyboard_person_count(primary_visual.get("person_count"), -1)
+        if primary_count < 0:
+            frame_counts = [
+                _storyboard_person_count(frame.get("person_count"), -1)
+                for frame in frame_hits
+                if _storyboard_person_count(frame.get("person_count"), -1) >= 0
+            ]
+            primary_count = max(frame_counts) if frame_counts else (max(person_counts) if person_counts else -1)
         left_sources = left.get("sources") if isinstance(left.get("sources"), list) else [left.get("source")]
         right_sources = right.get("sources") if isinstance(right.get("sources"), list) else [right.get("source")]
         refined.append({
@@ -17095,7 +17515,17 @@ def _storyboard_refine_visual_segments_with_hints(
             "start": round(start, 3),
             "end": round(end, 3),
             "duration": round(end - start, 3),
-            "person_count": max(person_counts) if person_counts else -1,
+            "person_count": primary_count,
+            "shot_class": _storyboard_person_class({
+                "person_count": primary_count,
+                "is_pure_background": bool(primary_visual.get("is_pure_background")),
+            }),
+            "shot_class_label": _storyboard_person_class_label(_storyboard_person_class({
+                "person_count": primary_count,
+                "is_pure_background": bool(primary_visual.get("is_pure_background")),
+            })),
+            "is_pure_background": bool(primary_visual.get("is_pure_background")) or primary_count == 0,
+            "person_count_source": "visual_detector",
             "segment_type": "visual_shot",
             "source": "mode2_visual_semantic_fused",
             "source_video_path": str((overlapping_visual[0].get("source_video_path") if overlapping_visual else "") or ""),
@@ -17271,6 +17701,8 @@ def _storyboard_mode2_cached_visual_timeline(
     if not isinstance(cached, dict):
         return None
     if not _storyboard_same_source_path(cached.get("video_path"), video_path):
+        return None
+    if int(cached.get("person_class_timeline_version") or 0) != MODE2_PERSON_CLASS_TIMELINE_VERSION:
         return None
 
     timeline: dict[str, list[dict[str, Any]]] = {}
@@ -17493,81 +17925,21 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
         visual_boundary_hints = _storyboard_visual_boundary_hints(reference_segments)
         boundary_hints = visual_boundary_hints + sam3_boundary_hints
         shot_metadata_boundary_hints = visual_boundary_hints + sam3_boundary_hints + semantic_boundary_hints
-        min_tail_seconds = 4.0
-        max_shots = 160
-        shots: list[dict[str, Any]] = []
-        start = 0.0
-        index = 1
-        while start < duration - 0.05 and index <= max_shots:
-            end = _storyboard_next_seedance_end(
-                start=start,
-                duration=duration,
-                target_seconds=target_seconds,
-                boundary_hints=boundary_hints,
-            )
-            if duration - end < min_tail_seconds and duration - end > 0:
-                end = duration
-            if end <= start + 0.05:
-                break
-            overlaps: list[dict[str, Any]] = []
-            for item in reference_segments:
-                try:
-                    item_start = float(item.get("start") or 0.0)
-                    item_end = float(item.get("end") or item_start)
-                except (TypeError, ValueError):
-                    continue
-                if item_end > start and item_start < end:
-                    overlaps.append(item)
-            descriptions = [
-                str(item.get("description") or "").strip()
-                for item in overlaps
-                if str(item.get("description") or "").strip()
-            ]
-            people = [
-                _safe_int(item.get("person_count"), -1)
-                for item in overlaps
-                if _safe_int(item.get("person_count"), -1) >= 0
-            ]
-            description = (
-                " ".join(descriptions[:2])
-                if descriptions
-                else "Model should infer this 4-15s shot action, emotion, and spatial relation from the source video."
-            )
-            person_count = max(people) if people else -1
-            semantic_scenes: list[dict[str, Any]] = []
-            for item in overlaps:
-                for scene in item.get("semantic_scenes") or []:
-                    if isinstance(scene, dict):
-                        semantic_scenes.append(scene)
-                if isinstance(item.get("semantic_scene"), dict):
-                    semantic_scenes.append(item["semantic_scene"])
-            shots.append({
-                "segment_id": f"S{index:03d}",
-                "start": round(start, 3),
-                "end": round(end, 3),
-                "duration": round(end - start, 3),
-                "source_segment_ids": [
-                    str(item.get("segment_id") or "").strip()
-                    for item in overlaps
-                    if str(item.get("segment_id") or "").strip()
-                ],
-                "person_count": person_count,
-                "segment_type": "storyboard_draft",
-                "source_video_path": video_path,
-                "output_path": video_path,
-                "description": description,
-                "prompt": "",
-                "status": "draft",
-                "understanding_status": understanding_status,
-                "semantic_scenes": semantic_scenes[:4],
-                "boundary_hints": _storyboard_boundary_hints_for_window(
-                    shot_metadata_boundary_hints,
-                    start=start,
-                    end=end,
-                ),
-            })
-            start = end
-            index += 1
+        shots = _storyboard_build_class_pure_shots(
+            reference_segments,
+            video_path=video_path,
+            understanding_status=understanding_status,
+            boundary_hints=shot_metadata_boundary_hints,
+        )
+        class_counts = {
+            value: sum(1 for item in shots if item.get("shot_class") == value)
+            for value in ("scene", "single", "multi", "unknown")
+        }
+        add_log(
+            "> 人物状态优先分镜完成: "
+            f"场景={class_counts['scene']} 单人={class_counts['single']} "
+            f"多人={class_counts['multi']} 待确认={class_counts['unknown']}；禁止跨类型合并"
+        )
 
         assets = _build_storyboard_assets_v2(
             video_path,
@@ -17611,11 +17983,12 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
         _mark_storyboard_mode2_candidate_asset_stage(assets)
         _compile_storyboard_prompts(assets, shots, project_config=project_config)
         add_log(f"> Built asset/shot index: {len(assets)} assets")
-        add_log(f"> Compiled Seedance-ready shot prompts around {target_seconds:.0f}s windows")
+        add_log("> 分镜保持原始视觉边界；生成阶段如需长视频，请在编排页组合镜头")
 
         storyboard_asset_store_path = Path(project_dir) / "assets" / "storyboard_assets.json"
         storyboard_asset_store = {
             "version": 2,
+            "person_class_timeline_version": MODE2_PERSON_CLASS_TIMELINE_VERSION,
             "job_id": job_id,
             "project_dir": project_dir,
             "reference_project_dir": reference_project_dir,
@@ -17673,9 +18046,8 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
             add_log(f"> Asset preflight skipped: {exc}")
 
         summary = (
-            "Mode2 storyboard draft is ready. It first tries full-video understanding for "
-            "characters, scenes and semantic boundaries, then falls back to rule-based "
-            "Seedance 4-15s windows if understanding is unavailable. "
+            "Mode2 storyboard draft is ready. Visual hard cuts and person-state changes "
+            "are preserved as scene/single/multi shots; semantics only enrich labels. "
             f"understanding_status={understanding_status}; "
             f"reference_strategy={_storyboard_reference_strategy_label(reference_strategy)}; "
             f"project_config={_storyboard_project_config_summary(project_config)}."
@@ -19201,6 +19573,57 @@ def _pick_path(kind: str, initial: str = "") -> str:
         )
     root.destroy()
     return str(picked or "")
+
+
+def _safe_uploaded_source_name(filename: str) -> str:
+    original = Path(str(filename or "source.mp4")).name
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", Path(original).stem).strip("._-")[:60]
+    suffix = Path(original).suffix.lower()
+    if suffix not in {".mp4", ".mov", ".mkv", ".avi", ".webm"}:
+        suffix = ".mp4"
+    return f"{stem or 'source_video'}{suffix}"
+
+
+def _save_uploaded_source_video(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
+    content_type = str(handler.headers.get("Content-Type") or "")
+    if "multipart/form-data" not in content_type.lower():
+        raise ValueError("请选择视频文件")
+
+    import cgi
+
+    form = cgi.FieldStorage(
+        fp=handler.rfile,
+        headers=handler.headers,
+        environ={
+            "REQUEST_METHOD": "POST",
+            "CONTENT_TYPE": content_type,
+            "CONTENT_LENGTH": str(handler.headers.get("Content-Length") or "0"),
+        },
+    )
+    field = form["video"] if "video" in form else None
+    if field is None or not getattr(field, "filename", ""):
+        raise ValueError("没有收到视频文件")
+
+    safe_name = _safe_uploaded_source_name(str(field.filename))
+    target_dir = STORYBOARD_MODE2_UPLOAD_ROOT / "source_videos"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / f"{time.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}_{safe_name}"
+    with target.open("wb") as output:
+        shutil.copyfileobj(field.file, output)
+
+    size = target.stat().st_size if target.exists() else 0
+    if size <= 0:
+        try:
+            target.unlink()
+        except OSError:
+            pass
+        raise ValueError("视频文件为空")
+    return {
+        "ok": True,
+        "path": str(target),
+        "name": safe_name,
+        "size": size,
+    }
 
 
 

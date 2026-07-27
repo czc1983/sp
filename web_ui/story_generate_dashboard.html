@@ -3,6 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.replace("http://127.0.0.1:7861/story_generate_dashboard.html");
+    }
+  </script>
   <title>SP 分镜生成工作台</title>
   <style>
     :root {
@@ -984,6 +989,17 @@
       object-fit: cover;
       display: block;
       background: #080a0c;
+    }
+
+    .timeline-thumb-placeholder {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      background: #080a0c;
+      color: #6e7a83;
+      font-size: 11px;
+      font-weight: 700;
     }
 
     .timeline-meta {
@@ -4854,7 +4870,7 @@
     .story-video-picker {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      gap: 0;
+      gap: 8px;
       align-items: stretch;
       justify-content: start;
     }
@@ -4898,6 +4914,33 @@
       color: #82919a;
       font-size: 12px;
       font-weight: 700;
+    }
+
+    .story-video-pick-btn {
+      width: 148px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1px solid #3a444b;
+      background: #111518;
+      color: #edf2f4;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .story-video-pick-btn:hover {
+      border-color: #5a5a5a;
+      background: #181d22;
+    }
+
+    .story-video-pick-status {
+      width: 148px;
+      min-height: 18px;
+      color: #9aa7ad;
+      font-size: 11px;
+      line-height: 1.4;
+      text-align: center;
+      word-break: break-all;
     }
 
     .story-bottom-actions {
@@ -5533,6 +5576,45 @@
       white-space: nowrap;
     }
 
+    .generation-panel-tools {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .generation-route-switch {
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      background: #050505;
+    }
+
+    .generation-route-switch button {
+      min-width: 42px;
+      height: 28px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: #aaa;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .generation-route-switch button.active {
+      border-color: rgba(255,255,255,.72);
+      background: #f0f0f0;
+      color: #050505;
+    }
+
+    .generation-route-switch button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
     .generation-package-list {
       min-height: 0;
       display: grid;
@@ -5574,6 +5656,22 @@
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    .generation-package-thumb-static {
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), transparent 45%),
+        #111;
+    }
+
+    .generation-package-card .generation-package-thumb-static span {
+      color: #f0f0f0;
+      font-size: 11px;
+      font-weight: 900;
+      writing-mode: vertical-rl;
+      letter-spacing: 0;
     }
 
     .generation-package-card.selected {
@@ -5624,15 +5722,16 @@
 
     .generation-stage {
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      grid-template-rows: auto minmax(380px, 1fr) auto;
     }
 
     .generation-compare-grid {
       min-height: 0;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      padding: 10px;
+      align-items: stretch;
+      gap: 14px;
+      padding: 12px 14px;
     }
 
     .generation-workbench.route-scail2 .generation-compare-grid {
@@ -5667,6 +5766,8 @@
     }
 
     .generation-player {
+      width: 100%;
+      height: min(100%, 46vw);
       min-height: 0;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 8px;
@@ -5675,7 +5776,9 @@
       place-items: center;
       overflow: hidden;
       aspect-ratio: 9 / 16;
-      max-height: 100%;
+      justify-self: center;
+      align-self: stretch;
+      margin: 0 auto;
     }
 
     .generation-player video {
@@ -5799,14 +5902,15 @@
 
     .generation-reference-picker {
       grid-area: references;
+      position: relative;
       min-width: 0;
       width: 100%;
-      padding: 8px;
+      padding: 8px 58px 8px 8px;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 8px;
       background: #0b0b0b;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 128px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       grid-template-rows: 1fr;
       align-items: stretch;
       gap: 8px;
@@ -5906,15 +6010,41 @@
     }
 
     .generation-reference-actions {
-      grid-column: 3;
-      grid-row: 1;
-      display: grid;
-      align-content: center;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: inline-flex;
+      align-items: center;
       gap: 5px;
+      z-index: 2;
     }
 
-    .generation-reference-actions .tiny-btn {
-      white-space: nowrap;
+    .generation-reference-icon-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 6px;
+      background: #151515;
+      color: #f0f0f0;
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .generation-reference-icon-btn:hover {
+      border-color: rgba(255,255,255,.45);
+      background: #202020;
+    }
+
+    .generation-reference-icon-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .generation-split-card {
@@ -5989,6 +6119,22 @@
       object-fit: contain;
       background: #000;
       display: block;
+    }
+
+    .generation-split-card-static {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), transparent 45%),
+        #151515;
+    }
+
+    .generation-split-card-static b {
+      color: #f1f1f1;
+      font-size: 12px;
+      font-weight: 900;
     }
 
     .generation-ref-card span,
@@ -8015,6 +8161,7 @@
     }
 
     .compose-board-mode,
+    .compose-eye-toggle,
     .compose-add-pack-btn {
       height: 24px;
       padding: 0 9px;
@@ -8024,6 +8171,38 @@
       color: #c8c8c8;
       font-size: 12px;
       cursor: pointer;
+    }
+
+    .compose-eye-toggle {
+      width: 30px;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      color: #f2f2f2;
+    }
+
+    .compose-eye-toggle.is-hidden {
+      color: #777;
+      border-color: #2a2a2a;
+      background: #0f0f0f;
+    }
+
+    .compose-eye-toggle svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .compose-eye-toggle .eye-slash {
+      display: none;
+    }
+
+    .compose-eye-toggle.is-hidden .eye-slash {
+      display: block;
     }
 
     .compose-add-pack-btn {
@@ -8173,15 +8352,129 @@
       background: linear-gradient(135deg, #252525 0%, #101010 58%, #050505 100%);
     }
 
-    .compose-thumb video {
+    .compose-thumb video,
+    .compose-thumb img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
     }
 
+    .compose-thumb-static,
+    .compose-mask-thumb-static {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      padding: 5px;
+      color: #f2f2f2;
+      text-align: center;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), transparent 42%),
+        linear-gradient(180deg, #252525 0%, #111 100%);
+    }
+
+    .compose-thumb-static.has-image,
+    .compose-mask-thumb-static.has-image {
+      padding: 0;
+      grid-template: 1fr / 1fr;
+      background: #050505;
+    }
+
+    .compose-thumb-static.has-image img,
+    .compose-mask-thumb-static.has-image img {
+      grid-area: 1 / 1;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .compose-thumb-fallback {
+      grid-area: 1 / 1;
+      min-width: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      place-items: center;
+      align-content: center;
+      gap: 4px;
+      padding: 5px;
+      color: #f2f2f2;
+      text-align: center;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), transparent 42%),
+        linear-gradient(180deg, #252525 0%, #111 100%);
+    }
+
+    .compose-thumb.image-failed .compose-thumb-fallback {
+      display: grid;
+    }
+
+    .compose-thumb.image-failed .compose-thumb-overlay {
+      display: none;
+    }
+
+    .compose-thumb-overlay {
+      grid-area: 1 / 1;
+      align-self: end;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 3px 5px;
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .78));
+      color: #fff;
+      pointer-events: none;
+    }
+
+    .compose-thumb-overlay b,
+    .compose-thumb-overlay small {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .compose-thumb-overlay small {
+      flex: 0 0 auto;
+      color: #dedede;
+      font-size: 9px;
+    }
+
+    .compose-thumb-type,
+    .compose-mask-thumb-static b {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .compose-thumb-static small,
+    .compose-mask-thumb-static small {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #aaa;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
     .compose-mask-video-thumb {
       cursor: pointer;
+    }
+
+    .compose-mask-video-thumb.is-inert {
+      cursor: default;
     }
 
     .compose-mask-video-thumb video {
@@ -8213,6 +8506,11 @@
     .compose-mask-video-thumb:hover .compose-mask-play {
       transform: translate(-50%, -50%) scale(1.06);
       opacity: 1;
+    }
+
+    .compose-mask-video-thumb.is-inert:hover .compose-mask-play {
+      transform: translate(-50%, -50%);
+      opacity: .9;
     }
 
     .compose-mask-video-thumb.is-playing .compose-mask-play {
@@ -8452,9 +8750,9 @@
     }
 
     .compose-pack.selected {
-      border-color: #d0d0d0;
+      border-color: #ff3b30;
       background: #1a1a1a;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+      box-shadow: inset 0 0 0 2px rgba(255, 59, 48, .92), 0 0 0 1px rgba(255, 59, 48, .5);
     }
 
     .compose-pack.warn {
@@ -8507,6 +8805,10 @@
       position: absolute;
       inset: 0;
       overflow: visible;
+    }
+
+    .compose-pack-stack.has-package-preview {
+      cursor: pointer;
     }
 
     .compose-pack-stack-card {
@@ -8705,8 +9007,8 @@
     }
 
     .compose-mask-package.selected {
-      border-color: #d0d0d0;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+      border-color: #ff3b30;
+      box-shadow: inset 0 0 0 2px rgba(255, 59, 48, .92), 0 0 0 1px rgba(255, 59, 48, .5);
     }
 
     .compose-mask-title {
@@ -9284,10 +9586,13 @@
                   <div class="story-field">
                     <div class="story-video-picker">
                       <input id="videoPathInput" type="hidden" />
+                      <input id="sourceVideoFileInput" type="file" accept="video/*,.mp4,.mov,.mkv,.avi,.webm" hidden />
                       <div class="story-video-preview" id="sourceVideoPreviewBox" role="button" tabindex="0" aria-label="上传视频">
                         <video id="sourceVideoPreview" muted playsinline preload="metadata" hidden></video>
                         <div class="story-video-empty" id="sourceVideoEmpty">上传视频</div>
                       </div>
+                      <button class="story-video-pick-btn" id="pickSourceVideoBtn" type="button">选择视频</button>
+                      <div class="story-video-pick-status" id="sourceVideoPickStatus"></div>
                     </div>
                   </div>
                 </div>
@@ -9496,6 +9801,13 @@
                 <div class="compose-section-head">
                   <strong>镜头池</strong>
                   <div class="compose-board-tools">
+                    <button class="compose-eye-toggle" id="composeHidePackedToggle" type="button" title="显示已入包卡牌" aria-label="显示已入包卡牌">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path>
+                        <circle cx="12" cy="12" r="2.7"></circle>
+                        <path class="eye-slash" d="M4 4l16 16"></path>
+                      </svg>
+                    </button>
                     <button class="compose-board-mode" type="button" data-compose-board-mode="mask">白膜包</button>
                     <button class="compose-board-mode active" type="button" data-compose-board-mode="all">全部</button>
                     <button class="compose-board-mode" type="button" data-compose-board-mode="current">当前包</button>
@@ -9508,8 +9820,9 @@
                 <div class="compose-section-head">
                   <strong id="composePackShelfTitle">卡包架</strong>
                   <div class="compose-pack-tools">
+                    <button class="compose-add-pack-btn" id="composeRemovePackBtn" type="button" title="删除当前卡包" aria-label="删除当前卡包">-</button>
                     <button class="compose-add-pack-btn" id="composeAddPackBtn" type="button" title="新增卡包" aria-label="新增卡包">+</button>
-                    <span id="composePackSummary">0 个卡包 · 5-10 秒最佳</span>
+                    <span id="composePackSummary">0 个卡包 · 5-15 秒</span>
                   </div>
                 </div>
                 <div class="compose-pack-list compose-pack-shelf" id="composePackList"></div>
@@ -9521,7 +9834,6 @@
                 <span id="composeDetailMeta">分镜保存后，在这里确认生成包。</span>
               </div>
               <div class="compose-detail-hand" id="composeDetailHand"></div>
-              <button class="btn primary" id="composeStartGenerateBtn" type="button">开始生成</button>
             </div>
           </div>
         </div>
@@ -9542,7 +9854,10 @@
             <aside class="generation-pack-column">
               <div class="generation-panel-head">
                 <strong>生成包</strong>
-                <span id="generationPackageSummary">0</span>
+                <div class="generation-panel-tools">
+                  <button class="tiny-btn" id="generationLoadPackagesBtn" type="button" title="读取当前编排卡包并合成当前包">读卡包</button>
+                  <span id="generationPackageSummary">0</span>
+                </div>
               </div>
               <div class="generation-package-list" id="generationPackageList"></div>
             </aside>
@@ -9570,7 +9885,10 @@
             <aside class="generation-pipeline">
               <div class="generation-panel-head">
                 <strong>执行</strong>
-                <span id="generationRouteLabel">自动</span>
+                <div class="generation-route-switch" id="generationRouteSwitch" role="group" aria-label="生成路线">
+                  <button type="button" data-generation-route="scail2" title="按单人 Scail2 生成">单人</button>
+                  <button type="button" data-generation-route="seedance" title="按多人接口生成">多人</button>
+                </div>
               </div>
               <div class="generation-pipeline-body">
                 <div class="generation-run-status" id="generationRunStatus">等待生成包</div>
@@ -9815,6 +10133,7 @@
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
     const STORY_GENERATION_ROUTE_KEY = "sp_story_generation_route";
     const STORY_GENERATION_RUNTIME_KEY_PREFIX = "sp_mode2_generation_runtime:";
+    const GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_v2";
     const STORY_WHITE_MASK_SHELF_KEY_PREFIX = "sp_mode2_white_mask_shelf:";
     const DEFAULT_PRE_DIRECTOR_BASE_URL = "https://ws-b8anhpvi1n7lp628.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
     const DEFAULT_PRE_DIRECTOR_API_KEY = "sk-ws-H.EHEYHRH.MmIP.MEUCIFR5bqIfGINteyGg4h74owHUSlJWFLhI-DPn7xNTk9fwAiEApZm4OqN_Z4Y5w3nj92Y6ayQaS-a7slo3yYHVBNwP8fw";
@@ -9830,10 +10149,15 @@
     ];
     const DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000";
     const SEEDANCE_A_RATIOS = ["9:16", "16:9"];
-    const SEEDANCE_A_DURATIONS = Array.from({ length: 10 }, (_, index) => index + 6);
+    const SEEDANCE_A_DURATIONS = Array.from({ length: 11 }, (_, index) => index + 5);
     const SEEDANCE_A_RESOLUTIONS = ["720x1280", "1280x720", "1024x1024", "1024x1792", "1792x1024"];
     const SEEDANCE_MATERIAL_LIMITS = { images: 4, videos: 3, audios: 3 };
     const STORY_COMPOSE_PLAN_KEY_PREFIX = "sp_mode2_compose_plan:";
+    const COMPOSE_PACK_MIN_SECONDS = 5;
+    const COMPOSE_PACK_TARGET_SECONDS = 10;
+    const COMPOSE_PACK_MAX_SECONDS = 15;
+    const COMPOSE_PACK_SOFT_MAX_SHOTS = 8;
+    const STORYBOARD_MIN_CUT_SECONDS = 1;
     const STORY_STYLE_PRESETS = [
       { value: "short_drama_realism", label: "短剧写实", note: "自然光线和真人表演，适合短剧重拍。" },
       { value: "cinematic_realism", label: "电影写实", note: "更克制的电影质感，镜头纹理更强。" },
@@ -9950,6 +10274,8 @@
     let assistantLastLogKey = "";
     let assistantLastStatusKey = "";
     let assistantChatBusy = false;
+    let sourceVideoPickBusy = false;
+    let sourceVideoAnalyzeAfterPick = false;
     let currentSeedanceMaskJobId = null;
     let seedanceMaskPollTimer = null;
     let seedanceMaskVideoIndex = -1;
@@ -9981,6 +10307,7 @@
     let composeDragShotId = "";
     let composeDragSourcePackId = "";
     let composeBoardMode = "all";
+    let composeHidePackedCards = false;
     let composeSelectedMaskShelfId = "";
     let generationWorkbench = {
       selectedPackId: "",
@@ -9992,6 +10319,11 @@
     let storyboardLeftPreviewMode = "source";
     let storyboardLeftSubclipEdit = null;
     let storyboardShotCutBusy = false;
+    let storyboardShotCutMaterializeTimer = null;
+    let storyboardShotCutMaterializePending = null;
+    let storyboardShotCutMaterializeRunning = false;
+    let storyboardShotCutMaterializeRevision = 0;
+    let storyboardShotCutMaterializePromise = Promise.resolve();
     let storyboardPlayAllRunning = false;
     let storyboardPlayAllToken = 0;
     let storyAssets = [];
@@ -11482,12 +11814,84 @@
       applyStoryReferenceStrategy(storyReferenceStrategy);
     }
 
+    function setSourceVideoPickStatus(message = "", tone = "info") {
+      const box = $("#sourceVideoPickStatus");
+      if (!box) return;
+      box.textContent = message;
+      box.dataset.tone = tone;
+      box.style.color = tone === "bad" ? "#ef6f6c" : (tone === "good" ? "#cfd8dc" : "#9aa7ad");
+    }
+
+    function setSourceVideoPickBusy(running) {
+      sourceVideoPickBusy = Boolean(running);
+      const button = $("#pickSourceVideoBtn");
+      if (button) {
+        button.disabled = sourceVideoPickBusy;
+        button.textContent = sourceVideoPickBusy ? "处理中..." : "选择视频";
+      }
+      $("#sourceVideoPreviewBox")?.classList.toggle("is-busy", sourceVideoPickBusy);
+    }
+
+    function chooseSourceVideo(options = {}) {
+      if (sourceVideoPickBusy) return;
+      sourceVideoAnalyzeAfterPick = Boolean(options.autoAnalyze);
+      const input = $("#sourceVideoFileInput");
+      if (!input) {
+        setSourceVideoPickStatus("选择控件未加载，请刷新页面。", "bad");
+        addLogs(["x 选择控件未加载，请刷新页面。"]);
+        return;
+      }
+      setSourceVideoPickStatus("正在打开选择窗口...", "info");
+      addLogs(["> 正在打开原视频选择窗口..."]);
+      input.value = "";
+      input.click();
+    }
+
+    async function uploadSourceVideoFile(file) {
+      if (!file) return;
+      setSourceVideoPickBusy(true);
+      setSourceVideoPickStatus("正在导入视频...", "info");
+      addLogs(["> 正在导入原视频: " + (file.name || "video")]);
+      try {
+        const form = new FormData();
+        form.append("video", file, file.name || "source.mp4");
+        const response = await fetch(storyboardApiUrl("/api/upload-source-video"), {
+          method: "POST",
+          body: form,
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || "导入失败");
+        const path = String(data.path || "").trim();
+        if (!path) throw new Error("服务器没有返回视频路径");
+        const target = $("#videoPathInput");
+        if (target) {
+          target.value = path;
+          target.dispatchEvent(new Event("change"));
+        }
+        localStorage.setItem("sp_last_videoPathInput", path);
+        refreshSourceVideoPreview();
+        setSourceVideoPickStatus("已选择: " + fileName(path), "good");
+        addLogs(["> 已选择原视频: " + path]);
+        if (sourceVideoAnalyzeAfterPick) {
+          sourceVideoAnalyzeAfterPick = false;
+          startStoryboardDraft();
+        }
+      } catch (error) {
+        sourceVideoAnalyzeAfterPick = false;
+        const message = error?.message || String(error || "导入失败");
+        setSourceVideoPickStatus("选择失败: " + message, "bad");
+        addLogs(["x 选择视频失败: " + message]);
+      } finally {
+        setSourceVideoPickBusy(false);
+      }
+    }
+
     async function pickPath(kind, targetSelector) {
       const target = $(targetSelector);
       const label = kind === "dir" ? "项目目录" : (kind === "image" ? "参考图" : "原视频");
       addLogs([`> 正在选择${label}...`]);
       try {
-        const response = await fetch("/api/pick-path", {
+        const response = await fetch(storyboardApiUrl("/api/pick-path"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kind, initial: target.value || "" }),
@@ -12728,7 +13132,7 @@
       const input = $("#assetTargetInput");
       const preview = $("#assetTargetPreviewSlot");
       try {
-        const response = await fetch("/api/pick-path", {
+        const response = await fetch(storyboardApiUrl("/api/pick-path"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kind: "image", initial: input?.value || "" }),
@@ -12827,7 +13231,7 @@
       event?.stopPropagation?.();
       const refs = currentAssetExtraRefs();
       try {
-        const response = await fetch("/api/pick-path", {
+        const response = await fetch(storyboardApiUrl("/api/pick-path"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kind: "image", initial: refs[refs.length - 1] || $("#assetTargetInput")?.value || "" }),
@@ -13018,7 +13422,7 @@
 
     async function pickManualAssetTargetPath() {
       try {
-        const response = await fetch("/api/pick-path", {
+        const response = await fetch(storyboardApiUrl("/api/pick-path"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kind: "image", initial: "" }),
@@ -13610,6 +14014,7 @@
         </div>
         <input id="assetTargetInput" type="hidden" value="${escapeHtml(asset.target_image || "")}" />
         <input id="assetExtraRefsInput" type="hidden" value="${escapeHtml(JSON.stringify(extraRefs))}" />
+        <div class="manual-asset-save-status" id="assetEditorSaveStatus" hidden></div>
         <div class="asset-editor-actions">
           <button class="btn" id="closeAssetEditorBtn" type="button">取消</button>
           <button class="btn good" id="saveAssetEditorBtn" type="button">${approvalRestricted ? "保存处理方式" : "保存"}</button>
@@ -13632,9 +14037,20 @@
       });
     }
 
+    function setAssetEditorSaveStatus(lines = [], tone = "info") {
+      const box = $("#assetEditorSaveStatus");
+      if (!box) return;
+      const list = (Array.isArray(lines) ? lines : [lines]).map((line) => String(line || "").trim()).filter(Boolean);
+      box.hidden = !list.length;
+      box.className = "manual-asset-save-status" + (tone && tone !== "info" ? " " + tone : "");
+      box.innerHTML = list.map((line) => `<div>${escapeHtml(line)}</div>`).join("");
+    }
+
     async function saveAssetEditor(overlay) {
       const current = findStoryAsset(editingAssetId);
       if (!current) return;
+      const saveButton = $("#saveAssetEditorBtn");
+      if (saveButton?.disabled) return;
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const approvalRestricted = assetApprovalRestricted(current);
       const requestedManualStatus = $("#assetManualStatusInput")?.value || "";
@@ -13670,20 +14086,37 @@
         renderSeedancePayload();
         return;
       }
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = "保存中...";
+      }
+      setAssetEditorSaveStatus(["正在保存资产..."], "info");
       try {
-        const response = await fetch("/api/storyboard-assets/update-asset", {
+        const response = await fetch(storyboardApiUrl("/api/storyboard-assets/update-asset"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_dir: projectDir, asset_id: current.id, updates }),
+          body: JSON.stringify({ project_dir: projectDir, asset_id: current.id, updates, lightweight: true }),
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "保存资产失败");
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.error) throw new Error(data.error || "保存资产失败");
+        if (data.asset && typeof data.asset === "object") {
+          const normalized = normalizeStoryAssets([data.asset])[0] || data.asset;
+          const index = storyAssets.findIndex((asset) => String(asset.id || "") === String(current.id || ""));
+          if (index >= 0) storyAssets[index] = { ...storyAssets[index], ...normalized };
+        }
         overlay.remove();
-        applyLoadedProject(data, { story: data.storyboard || {} });
+        renderStoryAssets();
         renderSeedancePayload();
         setStoryStatus(["> 资产已保存", `> ${current.name}: ${assetStatusText(current)}`], "good");
       } catch (error) {
-        setStoryStatus(["x " + error.message], "bad");
+        const message = error?.message || String(error || "保存资产失败");
+        setAssetEditorSaveStatus(["保存失败", message], "bad");
+        setStoryStatus(["x " + message], "bad");
+      } finally {
+        if (saveButton && document.body.contains(saveButton)) {
+          saveButton.disabled = false;
+          saveButton.textContent = approvalRestricted ? "保存处理方式" : "保存";
+        }
       }
     }
 
@@ -14449,7 +14882,7 @@
         try {
           let latestData = null;
           for (const [roleId, roleName] of pendingVideoAnchorNameUpdates.entries()) {
-            const renameResponse = await fetch("/api/storyboard-assets/update-asset", {
+            const renameResponse = await fetch(storyboardApiUrl("/api/storyboard-assets/update-asset"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -16077,8 +16510,14 @@
     }
 
     async function startStoryboardDraft() {
-      if (currentStoryJobId && storyPollTimer) return;
-      const videoPath = $("#videoPathInput").value.trim();
+      if (currentStoryJobId && storyPollTimer) {
+        const runningLines = ["> 当前分析任务仍在运行", `> job_id: ${currentStoryJobId}`];
+        setStoryStatus(runningLines, "warn");
+        setLogs(runningLines);
+        pollStoryJob();
+        return;
+      }
+      let videoPath = $("#videoPathInput").value.trim();
       const projectDir = "";
       const referenceStrategy = "new_only";
       const projectConfig = pullStoryProjectControls();
@@ -16090,6 +16529,14 @@
       syncStoryUnderstandingControls();
       saveStoryUnderstandingOptions();
       const preDirector = pullPreDirectorControls();
+      if (!videoPath) {
+        const choosingLines = ["> 请先选择原视频，正在打开文件选择窗口..."];
+        setStoryStatus(choosingLines, "warn");
+        setSourceVideoPickStatus("请先选择原视频。", "info");
+        setLogs(choosingLines);
+        chooseSourceVideo({ autoAnalyze: true });
+        return;
+      }
       if (!videoPath) {
         const lines = ["x 请先选择原视频", "> 新模式反推分镜至少需要原视频路径"];
         setStoryStatus(lines, "bad");
@@ -16109,7 +16556,7 @@
       setLogs(lines);
       setStoryRunning(true);
       try {
-        const response = await fetch("/api/storyboard-draft", {
+        const response = await fetch(storyboardApiUrl("/api/storyboard-draft"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -16146,7 +16593,7 @@
     async function pollStoryJob() {
       if (!currentStoryJobId) return;
       try {
-        const response = await fetch("/api/jobs/" + encodeURIComponent(currentStoryJobId));
+        const response = await fetch(storyboardApiUrl("/api/jobs/" + encodeURIComponent(currentStoryJobId)));
         const job = await response.json();
         if (!response.ok) throw new Error(job.error || "查询任务失败");
         const logs = Array.isArray(job.logs) ? job.logs : [];
@@ -16205,17 +16652,31 @@
       }
 
       strip.innerHTML = timelineSegments.map((seg, index) => {
-        const src = mediaSrc(shotVideoPath(seg), shotVideoStartTime(seg));
         const id = seg.segment_id || String(index + 1).padStart(3, "0");
-        const duration = Number(seg.duration);
+        const personCount = Number(seg.person_count);
+        const shotClass = String(seg.shot_class || (
+          seg.is_pure_background || personCount === 0
+            ? "scene"
+            : personCount === 1
+              ? "single"
+              : personCount >= 2
+                ? "multi"
+                : "unknown"
+        ));
+        const shotClassLabel = String(seg.shot_class_label || ({
+          scene: "场景",
+          single: "单人",
+          multi: "多人",
+          unknown: "待确认",
+        }[shotClass] || "待确认"));
         return `
-          <button class="timeline-card" type="button" data-index="${index}">
-            <div class="timeline-thumb">
-              ${src ? `<video muted preload="metadata" src="${escapeHtml(src)}"></video>` : `<span>无预览</span>`}
+          <button class="timeline-card" type="button" data-index="${index}" data-shot-class="${escapeHtml(shotClass)}">
+            <div class="timeline-thumb" data-timeline-thumb="${index}">
+              <span class="timeline-thumb-placeholder">${escapeHtml(shotClassLabel)}</span>
             </div>
             <div class="timeline-meta">
               <strong>#${escapeHtml(id)}</strong>
-              <span>${Number.isFinite(duration) ? duration.toFixed(1) : "-"}s</span>
+              <span>${escapeHtml(shotClassLabel)} · ${escapeHtml(storyboardDurationLabel(seg))}</span>
             </div>
           </button>
         `;
@@ -16227,23 +16688,93 @@
       selectTimelineSegment(0, { previewMode: "segment" });
     }
 
+    function hydrateTimelineThumb(index) {
+      const seg = timelineSegments[index];
+      const holder = document.querySelector(`[data-timeline-thumb="${index}"]`);
+      if (!seg || !holder || holder.dataset.loaded === "1") return;
+      const src = mediaSrc(shotVideoPath(seg), shotVideoStartTime(seg), shotVideoEndTime(seg));
+      if (!src) {
+        holder.innerHTML = `<span class="timeline-thumb-placeholder">无预览</span>`;
+        holder.dataset.loaded = "1";
+        return;
+      }
+      holder.innerHTML = `<video muted preload="metadata" src="${escapeHtml(src)}"></video>`;
+      holder.dataset.loaded = "1";
+    }
+
+    function hydrateTimelineThumbNeighborhood(index) {
+      [index - 1, index, index + 1].forEach((value) => {
+        if (value >= 0 && value < timelineSegments.length) hydrateTimelineThumb(value);
+      });
+    }
+
     function storyboardFullSourcePath(seg = timelineSegments[selectedTimelineIndex] || timelineSegments[0] || {}) {
       const inputPath = $("#videoPathInput")?.value.trim() || "";
       const draftPath = Array.isArray(seedanceDraft?.videos) ? String(seedanceDraft.videos[0] || "").trim() : "";
       return String(inputPath || seg?.full_source_video_path || seg?.source_video_path || draftPath || "").trim();
     }
 
-    function setStoryboardVideoSource(video, path, time = 0.1) {
+    function bindStoryboardSegmentPlayback(video) {
+      if (!video || video.dataset.storyboardSegmentBound === "1") return;
+      video.dataset.storyboardSegmentBound = "1";
+      const seekStart = () => {
+        const start = Number(video.dataset.storyboardSegmentStart || 0);
+        if (!Number.isFinite(start) || start < 0) return;
+        try {
+          video.currentTime = start;
+        } catch (_) {}
+      };
+      video.addEventListener("loadedmetadata", seekStart);
+      video.addEventListener("loadeddata", seekStart);
+      video.addEventListener("timeupdate", () => {
+        const start = Number(video.dataset.storyboardSegmentStart || 0);
+        const end = Number(video.dataset.storyboardSegmentEnd || 0);
+        if (!Number.isFinite(start) || start < 0) return;
+        if (video.currentTime < start - 0.05) {
+          try { video.currentTime = start; } catch (_) {}
+          return;
+        }
+        if (Number.isFinite(end) && end > start && video.currentTime >= end) {
+          try {
+            video.pause();
+            video.currentTime = Math.max(start, end - 0.001);
+          } catch (_) {}
+        }
+      });
+    }
+
+    function configureStoryboardSegmentPlayback(video, startTime = 0.1, endTime = null) {
+      if (!video) return;
+      const start = Math.max(0, Number(startTime) || 0);
+      const end = Number(endTime);
+      video.dataset.storyboardSegmentStart = String(start);
+      if (Number.isFinite(end) && end > start) {
+        video.dataset.storyboardSegmentEnd = String(end);
+      } else {
+        delete video.dataset.storyboardSegmentEnd;
+      }
+      bindStoryboardSegmentPlayback(video);
+      if (video.readyState >= 1) {
+        try { video.currentTime = start; } catch (_) {}
+      }
+    }
+
+    function setStoryboardVideoSource(video, path, time = 0.1, endTime = null) {
       if (!video) return;
       const value = String(path || "").trim();
       if (!value) {
         video.removeAttribute("src");
+        delete video.dataset.storyboardSegmentStart;
+        delete video.dataset.storyboardSegmentEnd;
         return;
       }
-      const src = mediaSrc(value, time);
+      const src = mediaSrc(value, time, endTime);
+      configureStoryboardSegmentPlayback(video, time, endTime);
       if (video.getAttribute("src") !== src) {
         video.src = src;
         video.load();
+      } else if (video.readyState >= 1) {
+        try { video.currentTime = Math.max(0, Number(time) || 0); } catch (_) {}
       }
     }
 
@@ -16266,7 +16797,26 @@
     }
 
     function storyboardCutVideoPath(seg = timelineSegments[selectedTimelineIndex] || {}) {
-      return String(seg?.preview_clip_path || seg?.clip_output_path || seg?.output_path || "").trim();
+      return String(
+        seg?.preview_clip_path
+        || seg?.clip_output_path
+        || seg?.output_path
+        || seg?.source_video_path
+        || seg?.full_source_video_path
+        || storyboardFullSourcePath(seg)
+        || ""
+      ).trim();
+    }
+
+    function storyboardPathUsesFullSource(seg = {}, path = "") {
+      const value = String(path || "").trim();
+      if (!value) return false;
+      const clip = String(seg?.preview_clip_path || seg?.clip_output_path || "").trim();
+      if (clip && sameStoryboardMediaPath(value, clip)) return false;
+      const source = String(seg?.source_video_path || seg?.full_source_video_path || storyboardFullSourcePath(seg) || "").trim();
+      const fullSource = storyboardFullSourcePath(seg);
+      return (!!source && sameStoryboardMediaPath(value, source))
+        || (!!fullSource && sameStoryboardMediaPath(value, fullSource));
     }
 
     function storyboardSegmentDuration(seg = {}) {
@@ -16278,7 +16828,8 @@
     }
 
     function canCutStoryboardSegment(seg = timelineSegments[selectedTimelineIndex] || {}) {
-      return selectedTimelineIndex >= 0 && !!storyboardCutVideoPath(seg);
+      const duration = storyboardSegmentDuration(seg);
+      return selectedTimelineIndex >= 0 && !!storyboardCutVideoPath(seg) && (!Number.isFinite(duration) || duration > 0);
     }
 
     function storyboardNumericFrameRate(value) {
@@ -16468,7 +17019,7 @@
       const path = shotVideoPath(seg);
       storyboardLeftPreviewMode = "segment";
       storyboardLeftSubclipEdit = null;
-      setStoryboardVideoSource($("#timelineOriginalVideo"), path, shotVideoStartTime(seg));
+      setStoryboardVideoSource($("#timelineOriginalVideo"), path, shotVideoStartTime(seg), shotVideoEndTime(seg));
       syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
       $("#timelineOriginalTitle").textContent = `#${id}`;
       $("#originalCompareLabel").textContent = `${formatNum(seg.start)}-${formatNum(seg.end)}s`;
@@ -16484,6 +17035,7 @@
       document.querySelectorAll(".timeline-card").forEach((card) => {
         card.classList.toggle("active", Number(card.dataset.index) === selectedTimelineIndex);
       });
+      if (selectedTimelineIndex >= 0) hydrateTimelineThumbNeighborhood(selectedTimelineIndex);
 
       const prevBtn = $("#timelinePrevBtn");
       const nextBtn = $("#timelineNextBtn");
@@ -16527,7 +17079,7 @@
       renderAssistantRouteCard();
 
       document.querySelector(`.timeline-card[data-index="${index}"]`)?.scrollIntoView({
-        behavior: "smooth",
+        behavior: "auto",
         block: "nearest",
         inline: "center",
       });
@@ -16714,6 +17266,13 @@
       const path = seedanceSubclipPath(clip);
       const start = Number(clip.start || 0);
       const endTime = Number(clip.end || 0);
+      const isVirtualSubclip = Boolean(clip.virtual_subclip || clip.virtual);
+      const mediaStart = Number(clip.media_start ?? clip.mediaStart);
+      const mediaEnd = Number(clip.media_end ?? clip.mediaEnd);
+      const previewStart = isVirtualSubclip && Number.isFinite(mediaStart) ? mediaStart : (isVirtualSubclip && Number.isFinite(start) ? start : 0);
+      const previewEnd = isVirtualSubclip && Number.isFinite(mediaEnd) && mediaEnd > previewStart
+        ? mediaEnd
+        : (isVirtualSubclip && Number.isFinite(endTime) && endTime > previewStart ? endTime : null);
       const range = `${Number.isFinite(start) ? start.toFixed(2) : "0.00"}-${Number.isFinite(endTime) ? endTime.toFixed(2) : "0.00"}s`;
       compareStage?.classList.remove("shotcut-main-preview");
       if (storyboardLeftPreviewMode === "source") {
@@ -16725,8 +17284,7 @@
       }
       if (path) {
         if (generatedVideo) {
-          generatedVideo.src = mediaSrc(path, 0.1);
-          generatedVideo.load();
+          setStoryboardVideoSource(generatedVideo, path, previewStart, previewEnd);
         }
         if (placeholder) placeholder.style.display = "none";
         if (label) label.textContent = `子镜头 ${selectedIndex + 1}/${subclips.length}`;
@@ -16901,16 +17459,76 @@
     function shotVideoStartTime(seg) {
       const path = shotVideoPath(seg);
       const clip = String(seg?.preview_clip_path || seg?.clip_output_path || "").trim();
-      const source = String(seg?.source_video_path || seg?.full_source_video_path || "").trim();
-      if (clip && path === clip) return 0.1;
-      if (path && source && path !== source) return 0.1;
+      if (clip && sameStoryboardMediaPath(path, clip)) return 0.1;
+      if (path && !storyboardPathUsesFullSource(seg, path)) return 0.1;
       return Number(seg?.start) || 0.1;
     }
 
-    function mediaSrc(path, time = 0.1) {
+    function shotVideoEndTime(seg) {
+      const path = shotVideoPath(seg);
+      const clip = String(seg?.preview_clip_path || seg?.clip_output_path || "").trim();
+      const end = Number(seg?.end);
+      if (!Number.isFinite(end) || end <= 0) return null;
+      if (clip && sameStoryboardMediaPath(path, clip)) return null;
+      if (path && !storyboardPathUsesFullSource(seg, path)) return null;
+      return end;
+    }
+
+    function storyboardDurationLabel(seg = {}) {
+      const duration = storyboardSegmentDuration(seg);
+      if (!Number.isFinite(duration) || duration <= 0) return "-";
+      if (duration < 0.1) {
+        const frameStep = storyboardFrameStepSeconds(seg);
+        const frames = Math.max(1, Math.round(duration / Math.max(0.001, frameStep)));
+        return `${frames}帧`;
+      }
+      return `${duration.toFixed(1)}s`;
+    }
+
+    function mediaSrc(path, time = 0.1, endTime = null) {
       const value = String(path || "").trim();
-      const t = Math.max(0, Number(time) || 0.1);
-      return value ? "/media?path=" + encodeURIComponent(value) + "#t=" + encodeURIComponent(String(t)) : "";
+      const parsedTime = Number(time);
+      const t = Number.isFinite(parsedTime) ? Math.max(0, parsedTime) : 0.1;
+      const end = Number(endTime);
+      const fragment = Number.isFinite(end) && end > t
+        ? `${t},${end}`
+        : String(t);
+      return value ? storyboardApiUrl("/media") + "?path=" + encodeURIComponent(value) + "#t=" + encodeURIComponent(fragment) : "";
+    }
+
+    function mediaFileSrc(path) {
+      const value = String(path || "").trim();
+      if (/^(https?:|data:|blob:)/i.test(value)) return value;
+      return value ? storyboardApiUrl("/media") + "?path=" + encodeURIComponent(value) : "";
+    }
+
+    function videoFrameSrc(path, time = 0.1) {
+      const value = String(path || "").trim();
+      const parsedTime = Number(time);
+      const t = Number.isFinite(parsedTime) ? Math.max(0, parsedTime) : 0.1;
+      return value ? storyboardApiUrl("/api/video-frame") + "?path=" + encodeURIComponent(value) + "&time=" + encodeURIComponent(t.toFixed(2)) : "";
+    }
+
+    function storyboardApiUrl(path) {
+      const value = String(path || "").trim();
+      if (!value) return value;
+      if (/^https?:\/\//i.test(value)) return value;
+      if (window.location?.protocol === "file:") {
+        return `http://127.0.0.1:7861${value.startsWith("/") ? value : "/" + value}`;
+      }
+      return value;
+    }
+
+    function installFileApiFetchBridge() {
+      if (window.location?.protocol !== "file:" || window.__storyboardFileApiFetchBridgeInstalled) return;
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (resource, options) => {
+        if (typeof resource === "string" && /^\/(?:api|media)(?:\/|\?|$)/.test(resource)) {
+          return nativeFetch(storyboardApiUrl(resource), options);
+        }
+        return nativeFetch(resource, options);
+      };
+      window.__storyboardFileApiFetchBridgeInstalled = true;
     }
 
     function fileName(path) {
@@ -16953,12 +17571,51 @@
       return index >= 0 ? { seg: timelineSegments[index], index, id: target } : null;
     }
 
+    function composeShotSortIndex(shotId) {
+      const target = String(shotId || "").trim();
+      const item = composeShotById(target);
+      if (item) return item.index;
+      const match = target.match(/S\s*0*(\d+)/i) || target.match(/(\d+)/);
+      return match ? Math.max(0, Number(match[1]) - 1) : Number.MAX_SAFE_INTEGER;
+    }
+
+    function composeShotIdCompare(a, b) {
+      const left = String(a || "").trim();
+      const right = String(b || "").trim();
+      const delta = composeShotSortIndex(left) - composeShotSortIndex(right);
+      if (delta) return delta;
+      return left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    function composeSortedShotIds(shotIds = []) {
+      return (Array.isArray(shotIds) ? shotIds : [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+        .sort(composeShotIdCompare);
+    }
+
+    function composeMaskClipShotId(clip = {}, index = 0) {
+      return String(clip?.shot_id || clip?.shotId || "").trim() || `S${String(index + 1).padStart(3, "0")}`;
+    }
+
+    function composeSortedMaskClips(clips = []) {
+      return (Array.isArray(clips) ? clips : [])
+        .map((clip, index) => ({ clip, index, shotId: composeMaskClipShotId(clip, index) }))
+        .sort((a, b) => composeShotIdCompare(a.shotId, b.shotId) || a.index - b.index)
+        .map((entry) => entry.clip);
+    }
+
     function composeShotDuration(seg = {}) {
       const duration = Number(seg.duration);
       if (Number.isFinite(duration) && duration > 0) return duration;
       const start = Number(seg.start);
       const end = Number(seg.end);
       return Number.isFinite(start) && Number.isFinite(end) && end > start ? end - start : 0;
+    }
+
+    function composeShotPackDuration(seg = {}) {
+      const duration = composeShotDuration(seg);
+      return duration > 0 ? duration : 1 / 24;
     }
 
     function composeShotRoles(seg = {}) {
@@ -17013,6 +17670,13 @@
       }, 0);
     }
 
+    function composePackDurationForPacking(pack = {}) {
+      return (pack.shotIds || []).reduce((sum, id) => {
+        const item = composeShotById(id);
+        return sum + composeShotPackDuration(item?.seg || {});
+      }, 0);
+    }
+
     function composeUsedShotIds() {
       return new Set((composePlan.packs || []).flatMap((pack) => pack.shotIds || []));
     }
@@ -17056,7 +17720,7 @@
           route: String(pack?.route || "Seedance").trim(),
           backend: String(pack?.backend || "seedance").trim(),
           type: String(pack?.type || "待定").trim(),
-          shotIds: ids,
+          shotIds: composeSortedShotIds(ids),
         };
       }).filter((pack) => pack.id);
       const stale = (Array.isArray(raw?.packs) ? raw.packs : [])
@@ -17080,7 +17744,7 @@
           route: pack.route || "",
           backend: pack.backend || "",
           type: pack.type || "",
-          shotIds: Array.isArray(pack.shotIds) ? pack.shotIds.slice() : [],
+          shotIds: composeSortedShotIds(pack.shotIds),
         }));
         localStorage.setItem(key, JSON.stringify({
           packs,
@@ -17118,8 +17782,19 @@
     }
 
     function composePackShotListText(pack = {}) {
-      const ids = Array.isArray(pack.shotIds) ? pack.shotIds : [];
-      return ids.length ? `${ids.length} 段：${ids.join(" ")}` : "0 段：空包";
+      const ids = composeSortedShotIds(pack.shotIds);
+      return ids.length ? composePackCardTitle(pack) : `${pack.id || "P000"} 0s`;
+    }
+
+    function composePackDurationText(pack = {}) {
+      const duration = Number(composePackDuration(pack));
+      if (!Number.isFinite(duration) || duration <= 0) return "0s";
+      const value = duration >= 10 ? duration.toFixed(0) : duration.toFixed(1);
+      return `${value}s`;
+    }
+
+    function composePackCardTitle(pack = {}) {
+      return `${pack.id || "P000"} ${composePackDurationText(pack)}`;
     }
 
     function composeSelectedPack() {
@@ -17147,7 +17822,7 @@
     function composeHandDropPlacement(event, hand, packId, fallbackTargetId = "", draggedId = composeDragShotId) {
       const x = Number(event?.clientX);
       const pack = (composePlan.packs || []).find((entry) => entry.id === packId) || composeSelectedPack();
-      const ids = Array.isArray(pack?.shotIds) ? pack.shotIds : [];
+      const ids = composeSortedShotIds(pack?.shotIds);
       if (!Number.isFinite(x) || !ids.length || !hand) {
         return fallbackTargetId ? composeDropPlacement(event, event?.currentTarget, fallbackTargetId) : {};
       }
@@ -17201,6 +17876,91 @@
       pack.type = route.type;
     }
 
+    function composeAutoShotMeta(seg = {}, index = 0) {
+      const route = composeShotRoute(seg);
+      return {
+        seg,
+        index,
+        id: composeShotKey(seg, index),
+        route,
+        key: composePackKey(seg, route),
+        label: composeShotLabel(seg),
+        duration: composeShotPackDuration(seg),
+      };
+    }
+
+    function composeCreatePackFromMeta(meta = {}, serial = 1) {
+      return {
+        id: `P${String(serial).padStart(3, "0")}`,
+        key: meta.key || "",
+        label: meta.label || "镜头",
+        route: meta.route?.labelText || "Seedance",
+        backend: meta.route?.backend || "seedance",
+        type: meta.route?.type || "待定",
+        shotIds: [],
+      };
+    }
+
+    function composeCanAutoPackTogether(pack = {}, metaOrPack = {}) {
+      const nextBackend = metaOrPack.route?.backend || metaOrPack.backend || "";
+      const nextType = metaOrPack.route?.type || metaOrPack.type || "";
+      const nextKey = metaOrPack.key || "";
+      return (
+        String(pack.backend || "") === String(nextBackend || "")
+        && String(pack.type || "") === String(nextType || "")
+        && String(pack.key || "") === String(nextKey || "")
+      );
+    }
+
+    function composeCanAutoPackRouteTogether(pack = {}, metaOrPack = {}) {
+      const nextBackend = metaOrPack.route?.backend || metaOrPack.backend || "";
+      const nextType = metaOrPack.route?.type || metaOrPack.type || "";
+      return (
+        String(pack.backend || "") === String(nextBackend || "")
+        && String(pack.type || "") === String(nextType || "")
+      );
+    }
+
+    function composeRenumberPacks(packs = []) {
+      return (Array.isArray(packs) ? packs : []).map((pack, index) => ({
+        ...pack,
+        id: `P${String(index + 1).padStart(3, "0")}`,
+      }));
+    }
+
+    function composeMergeShortSmartPacks(packs = []) {
+      const next = (Array.isArray(packs) ? packs : []).filter((pack) => (pack.shotIds || []).length);
+      for (let index = 0; index < next.length; index += 1) {
+        const pack = next[index];
+        const duration = composePackDurationForPacking(pack);
+        if (duration >= COMPOSE_PACK_MIN_SECONDS) continue;
+        const previous = next[index - 1];
+        const following = next[index + 1];
+        const previousDuration = previous ? composePackDurationForPacking(previous) : 0;
+        const followingDuration = following ? composePackDurationForPacking(following) : 0;
+        if (
+          previous
+          && composeCanAutoPackTogether(previous, pack)
+          && previousDuration + duration <= COMPOSE_PACK_MAX_SECONDS
+        ) {
+          previous.shotIds = composeSortedShotIds([...(previous.shotIds || []), ...(pack.shotIds || [])]);
+          next.splice(index, 1);
+          index = Math.max(-1, index - 2);
+          continue;
+        }
+        if (
+          following
+          && composeCanAutoPackTogether(pack, following)
+          && duration + followingDuration <= COMPOSE_PACK_MAX_SECONDS
+        ) {
+          pack.shotIds = composeSortedShotIds([...(pack.shotIds || []), ...(following.shotIds || [])]);
+          next.splice(index + 1, 1);
+          index = Math.max(-1, index - 1);
+        }
+      }
+      return composeRenumberPacks(next);
+    }
+
     function composeAddPack() {
       ensureComposePlan();
       const pack = {
@@ -17219,37 +17979,64 @@
       assistantSetStatus([`已新增卡包 ${pack.id}，可以把镜头拖进去。`], "good");
     }
 
+    function composeRemoveSelectedPack() {
+      ensureComposePlan();
+      const packs = Array.isArray(composePlan.packs) ? composePlan.packs : [];
+      if (!packs.length) {
+        assistantSetStatus(["> 暂无卡包可删除。"], "warn");
+        return;
+      }
+      const index = Math.max(0, packs.findIndex((pack) => pack.id === composePlan.selectedPackId));
+      const pack = packs[index] || packs[0];
+      const returned = Array.isArray(pack.shotIds) ? pack.shotIds.length : 0;
+      const nextPacks = packs.filter((item) => item !== pack);
+      composePlan.packs = nextPacks;
+      composePlan.selectedPackId = nextPacks[Math.min(index, Math.max(0, nextPacks.length - 1))]?.id || "";
+      composeConfirmedPlan = null;
+      saveComposePlanDraft();
+      renderComposePage();
+      assistantSetStatus([
+        `已删除卡包 ${pack.id || ""}`,
+        returned ? `> 包内 ${returned} 张镜头卡已回到镜头池。` : "> 空包已移除。",
+      ], "good");
+    }
+
     function composeCreateSmartPlan() {
-      const groups = new Map();
       const packs = [];
+      let current = null;
       timelineSegments.forEach((seg, index) => {
-        const shotId = composeShotKey(seg, index);
-        const route = composeShotRoute(seg);
-        const key = composePackKey(seg, route);
-        const label = composeShotLabel(seg);
-        const duration = composeShotDuration(seg);
-        const bucket = groups.get(key) || [];
-        let target = bucket.find((pack) => composePackDuration(pack) + duration <= 10);
-        if (!target) target = bucket.find((pack) => composePackDuration(pack) + duration <= 15);
-        if (!target) {
-          target = {
-            id: `P${String(packs.length + 1).padStart(3, "0")}`,
-            key,
-            label,
-            route: route.labelText,
-            backend: route.backend,
-            type: route.type,
-            shotIds: [],
-          };
-          packs.push(target);
-          bucket.push(target);
-          groups.set(key, bucket);
+        const meta = composeAutoShotMeta(seg, index);
+        if (!current) {
+          current = composeCreatePackFromMeta(meta, packs.length + 1);
         }
-        target.shotIds.push(shotId);
+        const currentDuration = composePackDurationForPacking(current);
+        const nextDuration = currentDuration + meta.duration;
+        const samePack = composeCanAutoPackTogether(current, meta);
+        const sameRoute = composeCanAutoPackRouteTogether(current, meta);
+        const shouldClose = current.shotIds.length && (
+          nextDuration > COMPOSE_PACK_MAX_SECONDS
+          || !sameRoute
+          || (!samePack && currentDuration >= COMPOSE_PACK_MIN_SECONDS)
+          || (
+            samePack
+            && currentDuration >= COMPOSE_PACK_MIN_SECONDS
+            && (
+              nextDuration > COMPOSE_PACK_TARGET_SECONDS
+              || current.shotIds.length >= COMPOSE_PACK_SOFT_MAX_SHOTS
+            )
+          )
+        );
+        if (shouldClose) {
+          packs.push(current);
+          current = composeCreatePackFromMeta(meta, packs.length + 1);
+        }
+        current.shotIds.push(meta.id);
       });
+      if (current?.shotIds?.length) packs.push(current);
+      const normalizedPacks = composeMergeShortSmartPacks(packs);
       composePlan = {
-        packs,
-        selectedPackId: packs[0]?.id || "",
+        packs: normalizedPacks,
+        selectedPackId: normalizedPacks[0]?.id || "",
       };
       composeConfirmedPlan = null;
       saveComposePlanDraft();
@@ -17279,10 +18066,12 @@
             return true;
           });
         if (nextIds.length !== (pack.shotIds || []).length) changed = true;
+        const sortedIds = composeSortedShotIds(nextIds);
+        if (sortedIds.join("\u0000") !== nextIds.join("\u0000")) changed = true;
         return {
           ...pack,
           id: String(pack.id || `P${String(index + 1).padStart(3, "0")}`).trim(),
-          shotIds: nextIds,
+          shotIds: sortedIds,
         };
       }).filter((pack) => pack.id);
       if (!composePlan.packs.length) {
@@ -17299,16 +18088,75 @@
       }
     }
 
-    function composeThumbHtml(seg = {}) {
+    function composeShotImagePath(seg = {}) {
+      const direct = [
+        seg?.thumbnail_path,
+        seg?.thumb_path,
+        seg?.thumbnail,
+        seg?.preview_image,
+        seg?.poster,
+        seg?.keyframe_path,
+        seg?.frame_path,
+        seg?.image_path,
+        seg?.keyframe?.crop_path,
+        seg?.keyframe?.path,
+      ].map((value) => String(value || "").trim()).find(Boolean);
+      if (direct) return direct;
+      const keyframes = Array.isArray(seg?.keyframes) ? seg.keyframes : [];
+      const frame = keyframes.find((item) => String(item?.crop_path || item?.path || "").trim());
+      return String(frame?.crop_path || frame?.path || "").trim();
+    }
+
+    function composeShotThumbSrc(seg = {}) {
+      const imagePath = composeShotImagePath(seg);
+      if (imagePath) return mediaFileSrc(imagePath);
+      const videoPath = shotVideoPath(seg);
+      return videoPath ? videoFrameSrc(videoPath, composeShotThumbTime(seg)) : "";
+    }
+
+    function composeShotThumbTime(seg = {}) {
+      const duration = composeShotDuration(seg);
       const path = shotVideoPath(seg);
-      if (path) {
-        return `<div class="compose-thumb"><video muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(path, shotVideoStartTime(seg)))}"></video></div>`;
+      const clip = String(seg?.preview_clip_path || seg?.clip_output_path || "").trim();
+      const isClip = (clip && sameStoryboardMediaPath(path, clip)) || (path && !storyboardPathUsesFullSource(seg, path));
+      if (isClip) {
+        if (duration > 0 && duration < 0.25) return Math.max(0, duration * 0.35);
+        return 0.02;
       }
-      return `<div class="compose-thumb compose-thumb-empty"></div>`;
+      const start = Number(seg?.start);
+      if (!Number.isFinite(start) || start < 0) return 0.1;
+      if (duration > 0 && duration < 0.25) return Math.max(0, start + duration * 0.35);
+      return Math.max(0, start + 0.1);
+    }
+
+    function composeThumbHtml(seg = {}) {
+      const duration = composeShotDuration(seg);
+      const durationText = duration > 0 ? `${duration.toFixed(duration >= 10 ? 0 : 1)}s` : "待定";
+      const typeText = composeShotType(seg);
+      const labelText = composeShotLabel(seg);
+      const thumbSrc = composeShotThumbSrc(seg);
+      const fallback = `
+        <span class="compose-thumb-type">${escapeHtml(typeText)}</span>
+        <small>${escapeHtml(durationText)}</small>
+      `;
+      if (thumbSrc) {
+        return `
+          <div class="compose-thumb compose-thumb-static has-image" title="${escapeHtml(`${labelText} · ${typeText} · ${durationText}`)}">
+            <img loading="lazy" decoding="async" src="${escapeHtml(thumbSrc)}" alt="" onerror="this.closest('.compose-thumb')?.classList.add('image-failed'); this.remove();">
+            <span class="compose-thumb-fallback">${fallback}</span>
+            <span class="compose-thumb-overlay"><b>${escapeHtml(typeText)}</b><small>${escapeHtml(durationText)}</small></span>
+          </div>
+        `;
+      }
+      return `
+        <div class="compose-thumb compose-thumb-static" title="${escapeHtml(`${labelText} · ${typeText} · ${durationText}`)}">
+          ${fallback}
+        </div>
+      `;
     }
 
     function composeMiniCardsHtml(shotIds = [], packId = "", options = {}) {
-      const ids = Array.isArray(shotIds) ? shotIds : [];
+      const ids = composeSortedShotIds(shotIds);
       if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
       const count = ids.length;
       const step = options.large ? 86 : (options.strip ? 50 : 42);
@@ -17334,7 +18182,7 @@
     }
 
     function composePackStackHtml(pack = {}) {
-      const ids = Array.isArray(pack.shotIds) ? pack.shotIds : [];
+      const ids = composeSortedShotIds(pack.shotIds);
       if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
       const previewIds = ids.slice(0, 4);
       const count = previewIds.length;
@@ -17423,22 +18271,42 @@
       `;
     }
 
+    function composeManualWhiteMaskClipPathSet(items = []) {
+      const paths = new Set();
+      (Array.isArray(items) ? items : []).forEach((item) => {
+        if (!composeIsManualWhiteMaskItem(item)) return;
+        (Array.isArray(item.clips) ? item.clips : []).forEach((clip) => {
+          const key = normalizeLocalPathKey(clip?.path || clip?.video_path);
+          if (key) paths.add(key);
+        });
+      });
+      return paths;
+    }
+
     function composeWhiteMaskClipCards(items = []) {
-      return (Array.isArray(items) ? items : []).flatMap((item, packageIndex) => {
+      const rows = Array.isArray(items) ? items : [];
+      const hiddenPaths = composeHidePackedCards ? composeManualWhiteMaskClipPathSet(rows) : new Set();
+      return rows.flatMap((item, packageIndex) => {
         if (composeIsManualWhiteMaskItem(item)) return [];
-        const clips = Array.isArray(item.clips) ? item.clips : [];
-        return clips.map((clip, clipIndex) => ({
-          item,
-          clip,
-          packageIndex,
-          clipIndex,
-        }));
+        const clips = composeSortedMaskClips(item.clips);
+        return clips
+          .filter((clip) => !hiddenPaths.has(normalizeLocalPathKey(clip?.path || clip?.video_path)))
+          .map((clip, clipIndex) => ({
+            item,
+            clip,
+            packageIndex,
+            clipIndex,
+          }));
       });
     }
 
     function composeMaskVideoThumbHtml(path, label = "", options = {}) {
       const source = String(path || "").trim();
       if (!source) return `<div class="compose-thumb compose-thumb-empty"></div>`;
+      const inert = Boolean(options.inert);
+      const previewAttrs = inert
+        ? ""
+        : ` data-compose-mask-video-thumb data-video-path="${escapeHtml(source)}" data-video-label="${escapeHtml(label || "白膜片段")}"`;
       const deleteButton = options.returnAsClose ? `
         <button class="compose-mask-delete-btn compose-mask-return-btn" type="button"
           data-return-white-mask-clip
@@ -17479,8 +18347,12 @@
           aria-label="放回白膜池">↩</button>
       ` : "");
       return `
-        <div class="compose-thumb compose-mask-video-thumb" data-compose-mask-video-thumb data-video-path="${escapeHtml(source)}" data-video-label="${escapeHtml(label || "白膜片段")}" title="${escapeHtml(label || source)}">
-          <video muted playsinline loop preload="metadata" data-compose-mask-video src="${escapeHtml(mediaSrc(source, 0.1))}"></video>
+        <div class="compose-thumb compose-mask-video-thumb${inert ? " is-inert" : ""}"${previewAttrs} title="${escapeHtml(label || source)}">
+          <div class="compose-mask-thumb-static has-image">
+            <img loading="lazy" decoding="async" src="${escapeHtml(videoFrameSrc(source, 0.1))}" alt="" onerror="this.closest('.compose-thumb')?.classList.add('image-failed'); this.remove();">
+            <span class="compose-thumb-fallback"><span class="compose-thumb-type">白膜</span><small>${escapeHtml(label || "片段")}</small></span>
+            <span class="compose-thumb-overlay"><b>白膜</b><small>${escapeHtml(label || "片段")}</small></span>
+          </div>
           <span class="compose-mask-play" aria-hidden="true"></span>
           ${actionButton}
           ${deleteButton}
@@ -17508,7 +18380,7 @@
     }
 
     function composeMaskHandCardsHtml(item = {}, options = {}) {
-      const clips = Array.isArray(item?.clips) ? item.clips : [];
+      const clips = composeSortedMaskClips(item?.clips);
       if (!clips.length) return `<div class="compose-pack-empty">暂无白膜手牌</div>`;
       const count = clips.length;
       const step = options.large ? 86 : 42;
@@ -17538,8 +18410,12 @@
     }
 
     function composeMaskPackStackHtml(item = {}) {
-      const clips = Array.isArray(item.clips) ? item.clips : [];
+      const clips = composeSortedMaskClips(item.clips);
       if (!clips.length) return `<div class="compose-pack-empty">暂无白膜</div>`;
+      const packageSource = String(item.source_path || "").trim();
+      const canPreviewPackage = packageSource && !packageSource.startsWith("manual:");
+      const packId = String(item.package_id || "").trim();
+      const packageLabel = `${packId || item.package_label || "白膜包"} 整包白膜`;
       const previewClips = clips.slice(0, 4);
       const count = previewClips.length;
       const cards = previewClips.map((clip, index) => {
@@ -17552,13 +18428,16 @@
         const rot = (index - center) * 5;
         return `
           <div class="compose-pack-stack-card" style="--stack-x:${x}px; --stack-y:${y}; --stack-z:${10 + index}; --stack-rot:${rot.toFixed(1)}deg">
-            ${composeMaskVideoThumbHtml(path, shotId)}
+            ${composeMaskVideoThumbHtml(path, shotId, { inert: true })}
             <span>${escapeHtml(shotId)}</span>
           </div>
         `;
       }).join("");
       const more = clips.length > previewClips.length ? `<div class="compose-pack-more">+${clips.length - previewClips.length}</div>` : "";
-      return `<div class="compose-pack-stack">${cards}${more}</div>`;
+      const previewAttrs = canPreviewPackage
+        ? ` data-compose-mask-package-preview data-video-path="${escapeHtml(packageSource)}" data-video-label="${escapeHtml(packageLabel)}" data-mask-id="${escapeHtml(composeMaskShelfKey(item))}"`
+        : "";
+      return `<div class="compose-pack-stack${canPreviewPackage ? " has-package-preview" : ""}"${previewAttrs}>${cards}${more}</div>`;
     }
 
     function pauseOtherComposeMaskVideos(activeVideo) {
@@ -17874,18 +18753,32 @@
 
     function bindComposeMaskVideoPlayback(root = document) {
       bindComposeMaskPreviewChrome();
+      root.querySelectorAll("[data-compose-mask-package-preview]").forEach((stack) => {
+        if (stack.dataset.packagePlayBound === "1") return;
+        stack.dataset.packagePlayBound = "1";
+        stack.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const maskId = String(stack.dataset.maskId || "").trim();
+          if (maskId) composeSelectedMaskShelfId = maskId;
+          openComposeMaskVideoPreview(
+            stack.dataset.videoPath,
+            stack.dataset.videoLabel || "白膜包整包预览",
+          );
+        });
+      });
       root.querySelectorAll("[data-compose-mask-video-thumb]").forEach((thumb) => {
         if (thumb.dataset.playBound === "1") return;
         thumb.dataset.playBound = "1";
         const video = thumb.querySelector("[data-compose-mask-video]");
-        if (!video) return;
         const syncPlayingState = () => {
+          if (!video) return;
           thumb.classList.toggle("is-playing", !video.paused && !video.ended);
         };
         thumb.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          openComposeMaskVideoPreview(thumb.dataset.videoPath || video.currentSrc || video.src, thumb.dataset.videoLabel || thumb.title || "白膜片段预览");
+          openComposeMaskVideoPreview(thumb.dataset.videoPath || video?.currentSrc || video?.src, thumb.dataset.videoLabel || thumb.title || "白膜片段预览");
         });
         thumb.querySelector("[data-delete-white-mask-clip]")?.addEventListener("click", (event) => {
           event.preventDefault();
@@ -17919,9 +18812,9 @@
             shotId: button.dataset.shotId,
           });
         });
-        video.addEventListener("play", syncPlayingState);
-        video.addEventListener("pause", syncPlayingState);
-        video.addEventListener("ended", syncPlayingState);
+        video?.addEventListener("play", syncPlayingState);
+        video?.addEventListener("pause", syncPlayingState);
+        video?.addEventListener("ended", syncPlayingState);
       });
       root.querySelectorAll("[data-return-white-mask-card]").forEach((card) => {
         if (card.dataset.returnBound === "1") return;
@@ -17939,11 +18832,24 @@
       });
     }
 
+    function syncComposeHidePackedToggle() {
+      const eyeButton = $("#composeHidePackedToggle");
+      if (!eyeButton) return;
+      eyeButton.classList.toggle("is-hidden", composeHidePackedCards);
+      eyeButton.title = composeHidePackedCards ? "显示已入包卡牌" : "隐藏已入包卡牌";
+      eyeButton.setAttribute("aria-label", eyeButton.title);
+      eyeButton.onclick = () => {
+        composeHidePackedCards = !composeHidePackedCards;
+        renderComposePage();
+      };
+    }
+
     function renderComposeMaskStore() {
       const list = $("#composeShotGrid");
       const summary = $("#composeBoardSummary");
       if (!list) return;
       if (composeBoardMode !== "mask") return;
+      syncComposeHidePackedToggle();
       list.classList.add("mask-mode");
       list.classList.remove("drop-target");
       list.ondragenter = null;
@@ -17953,9 +18859,11 @@
       const items = composeWhiteMaskShelfItems();
       composeSelectedWhiteMaskShelfItem(items);
       const cards = composeWhiteMaskClipCards(items);
-      if (summary) summary.textContent = cards.length ? `${cards.length} 张白膜卡 · ${items.length} 个白膜包` : "生成白膜后自动保存";
+      if (summary) summary.textContent = cards.length
+        ? `${cards.length} 张白膜卡 · ${items.length} 个白膜包`
+        : (composeHidePackedCards ? "白膜池已隐藏手牌中的卡" : "生成白膜后自动保存");
       if (!cards.length) {
-        list.innerHTML = `<div class="empty" style="min-width:260px;">暂无白膜包。生成白膜后会保存在这里。</div>`;
+        list.innerHTML = `<div class="empty" style="min-width:260px;">${composeHidePackedCards ? "没有可显示的白膜卡。点眼睛可显示全部。" : "暂无白膜包。生成白膜后会保存在这里。"}</div>`;
         return;
       }
       list.innerHTML = cards.map((entry) => composeMaskCardHtml(entry)).join("");
@@ -17986,6 +18894,7 @@
           renderComposePage();
         };
       });
+      syncComposeHidePackedToggle();
       if (composeBoardMode === "mask") {
         renderComposeMaskStore();
         return;
@@ -17998,7 +18907,7 @@
       const used = composeUsedShotIds();
       const selectedPack = composeSelectedPack();
       const selectedIds = new Set(selectedPack?.shotIds || []);
-      const selectedItems = (selectedPack?.shotIds || []).map((id) => composeShotById(id)).filter(Boolean);
+      const selectedItems = composeSortedShotIds(selectedPack?.shotIds).map((id) => composeShotById(id)).filter(Boolean);
       const selectedItemIds = new Set(selectedItems.map((item) => item.id));
       const timelineItems = timelineSegments.map((seg, index) => ({
         seg,
@@ -18007,14 +18916,16 @@
       }));
       const items = composeBoardMode === "current"
         ? selectedItems
-        : selectedItems.concat(timelineItems.filter((item) => !selectedItemIds.has(item.id)));
+        : (composeHidePackedCards
+          ? timelineItems.filter((item) => !used.has(item.id))
+          : selectedItems.concat(timelineItems.filter((item) => !selectedItemIds.has(item.id))));
       if (summary) {
         summary.textContent = composeBoardMode === "current"
           ? `${items.length} 张当前包`
-          : `${timelineSegments.length} 个分镜`;
+          : (composeHidePackedCards ? `${items.length} 张未入包` : `${timelineSegments.length} 个分镜`);
       }
       if (!items.length) {
-        grid.innerHTML = `<div class="empty" style="min-width:220px;">当前包为空</div>`;
+        grid.innerHTML = `<div class="empty" style="min-width:220px;">${composeHidePackedCards && composeBoardMode !== "current" ? "没有未入包卡牌。点眼睛可显示全部。" : "当前包为空"}</div>`;
         return;
       }
       grid.innerHTML = items.map(({ seg, index, id }) => {
@@ -18107,15 +19018,15 @@
         const packId = String(item.package_id || "").trim();
         const maskId = composeMaskShelfKey(item);
         const selected = maskId && maskId === composeMaskShelfKey(selectedItem);
-        const shotText = clips.map((clip) => String(clip?.shot_id || "").trim()).filter(Boolean).slice(0, 6).join(" ");
         const width = Math.min(100, Math.max(3, (clips.length / 10) * 100));
+        const titleText = packId || item.package_label || `白膜包 ${index + 1}`;
         return `
           <section class="compose-pack mask-pack${selected ? " selected" : ""}" data-compose-mask-package="${escapeHtml(packId)}" data-mask-id="${escapeHtml(maskId)}" title="${escapeHtml(item.source_path || item.manifest_path || "")}">
             <div class="compose-pack-stack-wrap">${composeMaskPackStackHtml(item)}</div>
             <div class="compose-pack-head">
-              <div class="compose-pack-title">${escapeHtml(item.package_label || packId || `白膜包 ${index + 1}`)}</div>
+              <div class="compose-pack-title">${escapeHtml(titleText)}</div>
             </div>
-            <div class="compose-pack-shot-list">${escapeHtml(`${clips.length || item.shot_count || 0} 段：${shotText || "白膜片段"}`)}</div>
+            <div class="compose-pack-shot-list">${escapeHtml("白膜卡包")}</div>
             <div class="compose-meter"><span style="width:${width}%"></span></div>
           </section>
         `;
@@ -18145,7 +19056,7 @@
       if (title) title.textContent = "卡包架";
       const packs = composePlan.packs || [];
       const summary = $("#composePackSummary");
-      if (summary) summary.textContent = `${packs.length} 个卡包 · 5-10 秒最佳`;
+      if (summary) summary.textContent = `${packs.length} 个卡包 · 5-15 秒`;
       list.classList.toggle("dense", packs.length > 6 && packs.length <= 12);
       list.classList.toggle("extra-dense", packs.length > 12);
       if (!packs.length) {
@@ -18155,16 +19066,17 @@
       }
       list.innerHTML = packs.map((pack) => {
         const duration = composePackDuration(pack);
-        const warn = duration > 10;
-        const width = Math.min(100, (duration / 15) * 100);
+        const warn = duration > COMPOSE_PACK_MAX_SECONDS || (duration > 0 && duration < COMPOSE_PACK_MIN_SECONDS);
+        const width = Math.min(100, (duration / COMPOSE_PACK_MAX_SECONDS) * 100);
         const shotListText = composePackShotListText(pack);
+        const identityId = generationPackIdentityId(pack);
         return `
-          <section class="compose-pack${pack.id === composePlan.selectedPackId ? " selected" : ""}${warn ? " warn" : ""}" data-compose-pack="${escapeHtml(pack.id)}" title="${escapeHtml(shotListText)}">
+          <section class="compose-pack${pack.id === composePlan.selectedPackId ? " selected" : ""}${warn ? " warn" : ""}" data-compose-pack="${escapeHtml(pack.id)}" data-pack-identity="${escapeHtml(identityId)}" title="${escapeHtml(`${shotListText} · ${identityId}`)}">
             <div class="compose-pack-stack-wrap">${composePackStackHtml(pack)}</div>
             <div class="compose-pack-head">
-              <div class="compose-pack-title">${escapeHtml(pack.id || "P000")}</div>
+              <div class="compose-pack-title">${escapeHtml(composePackCardTitle(pack))}</div>
             </div>
-            <div class="compose-pack-shot-list">${escapeHtml(shotListText)}</div>
+            <div class="compose-pack-shot-list">${escapeHtml(pack.label || pack.type || pack.route || "")}</div>
             <div class="compose-meter${warn ? " warn" : ""}"><span style="width:${width}%"></span></div>
           </section>
         `;
@@ -18293,9 +19205,15 @@
       }
       const duration = composePackDuration(pack);
       if (title) title.textContent = composePackTitle(pack);
-      if (meta) meta.textContent = duration > 10
-        ? `当前 ${duration.toFixed(1)} 秒，偏长但可用；超过 15 秒禁止。`
-        : `当前 ${duration.toFixed(1)} 秒，适合一次生成，拆回原分镜。`;
+      if (meta) {
+        if (duration > COMPOSE_PACK_MAX_SECONDS) {
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，超过 15 秒，不能确认。`;
+        } else if (duration > 0 && duration < COMPOSE_PACK_MIN_SECONDS) {
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，少于 5 秒，请并入相邻包。`;
+        } else {
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，在 5-15 秒范围内。`;
+        }
+      }
       if (hand) {
         hand.innerHTML = composeMiniCardsHtml(pack.shotIds, pack.id, { large: true, center: true, hint: true });
         bindComposeMiniCards(hand);
@@ -18327,7 +19245,7 @@
         const toIndex = nextIds.indexOf(swapId);
         if (fromIndex >= 0 && toIndex >= 0) {
           [nextIds[fromIndex], nextIds[toIndex]] = [nextIds[toIndex], nextIds[fromIndex]];
-          pack.shotIds = nextIds;
+          pack.shotIds = composeSortedShotIds(nextIds);
           composePlan.selectedPackId = pack.id;
           composeConfirmedPlan = null;
           saveComposePlanDraft();
@@ -18341,7 +19259,7 @@
         return;
       }
       const nextDuration = composePackDuration(pack) + (alreadyInTarget ? 0 : composeShotDuration(item.seg));
-      if (nextDuration > 15) {
+      if (nextDuration > COMPOSE_PACK_MAX_SECONDS) {
         composePlan.selectedPackId = pack.id;
         renderComposeDetail();
         assistantSetStatus(["超过 15 秒，不能放入这个生成包。"], "warn");
@@ -18356,7 +19274,7 @@
       if (beforeIndex >= 0) nextIds.splice(beforeIndex, 0, item.id);
       else if (afterIndex >= 0) nextIds.splice(afterIndex + 1, 0, item.id);
       else nextIds.push(item.id);
-      pack.shotIds = nextIds;
+      pack.shotIds = composeSortedShotIds(nextIds);
       composePlan.selectedPackId = pack.id;
       composeConfirmedPlan = null;
       saveComposePlanDraft();
@@ -18413,6 +19331,31 @@
         assistantSetStatus(["还没有生成包。请先点“智能合包”。"], "warn");
         return;
       }
+      const totalDuration = timelineSegments.reduce((sum, seg) => sum + composeShotDuration(seg), 0);
+      const tooLongPacks = packs
+        .map((pack) => ({ pack, duration: composePackDuration(pack) }))
+        .filter((item) => item.duration > COMPOSE_PACK_MAX_SECONDS);
+      if (tooLongPacks.length) {
+        assistantSetStatus([
+          "有生成包超过 15 秒，不能确认。",
+          ...tooLongPacks.map(({ pack, duration }) => `> ${pack.id}: ${duration.toFixed(1)} 秒`),
+        ], "warn");
+        composePlan.selectedPackId = tooLongPacks[0].pack.id;
+        renderComposePage();
+        return;
+      }
+      const tooShortPacks = packs
+        .map((pack) => ({ pack, duration: composePackDuration(pack) }))
+        .filter((item) => item.duration > 0 && item.duration < COMPOSE_PACK_MIN_SECONDS);
+      if (tooShortPacks.length && totalDuration >= COMPOSE_PACK_MIN_SECONDS) {
+        assistantSetStatus([
+          "有生成包少于 5 秒，请先并入相邻包再确认。",
+          ...tooShortPacks.map(({ pack, duration }) => `> ${pack.id}: ${duration.toFixed(1)} 秒`),
+        ], "warn");
+        composePlan.selectedPackId = tooShortPacks[0].pack.id;
+        renderComposePage();
+        return;
+      }
       const unpackedShotIds = composeUnpackedShotIds();
       saveComposePlanDraft({ log: true });
       composeConfirmedPlan = {
@@ -18435,7 +19378,7 @@
         "> 已清空旧参考图，请从当前资产图中手动选择本次要上传的图。",
         "> 已进入视频生成界面。",
       ].filter(Boolean);
-      generationWorkbench.selectedPackId = composeConfirmedPlan.packs[0]?.id || "";
+      generationWorkbench.selectedPackId = composePlan.selectedPackId || composeConfirmedPlan.packs[0]?.id || "";
       renderGenerationPackageWorkbench();
       setSeedanceSubmitStatus(lines, "good");
       assistantSetStatus(lines, "good");
@@ -18443,12 +19386,48 @@
     }
 
     function generationPackSignature(pack = {}) {
+      return generationPackIdentitySignature(pack);
+    }
+
+    function generationStringHash(text = "") {
+      let hash = 2166136261;
+      const value = String(text || "");
+      for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(36).padStart(7, "0");
+    }
+
+    function generationPackIdentitySignature(pack = {}) {
+      const shots = generationPackShots(pack);
+      const shotSignature = shots.map(({ seg, id }) => [
+        id,
+        normalizeLocalPathKey(shotVideoPath(seg)),
+        Number(shotVideoStartTime(seg) || 0).toFixed(3),
+        Number(shotVideoEndTime(seg) || 0).toFixed(3),
+        Number(composeShotDuration(seg) || 0).toFixed(3),
+      ].join("@")).join("|");
       return [
         pack.id || "",
         generationPackBackend(pack),
-        (pack.shotIds || []).join("|"),
+        shotSignature || composeSortedShotIds(pack.shotIds).join("|"),
         Number(composePackDuration(pack) || pack.duration || 0).toFixed(3),
       ].join("::");
+    }
+
+    function generationPackIdentityId(pack = {}) {
+      return `${pack.id || "P000"}-${generationStringHash(generationPackIdentitySignature(pack))}`;
+    }
+
+    function generationRuntimeMatchesPack(runtime = {}, pack = {}) {
+      const identityId = generationPackIdentityId(pack);
+      const signature = generationPackIdentitySignature(pack);
+      const sourceVersionOk = String(runtime.packageSourceVersion || "") === GENERATION_PACKAGE_SOURCE_VERSION;
+      return sourceVersionOk && (
+        String(runtime.packageIdentityId || "") === identityId
+        || String(runtime.planSignature || "") === signature
+      );
     }
 
     function generationRuntimeStorageKey() {
@@ -18475,6 +19454,8 @@
       const keys = [
         "status",
         "planSignature",
+        "packageIdentityId",
+        "packageSourceVersion",
         "sourcePath",
         "packageSourcePath",
         "packageSegments",
@@ -18532,14 +19513,15 @@
         const packs = generationPacks();
         const planKey = generationRuntimePlanKey(packs);
         if (!planKey) return false;
-        const packageRuntime = {};
-        packs.forEach((pack) => {
-          const id = String(pack.id || "").trim();
-          if (!id) return;
-          const runtime = normalizeGenerationRuntimeForStorage(generationWorkbench.packageRuntime[id] || {});
-          runtime.planSignature = generationPackSignature(pack);
-          if (generationRuntimeHasStoredValue(runtime)) packageRuntime[id] = runtime;
-        });
+      const packageRuntime = {};
+      packs.forEach((pack) => {
+        const id = String(pack.id || "").trim();
+        if (!id) return;
+        const runtime = normalizeGenerationRuntimeForStorage(generationWorkbench.packageRuntime[id] || {});
+        runtime.planSignature = generationPackSignature(pack);
+        runtime.packageIdentityId = generationPackIdentityId(pack);
+        if (generationRuntimeHasStoredValue(runtime)) packageRuntime[id] = runtime;
+      });
         localStorage.setItem(generationRuntimeStorageKey(), JSON.stringify({
           planKey,
           selectedPackId: generationWorkbench.selectedPackId || "",
@@ -18575,6 +19557,7 @@
             ...(useSavedLast ? current : runtime),
             ...(useSavedLast ? runtime : current),
             planSignature: signature,
+            packageIdentityId: generationPackIdentityId(pack),
             sourcePreparing: false,
           };
           restored += 1;
@@ -18606,22 +19589,29 @@
         const signature = generationPackSignature(pack);
         const current = generationWorkbench.packageRuntime[id] || {};
         const keepCurrent = current.planSignature === signature && String(current.status || "") !== "failed";
-        nextRuntime[id] = keepCurrent ? { ...current, planSignature: signature } : { status: "idle", planSignature: signature };
+        const packageIdentityId = generationPackIdentityId(pack);
+        nextRuntime[id] = keepCurrent
+          ? { ...current, planSignature: signature, packageIdentityId }
+          : { status: "idle", planSignature: signature, packageIdentityId };
       });
       generationWorkbench.packageRuntime = nextRuntime;
       generationWorkbench.runtimePlanKey = "";
     }
 
     function generationPacks() {
-      const confirmed = Array.isArray(composeConfirmedPlan?.packs) ? composeConfirmedPlan.packs : [];
       const draft = Array.isArray(composePlan?.packs) ? composePlan.packs : [];
-      return (confirmed.length ? confirmed : draft).filter((pack) => Array.isArray(pack?.shotIds) && pack.shotIds.length);
+      return draft
+        .filter((pack) => Array.isArray(pack?.shotIds) && pack.shotIds.length)
+        .map((pack) => ({
+          ...pack,
+          shotIds: composeSortedShotIds(pack.shotIds),
+          duration: Number(composePackDuration(pack).toFixed(3)),
+        }));
     }
 
     function generationReferencePlanKey(packs = []) {
       if (!packs.length) return "";
-      const stamp = String(composeConfirmedPlan?.confirmed_at || "draft");
-      return [stamp, ...packs.map((pack) => generationPackSignature(pack))].join("||");
+      return packs.map((pack) => generationPackSignature(pack)).join("||");
     }
 
     function generationPackById(packId) {
@@ -18668,17 +19658,53 @@
       return generationPackBackend(pack) === "scail2" ? "单人 Scail2" : "多人接口";
     }
 
+    function setGenerationPackBackend(packId, backend) {
+      const id = String(packId || "").trim();
+      if (!id) return;
+      const pack = (composePlan.packs || []).find((item) => String(item.id || "") === id);
+      if (!pack) return;
+      const nextBackend = String(backend || "").trim() === "scail2" ? "scail2" : "seedance";
+      if (String(pack.backend || "") === nextBackend) return;
+      pack.backend = nextBackend;
+      pack.route = nextBackend === "scail2" ? "Scail2" : "Seedance";
+      pack.type = nextBackend === "scail2" ? "单人" : "多人";
+      composePlan.selectedPackId = id;
+      generationWorkbench.selectedPackId = id;
+      saveComposePlanDraft();
+      const nextPack = generationPackById(id) || pack;
+      const signature = generationPackSignature(nextPack);
+      generationWorkbench.packageRuntime[id] = {
+        status: "idle",
+        planSignature: signature,
+        packageIdentityId: generationPackIdentityId(nextPack),
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+        lastMessage: `已手动切换路线：${generationBackendLabel(nextPack)}`,
+        lastTone: "good",
+        errorMessage: "",
+        updatedAt: Date.now(),
+      };
+      saveGenerationRuntimeDraft();
+      renderComposePage();
+      renderGenerationPackageWorkbench();
+      setSeedanceSubmitStatus(["> 已手动切换生成路线", `> ${id}: ${generationBackendLabel(nextPack)}`], "good");
+      assistantSetStatus(["> 已手动切换生成路线", `> ${id}: ${generationBackendLabel(nextPack)}`], "good");
+    }
+
     function generationPackSourceInfo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const shots = generationPackShots(pack);
       const runtimePath = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
-      if (runtimePath) return { path: runtimePath, time: 0.1, shotId: shots.length > 1 ? `整包 ${shots.length} 段` : "" };
+      if (runtimePath && generationRuntimeMatchesPack(runtime, pack)) {
+        return { path: runtimePath, time: 0.1, shotId: shots.length > 1 ? `整包 ${shots.length} 段` : "" };
+      }
       if (shots.length > 1) {
         return {
           path: "",
           time: 0.1,
           shotId: runtime.sourcePreparing ? "整包合成中" : `整包 ${shots.length} 段待合成`,
-          emptyText: runtime.errorMessage ? "整包预览合成失败" : "正在合成整包预览",
+          emptyText: runtime.sourcePreparing
+            ? "正在合成当前包输入"
+            : (runtime.errorMessage ? "整包预览合成失败" : "点读卡包或点包会合成整包输入"),
         };
       }
       const item = shots.find(({ seg }) => shotVideoPath(seg));
@@ -18834,14 +19860,12 @@
     }
 
     function ensureGenerationPackageManualReferences(pack = {}, actionLabel = "生成") {
-      pullSeedanceMaterialSlots("images");
       const refs = generationManualReferenceImages();
-      const expectedRoleCount = generationPackRoleAssets(pack).length;
-      if (refs.length && (!expectedRoleCount || refs.length >= expectedRoleCount)) return refs;
+      if (refs.length) return refs;
       const lines = [
-        refs.length ? "x 参考图数量不够" : "x 缺参考图",
-        expectedRoleCount ? `> 当前生成包检测到 ${expectedRoleCount} 个角色，已选择 ${refs.length} 张参考图。` : "",
-        "> 在下方“当前资产缩略图”里点选要上传的人物参考图，或点“本地选择参考图”。",
+        "x 缺参考图",
+        "> 生成包只检查下方“会上传的参考图”区域，至少选择 1 张即可继续。",
+        "> 在“可选资产图”里点选要上传的人物参考图，或点本地上传图标。",
         "> 系统不会再自动把资产图塞进请求，避免传错旧图。",
       ].filter(Boolean);
       setSeedanceSubmitStatus(lines, "bad");
@@ -18895,8 +19919,12 @@
             <div class="generation-reference-row">${assetHtml}</div>
           </div>
           <div class="generation-reference-actions">
-            <button class="tiny-btn" type="button" data-generation-upload-reference>本地选择参考图</button>
-            <button class="tiny-btn" type="button" data-generation-clear-references>清空已选</button>
+            <button class="generation-reference-icon-btn" type="button" data-generation-upload-reference title="本地选择参考图" aria-label="本地选择参考图">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="M7 8l5-5 5 5"></path><path d="M5 15v4h14v-4"></path></svg>
+            </button>
+            <button class="generation-reference-icon-btn" type="button" data-generation-clear-references title="清空已选" aria-label="清空已选">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 14h10l1-14"></path><path d="M9 7V4h6v3"></path></svg>
+            </button>
             <input id="generationManualReferencePathInput" type="hidden" value="">
           </div>
         </div>
@@ -18995,13 +20023,22 @@
       if (!shots.length) throw new Error("当前生成包没有可合成的视频片段");
       const runtime = generationRuntimeForPack(pack.id);
       const existingPath = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
-      if (existingPath && Array.isArray(runtime.packageSegments) && runtime.packageSegments.length === shots.length) {
+      const packageIdentityId = generationPackIdentityId(pack);
+      const planSignature = generationPackSignature(pack);
+      if (
+        existingPath
+        && generationRuntimeMatchesPack(runtime, pack)
+        && Array.isArray(runtime.packageSegments)
+        && runtime.packageSegments.length === shots.length
+      ) {
         return {
           output_path: existingPath,
           source_path: existingPath,
           segments: runtime.packageSegments,
           duration: Number(runtime.packageDuration || 0) || composePackDuration(pack),
           shot_count: runtime.packageSegments.length,
+          package_identity_id: packageIdentityId,
+          reused: true,
         };
       }
       const body = {
@@ -19019,6 +20056,9 @@
       patchGenerationPackRuntime(pack.id, {
         sourcePath: String(data.output_path || data.source_path || "").trim(),
         packageSourcePath: String(data.output_path || data.source_path || "").trim(),
+        planSignature,
+        packageIdentityId,
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
         packageSegments: Array.isArray(data.segments) ? data.segments : shots,
         packageDuration: Number(data.duration || 0) || composePackDuration(pack),
         sourcePreparing: false,
@@ -19027,7 +20067,89 @@
         lastTone: "warn",
         errorMessage: "",
       });
+      data.package_identity_id = packageIdentityId;
+      data.reused = false;
       return data;
+    }
+
+    function generationPreparedPackageInput(pack = {}) {
+      const runtime = generationRuntimeForPack(pack.id);
+      const path = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
+      const segments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
+      const shots = generationPackShotPayload(pack);
+      if (!path || !shots.length || segments.length !== shots.length) return null;
+      if (!generationRuntimeMatchesPack(runtime, pack)) return null;
+      return {
+        path,
+        segments,
+        duration: Number(runtime.packageDuration || 0) || composePackDuration(pack),
+        identityId: generationPackIdentityId(pack),
+      };
+    }
+
+    async function prepareGenerationPackageInputFromWorkbench(pack = {}, options = {}) {
+      const latest = generationPackById(pack.id) || pack;
+      const prepared = generationPreparedPackageInput(latest);
+      const prefixLines = Array.isArray(options.prefixLines) ? options.prefixLines : [];
+      if (prepared) {
+        const lines = [
+          ...prefixLines,
+          `> 包身份未变化，复用已合成输入: ${latest.id}`,
+          `> 身份ID: ${prepared.identityId}`,
+        ];
+        if (!options.silent) {
+          setSeedanceSubmitStatus(lines, "good");
+          assistantSetStatus(lines, "good");
+        }
+        return {
+          output_path: prepared.path,
+          source_path: prepared.path,
+          segments: prepared.segments,
+          duration: prepared.duration,
+          shot_count: prepared.segments.length,
+          package_identity_id: prepared.identityId,
+          reused: true,
+        };
+      }
+      patchGenerationPackRuntime(latest.id, {
+        sourcePreparing: true,
+        sourcePreviewFailed: false,
+        lastMessage: "正在合成当前包输入",
+        lastTone: "warn",
+        errorMessage: "",
+      }, { render: false });
+      renderGenerationPackageWorkbench();
+      try {
+        const data = await prepareGenerationPackageSource(generationPackById(latest.id) || latest);
+        const sourcePath = String(data?.output_path || data?.source_path || "").trim();
+        patchGenerationPackRuntime(latest.id, {
+          sourcePreparing: false,
+          sourcePreviewFailed: false,
+          sourcePath,
+          packageSourcePath: sourcePath,
+          planSignature: generationPackSignature(latest),
+          packageIdentityId: generationPackIdentityId(latest),
+          packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+          packageSegments: Array.isArray(data?.segments) ? data.segments : generationPackShotPayload(latest),
+          packageDuration: Number(data?.duration || 0) || composePackDuration(latest),
+          lastMessage: `当前包已合成\n${fileName(sourcePath)}`,
+          lastTone: "good",
+          errorMessage: "",
+        }, { render: false });
+        return data;
+      } catch (error) {
+        const message = error.message || String(error);
+        patchGenerationPackRuntime(latest.id, {
+          sourcePreparing: false,
+          sourcePreviewFailed: true,
+          lastMessage: `当前包合成失败\n${message}`,
+          lastTone: "bad",
+          errorMessage: `当前包合成失败\n${message}`,
+        }, { render: false });
+        throw error;
+      } finally {
+        renderGenerationPackageWorkbench();
+      }
     }
 
     async function ensureGenerationPackageSourcePreview(pack = {}) {
@@ -19236,6 +20358,9 @@
       ].forEach((key) => {
         if (data[key] !== undefined) patch[key] = data[key];
       });
+      if (String(data.packageSourcePath || data.sourcePath || "").trim()) {
+        patch.packageSourceVersion = GENERATION_PACKAGE_SOURCE_VERSION;
+      }
       patchGenerationPackRuntime(id, patch);
       return data;
     }
@@ -19310,11 +20435,11 @@
         return null;
       }
       const refs = generationManualReferenceImages();
-      const duration = Number(pack.duration || composePackDuration(pack) || composeShotDuration(first.seg) || 4);
+      const duration = Number(pack.duration || composePackDuration(pack) || composeShotDuration(first.seg) || COMPOSE_PACK_MIN_SECONDS);
       seedanceDraft.model = "sd-2.0-r3";
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio || "9:16";
       seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
-      seedanceDraft.duration = Math.max(4, Math.min(15, Math.ceil(duration)));
+      seedanceDraft.duration = Math.max(COMPOSE_PACK_MIN_SECONDS, Math.min(COMPOSE_PACK_MAX_SECONDS, Math.ceil(duration)));
       seedanceDraft.taskName = `${useMask ? "result" : "mask"}_${pack.id || "P000"}`;
       seedanceDraft.prompt = generationEditorPromptText(pack, generationPromptStage(pack, { useMask }));
       seedanceDraft.images = normalizeMaterialList(seedanceDraft.images, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
@@ -19363,7 +20488,9 @@
         const shotId = String(clip?.shot_id || "").trim() || "S";
         return `
           <div class="generation-split-card" title="${escapeHtml(label + " " + shotId + " - " + path)}">
-            <video muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(path, 0.1))}"></video>
+            <div class="generation-split-card-static">
+              <b>${escapeHtml(label)}</b>
+            </div>
             <span>${escapeHtml(label)} ${escapeHtml(shotId)}</span>
           </div>
         `;
@@ -19415,7 +20542,10 @@
       const source = generationPackSourceInfo(pack);
       const path = String(generationPackResultVideo(pack) || generationPackMaskVideo(pack) || source.path || "").trim();
       if (!path) return `<div class="generation-package-thumb"></div>`;
-      return `<div class="generation-package-thumb"><video muted playsinline preload="metadata" src="${escapeHtml(mediaSrc(path, source.time || 0.1))}"></video></div>`;
+      const label = generationPackResultVideo(pack)
+        ? "成片"
+        : (generationPackMaskVideo(pack) ? "白膜" : "原片");
+      return `<div class="generation-package-thumb generation-package-thumb-static"><span>${escapeHtml(label)}</span></div>`;
     }
 
     function generationActivePromptLabel(pack = {}) {
@@ -19584,9 +20714,17 @@
           const button = $(selector);
           if (button) button.disabled = true;
         });
+        $("#generationRouteSwitch")?.querySelectorAll("[data-generation-route]").forEach((button) => {
+          button.classList.remove("active");
+          button.setAttribute("aria-pressed", "false");
+          button.disabled = true;
+        });
         return;
       }
       packs.forEach((pack) => ensureGenerationPackageRuntimeRestored(pack));
+      if (composePlan.selectedPackId && generationPackById(composePlan.selectedPackId)) {
+        generationWorkbench.selectedPackId = composePlan.selectedPackId;
+      }
       const selected = generationPackById(generationWorkbench.selectedPackId);
       generationWorkbench.selectedPackId = selected?.id || packs[0].id;
       const list = $("#generationPackageList");
@@ -19594,16 +20732,16 @@
         list.innerHTML = packs.map((pack) => {
           const runtime = generationRuntimeForPack(pack.id);
           const duration = Number(pack.duration || composePackDuration(pack) || 0);
-          const width = Math.min(100, Math.max(3, (duration / 15) * 100));
-          const shotText = (pack.shotIds || []).slice(0, 5).join(" ");
+          const width = Math.min(100, Math.max(3, (duration / COMPOSE_PACK_MAX_SECONDS) * 100));
           const statusText = generationRuntimeLabel(runtime, pack);
+          const durationText = duration > 0 ? `${duration >= 10 ? duration.toFixed(0) : duration.toFixed(1)}s` : "0s";
+          const identityId = generationPackIdentityId(pack);
           return `
-            <button class="generation-package-card${pack.id === generationWorkbench.selectedPackId ? " selected" : ""}" type="button" data-generation-pack="${escapeHtml(pack.id || "")}">
+            <button class="generation-package-card${pack.id === generationWorkbench.selectedPackId ? " selected" : ""}" type="button" data-generation-pack="${escapeHtml(pack.id || "")}" data-pack-identity="${escapeHtml(identityId)}" title="${escapeHtml(identityId)}">
               ${generationPackThumbHtml(pack)}
-              <strong>${escapeHtml(pack.id || "P000")}</strong>
+              <strong>${escapeHtml(`${pack.id || "P000"} ${durationText}`)}</strong>
               <span>${escapeHtml(generationPackRoleLabel(pack))}</span>
               <span class="generation-pack-route"><em>路线：${escapeHtml(generationBackendLabel(pack))}</em><em>${duration.toFixed(1)}s</em></span>
-              <span>镜头：${escapeHtml(shotText || "-")}</span>
               <span class="generation-pack-status">状态：${escapeHtml(statusText)}</span>
               <div class="generation-meter"><span style="width:${width}%"></span></div>
             </button>
@@ -19627,8 +20765,7 @@
       root.classList.toggle("route-seedance", backend !== "scail2");
       $("#generationStageTitle").textContent = `${pack.id || "P000"} · ${generationPackRoleLabel(pack)}`;
       $("#generationStageMeta").textContent = `${generationBackendLabel(pack)} · 镜头 ${shots.length} 段 · ${duration.toFixed(1)}s`;
-      $("#generationRouteLabel").textContent = generationBackendLabel(pack);
-      $("#generationOriginalMeta").textContent = sourceInfo.shotId || "";
+      $("#generationOriginalMeta").textContent = "";
       $("#generationMaskMeta").textContent = maskPath ? "已生成" : "";
       $("#generationResultMeta").textContent = resultPath ? "已生成" : "";
       $("#generationOriginalPlayer").innerHTML = generationPlayerHtml(sourceInfo.path, sourceInfo.emptyText || "暂无原视频", sourceInfo.time);
@@ -19653,6 +20790,16 @@
       const whiteDone = Boolean(maskPath);
       const resultDone = Boolean(resultPath);
       const running = ["mask_running", "result_running", "scail2_running"].includes(String(runtime.status || ""));
+      const canPrepareSource = Boolean(sourceInfo.path || shots.length);
+      const routeSwitch = $("#generationRouteSwitch");
+      if (routeSwitch) {
+        routeSwitch.querySelectorAll("[data-generation-route]").forEach((button) => {
+          const active = String(button.dataset.generationRoute || "") === backend;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", active ? "true" : "false");
+          button.disabled = running;
+        });
+      }
       $("#generationStepList").innerHTML = backend === "scail2"
         ? `<div class="generation-step${running ? " active" : ""}${resultDone ? " done" : ""}">
             <div class="generation-step-title"><span>单人 Scail2 生成</span><b>${resultDone ? "完成" : (running ? "运行中" : "待生成")}</b></div>
@@ -19676,7 +20823,7 @@
       const scailBtn = $("#generateScail2PackageBtn");
       if (whiteBtn) {
         whiteBtn.hidden = backend === "scail2" || whiteDone;
-        whiteBtn.disabled = backend === "scail2" || running || !sourceInfo.path;
+        whiteBtn.disabled = backend === "scail2" || running || !canPrepareSource;
       }
       if (resultBtn) {
         resultBtn.hidden = backend === "scail2" || resultDone;
@@ -19684,11 +20831,11 @@
       }
       if (fullBtn) {
         fullBtn.hidden = backend === "scail2";
-        fullBtn.disabled = backend === "scail2" || running || !sourceInfo.path;
+        fullBtn.disabled = backend === "scail2" || running || !canPrepareSource;
       }
       if (rerunWhiteBtn) {
         rerunWhiteBtn.hidden = backend === "scail2" || !whiteDone;
-        rerunWhiteBtn.disabled = backend === "scail2" || running || !sourceInfo.path;
+        rerunWhiteBtn.disabled = backend === "scail2" || running || !canPrepareSource;
       }
       if (rerunResultBtn) {
         rerunResultBtn.hidden = backend === "scail2" || !resultDone;
@@ -19696,21 +20843,137 @@
       }
       if (scailBtn) {
         scailBtn.hidden = backend !== "scail2";
-        scailBtn.disabled = backend !== "scail2" || running || !sourceInfo.path;
+        scailBtn.disabled = backend !== "scail2" || running || !canPrepareSource;
       }
       bindGenerationCompareSync();
-      ensureGenerationPackageSourcePreview(pack);
     }
 
-    function selectGenerationPackage(packId) {
+    async function reloadGenerationPackagesFromCompose() {
+      ensureComposePlan();
+      composePlan.packs = (composePlan.packs || []).map((pack) => ({
+        ...pack,
+        shotIds: composeSortedShotIds(pack.shotIds),
+      }));
+      if (!composePlan.packs.some((pack) => pack.id === composePlan.selectedPackId)) {
+        composePlan.selectedPackId = composePlan.packs[0]?.id || "";
+      }
+      generationWorkbench.selectedPackId = composePlan.selectedPackId || generationWorkbench.selectedPackId || "";
+      saveComposePlanDraft();
+      renderGenerationPackageWorkbench();
+      const packs = generationPacks();
+      if (!packs.length) {
+        const lines = [
+          "> 已读取当前编排卡包",
+          "> 暂无可合成卡包",
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        return;
+      }
+      const button = $("#generationLoadPackagesBtn");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "同步中";
+      }
+      const lines = [
+        "> 已读取当前编排卡包",
+        `> 卡包: ${packs.length}`,
+        "> 正在按指纹同步全部卡包",
+      ];
+      setSeedanceSubmitStatus(lines, "warn");
+      assistantSetStatus(lines, "warn");
+      let reused = 0;
+      let composed = 0;
+      let failed = 0;
+      const failures = [];
+      try {
+        for (let index = 0; index < packs.length; index += 1) {
+          const pack = generationPackById(packs[index].id) || packs[index];
+          if (generationPreparedPackageInput(pack)) {
+            reused += 1;
+            continue;
+          }
+          const progressLines = [
+            "> 正在按指纹同步全部卡包",
+            `> ${index + 1}/${packs.length}: ${pack.id}`,
+            `> 已复用 ${reused}，新合成 ${composed}，失败 ${failed}`,
+          ];
+          setSeedanceSubmitStatus(progressLines, "warn");
+          assistantSetStatus(progressLines, "warn");
+          try {
+            const data = await prepareGenerationPackageInputFromWorkbench(pack, { silent: true });
+            if (data?.reused) reused += 1;
+            else composed += 1;
+          } catch (error) {
+            failed += 1;
+            failures.push(`${pack.id}: ${error.message || error}`);
+          }
+        }
+        const doneLines = [
+          "> 已同步当前编排卡包",
+          `> 卡包: ${packs.length}`,
+          `> 复用: ${reused}`,
+          `> 新合成: ${composed}`,
+          failed ? `> 失败: ${failed}` : "",
+          ...failures.slice(0, 3).map((item) => "> " + item),
+        ].filter(Boolean);
+        setSeedanceSubmitStatus(doneLines, failed ? "warn" : "good");
+        assistantSetStatus(doneLines, failed ? "warn" : "good");
+      } catch (error) {
+        const message = error.message || String(error);
+        const failLines = [
+          "x 卡包同步失败",
+          "> " + message,
+        ];
+        setSeedanceSubmitStatus(failLines, "bad");
+        assistantSetStatus(failLines, "bad");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = "读卡包";
+        }
+        renderGenerationPackageWorkbench();
+      }
+    }
+
+    async function selectGenerationPackage(packId) {
       const pack = generationPackById(packId);
       if (!pack) return;
       generationWorkbench.selectedPackId = pack.id;
+      composePlan.selectedPackId = pack.id;
+      saveComposePlanDraft();
       const first = generationPackShots(pack)[0];
       if (first && selectedTimelineIndex !== first.index) {
         selectTimelineSegment(first.index, { previewMode: "segment" });
       }
       renderGenerationPackageWorkbench();
+      if (generationPreparedPackageInput(pack)) return;
+      const lines = [
+        `> 已切换生成包: ${pack.id}`,
+        "> 包身份有变化或尚未合成，正在合成当前包输入",
+      ];
+      setSeedanceSubmitStatus(lines, "warn");
+      assistantSetStatus(lines, "warn");
+      try {
+        const data = await prepareGenerationPackageInputFromWorkbench(pack);
+        const doneLines = [
+          `> 已切换生成包: ${pack.id}`,
+          data?.reused ? "> 包身份未变化，已复用输入" : "> 当前包输入已合成",
+          data?.package_identity_id ? `> 身份ID: ${data.package_identity_id}` : "",
+          Number(data?.shot_count || 0) ? `> 可拆分片段: ${data.shot_count}` : "",
+        ].filter(Boolean);
+        setSeedanceSubmitStatus(doneLines, "good");
+        assistantSetStatus(doneLines, "good");
+      } catch (error) {
+        const message = error.message || String(error);
+        const failLines = [
+          "x 当前包合成失败",
+          `> ${pack.id}`,
+          "> " + message,
+        ];
+        setSeedanceSubmitStatus(failLines, "bad");
+        assistantSetStatus(failLines, "bad");
+      }
     }
 
     async function startGenerationPackageMask(packId = generationWorkbench.selectedPackId, options = {}) {
@@ -19848,6 +21111,19 @@
         return;
       }
       if (!ensureGenerationPackageManualReferences(pack, "Scail2 生成")) return;
+      try {
+        await prepareGenerationPackageInputFromWorkbench(pack, { silent: true });
+      } catch (error) {
+        const message = error.message || String(error);
+        patchGenerationPackRuntime(pack.id, {
+          status: "failed",
+          lastMessage: `生成包合成失败\n${message}`,
+          lastTone: "bad",
+          errorMessage: `生成包合成失败\n${message}`,
+        });
+        setSeedanceSubmitStatus(["x 生成包合成失败", "> " + message], "bad");
+        return;
+      }
       const synced = syncGenerationPackageToSeedanceDraft(pack, { useMask: false });
       if (!synced) return;
       const scail2Message = seedanceStatusVisibleText([
@@ -19865,6 +21141,10 @@
     }
 
     function initGenerationWorkbench() {
+      $("#generationLoadPackagesBtn")?.addEventListener("click", () => reloadGenerationPackagesFromCompose());
+      $("#generationRouteSwitch")?.querySelectorAll("[data-generation-route]").forEach((button) => {
+        button.addEventListener("click", () => setGenerationPackBackend(generationWorkbench.selectedPackId, button.dataset.generationRoute));
+      });
       $("#generateWhiteMaskBtn")?.addEventListener("click", () => startGenerationPackageMask());
       $("#generateResultBtn")?.addEventListener("click", () => startGenerationPackageResult());
       $("#generateFullPipelineBtn")?.addEventListener("click", () => startGenerationPackageFull());
@@ -20221,7 +21501,7 @@
       seedanceDraft.taskName = `white_mask_reverse_${seedanceTaskSlug(context.originalVideoPath || value)}`;
       const segDuration = Number(seg.duration);
       if (Number.isFinite(segDuration) && segDuration > 0) {
-        seedanceDraft.duration = Math.max(4, Math.min(15, Math.ceil(segDuration)));
+        seedanceDraft.duration = Math.max(COMPOSE_PACK_MIN_SECONDS, Math.min(COMPOSE_PACK_MAX_SECONDS, Math.ceil(segDuration)));
       }
       seedanceDraft.images = normalizeMaterialList(refImages.slice(0, SEEDANCE_MATERIAL_LIMITS.images), 1);
       seedanceDraft.videos = normalizeMaterialList([value], 1);
@@ -20303,6 +21583,9 @@
       const clip = subclips[selectedIndex] || {};
       const start = Math.max(0, Number(clip.start || 0));
       const end = Number(clip.end || start);
+      const isVirtualSubclip = Boolean(clip.virtual_subclip || clip.virtual);
+      const mediaStart = Number(clip.media_start ?? clip.mediaStart);
+      const mediaEnd = Number(clip.media_end ?? clip.mediaEnd);
       const path = seedanceSubclipPath(clip);
       if (!path) {
         const lines = ["x 当前子镜头没有视频", "> 请重新选择一个可预览的子镜头。"];
@@ -20313,7 +21596,14 @@
       const rightVideo = $("#timelineGeneratedVideo");
       const clipDuration = Number.isFinite(end) && end > start ? end - start : Number(rightVideo?.duration || 0);
       const rightCurrent = Number(rightVideo?.currentTime || 0);
-      const target = Math.max(0, Math.min(Math.max(0, clipDuration - 0.001), Number.isFinite(rightCurrent) ? rightCurrent : 0));
+      const rightRelative = isVirtualSubclip && Number.isFinite(mediaStart)
+        ? rightCurrent - mediaStart
+        : rightCurrent;
+      const target = Math.max(0, Math.min(Math.max(0, clipDuration - 0.001), Number.isFinite(rightRelative) ? rightRelative : 0));
+      const targetMediaTime = isVirtualSubclip && Number.isFinite(mediaStart) ? mediaStart + target : target;
+      const parentMediaStart = isVirtualSubclip && Number.isFinite(Number(seg.start)) ? Number(seg.start) : mediaStart;
+      const parentMediaEnd = isVirtualSubclip && Number.isFinite(Number(seg.end)) ? Number(seg.end) : mediaEnd;
+      const targetMediaEnd = isVirtualSubclip && Number.isFinite(parentMediaEnd) ? parentMediaEnd : null;
       storyboardLeftPreviewMode = "subclip";
       storyboardLeftSubclipEdit = {
         index: selectedIndex,
@@ -20321,8 +21611,13 @@
         start,
         end,
         duration: clipDuration,
+        virtual: isVirtualSubclip,
+        mediaStart: Number.isFinite(mediaStart) ? mediaStart : 0,
+        mediaEnd: Number.isFinite(mediaEnd) ? mediaEnd : 0,
+        parentMediaStart: Number.isFinite(parentMediaStart) ? parentMediaStart : 0,
+        parentMediaEnd: Number.isFinite(parentMediaEnd) ? parentMediaEnd : 0,
       };
-      setStoryboardVideoSource($("#timelineOriginalVideo"), path, target || 0.1);
+      setStoryboardVideoSource($("#timelineOriginalVideo"), path, (isVirtualSubclip && Number.isFinite(parentMediaStart) ? parentMediaStart : targetMediaTime) || 0.1, targetMediaEnd);
       syncStoryboardOriginalButton(storyboardFullSourcePath(seg));
       $("#timelineOriginalTitle").textContent = "子镜头";
       $("#originalCompareLabel").textContent = `子镜头 ${selectedIndex + 1} · ${formatNum(start)}-${formatNum(end)}s`;
@@ -20340,7 +21635,7 @@
       const seekLeft = () => {
         if (!leftVideo) return;
         try { leftVideo.pause(); } catch (_) {}
-        leftVideo.currentTime = target;
+        leftVideo.currentTime = targetMediaTime;
         leftVideo.focus?.();
       };
       if (leftVideo?.readyState >= 1) {
@@ -20723,7 +22018,12 @@
               source_identity_shapes_by_role: clip.source_identity_shapes_by_role || previous.source_identity_shapes_by_role || {},
             };
           }),
-          selectedIndex: Math.max(0, Math.min(seedanceReferenceSubclipState.selectedIndex || 0, nextSubclips.length - 1)),
+          selectedIndex: Math.max(0, Math.min(
+            Number.isFinite(Number(result.selected_index ?? result.selectedIndex))
+              ? Number(result.selected_index ?? result.selectedIndex)
+              : (seedanceReferenceSubclipState.selectedIndex || 0),
+            nextSubclips.length - 1,
+          )),
           sourceVideoIndex: Number.isFinite(sourceIndex) ? sourceIndex : -1,
           sourceVideoPath,
           projectDir: String(result.project_dir || $("#projectDirInput")?.value.trim() || "").trim(),
@@ -20756,6 +22056,13 @@
       const mergedMaskPath = String(state.mergedMaskPath || "").trim();
       const start = Number(clip.start || 0);
       const endTime = Number(clip.end || 0);
+      const isVirtualSubclip = Boolean(clip.virtual_subclip || clip.virtual);
+      const mediaStart = Number(clip.media_start ?? clip.mediaStart);
+      const mediaEnd = Number(clip.media_end ?? clip.mediaEnd);
+      const previewStart = isVirtualSubclip && Number.isFinite(mediaStart) ? mediaStart : (isVirtualSubclip && Number.isFinite(start) ? start : 0);
+      const previewEnd = isVirtualSubclip && Number.isFinite(mediaEnd) && mediaEnd > previewStart
+        ? mediaEnd
+        : (isVirtualSubclip && Number.isFinite(endTime) && endTime > previewStart ? endTime : null);
       const range = `${Number.isFinite(start) ? start.toFixed(2) : "0.00"}-${Number.isFinite(endTime) ? endTime.toFixed(2) : "0.00"}s`;
       const readyCount = subclips.filter((item) => String(item.mask_path || item.output_path || "").trim()).length;
       const allMasksReady = subclips.length > 0 && readyCount === subclips.length;
@@ -20823,7 +22130,7 @@
             <div class="seedance-subclip-pane-title">${escapeHtml(sourceTitle)}</div>
             <div class="seedance-subclip-player${anchorMode ? " is-anchoring" : ""}" data-subclip-source-player>
               ${path ? markerHtml + pendingPopoverHtml : ""}
-              ${path ? `<video controls muted playsinline src="${escapeHtml(mediaSrc(path, 0.1))}"></video>` : `<div class="seedance-subclip-empty">暂无子镜头</div>`}
+              ${path ? `<video controls muted playsinline src="${escapeHtml(mediaSrc(path, previewStart, previewEnd))}"></video>` : `<div class="seedance-subclip-empty">暂无子镜头</div>`}
             </div>
             ${referencePickerHtml}
           </div>
@@ -20862,19 +22169,23 @@
       const sourcePlayer = root.querySelector("[data-subclip-source-player]");
       const sourceVideo = sourcePlayer?.querySelector("video");
       if (sourceVideo) {
+        configureStoryboardSegmentPlayback(sourceVideo, previewStart, previewEnd);
         sourceVideo.addEventListener("loadedmetadata", () => {
           setSeedanceSubclipPreviewRatioFromVideo(sourceVideo);
           const restoreTime = Number(clip.preview_current_time);
           if (Number.isFinite(restoreTime) && restoreTime > 0 && Number.isFinite(sourceVideo.duration)) {
+            const restoreTarget = isVirtualSubclip && Number.isFinite(mediaStart) ? mediaStart + restoreTime : restoreTime;
+            const restoreUpper = Number.isFinite(previewEnd) && previewEnd > previewStart ? previewEnd - 0.001 : sourceVideo.duration - 0.05;
             try {
-              sourceVideo.currentTime = Math.max(0, Math.min(sourceVideo.duration - 0.05, restoreTime));
+              sourceVideo.currentTime = Math.max(previewStart, Math.min(restoreUpper, restoreTarget));
             } catch (_) {}
           }
           updateSeedanceSubclipMarkerPositions();
         });
         sourceVideo.addEventListener("loadeddata", updateSeedanceSubclipMarkerPositions);
         sourceVideo.addEventListener("pause", () => {
-          clip.preview_current_time = Number(sourceVideo.currentTime || 0);
+          const rawTime = Number(sourceVideo.currentTime || 0);
+          clip.preview_current_time = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
         });
       }
       root.querySelector("[data-toggle-subclip-identity]")?.addEventListener("click", () => {
@@ -20882,7 +22193,10 @@
           setSeedanceSubmitStatus(["x 当前片段没有可绑定的角色参考图"], "bad");
           return;
         }
-        if (sourceVideo) clip.preview_current_time = Number(sourceVideo.currentTime || 0);
+        if (sourceVideo) {
+          const rawTime = Number(sourceVideo.currentTime || 0);
+          clip.preview_current_time = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
+        }
         clip.identity_anchor_mode = !clip.identity_anchor_mode;
         delete clip.pending_identity_point;
         renderSeedanceReferenceSubclips();
@@ -20899,7 +22213,8 @@
         event.preventDefault();
         event.stopPropagation();
         const point = pointFromSubclipVideoClick(event, sourceVideo);
-        const clipTime = Number(sourceVideo.currentTime || 0);
+        const rawTime = Number(sourceVideo.currentTime || 0);
+        const clipTime = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
         sourceVideo.pause();
         clip.preview_current_time = clipTime;
         clip.pending_identity_point = point;
@@ -20947,10 +22262,12 @@
           const point = pointFromSubclipVideoClick(event, sourceVideo);
           marker.dataset.x = String(point[0]);
           marker.dataset.y = String(point[1]);
+          const rawTime = Number(sourceVideo.currentTime || clip.preview_current_time || 0);
+          const clipTime = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
           setSeedanceSubclipIdentityPoint(roleIndex, point, {
             silent: true,
-            clipTime: Number(sourceVideo.currentTime || clip.preview_current_time || 0),
-            absoluteTime: Number(clip.start || 0) + Number(sourceVideo.currentTime || clip.preview_current_time || 0),
+            clipTime,
+            absoluteTime: Number(clip.start || 0) + clipTime,
           });
           updateSeedanceSubclipMarkerPositions();
         });
@@ -21226,7 +22543,10 @@
       seedanceDraft.prompt = prompt;
       seedanceDraft.taskName = `shot_retake_${id}`;
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio;
-      seedanceDraft.duration = Math.max(4, Math.min(15, Math.ceil(Number(seg.duration) || 4)));
+      seedanceDraft.duration = Math.max(
+        COMPOSE_PACK_MIN_SECONDS,
+        Math.min(COMPOSE_PACK_MAX_SECONDS, Math.ceil(Number(seg.duration) || COMPOSE_PACK_MIN_SECONDS)),
+      );
       seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
       if (path) seedanceDraft.videos[0] = path;
       const images = generationManualReferenceImages();
@@ -21816,13 +23136,15 @@
       return Number.isFinite(number) ? Math.round(number * 1000) : null;
     }
 
-    function normalizeStoryboardCutTimes(values = [], duration = Infinity) {
-      const maxTime = Number.isFinite(Number(duration)) ? Number(duration) - 0.05 : Infinity;
+    function normalizeStoryboardCutTimes(values = [], duration = Infinity, frameStep = 0) {
+      const step = Number(frameStep);
+      const edgePadding = Number.isFinite(step) && step > 0 ? Math.max(0.001, step * 0.45) : 0.001;
+      const maxTime = Number.isFinite(Number(duration)) ? Number(duration) - edgePadding : Infinity;
       const seen = new Set();
       return (Array.isArray(values) ? values : [])
         .map(Number)
-        .filter((value) => Number.isFinite(value) && value > 0.05 && value < maxTime)
-        .map((value) => Math.round(value * 1000) / 1000)
+        .filter((value) => Number.isFinite(value) && value > edgePadding && value < maxTime)
+        .map((value) => Math.round(value * 1000000) / 1000000)
         .filter((value) => {
           const key = storyboardCutTimeKey(value);
           if (key === null || seen.has(key)) return false;
@@ -21832,19 +23154,269 @@
         .sort((a, b) => a - b);
     }
 
+    function storyboardFrameAlignedCutTime(value = 0, duration = Infinity, seg = timelineSegments[selectedTimelineIndex] || {}) {
+      const frameStep = storyboardFrameStepSeconds(seg);
+      const fps = frameStep > 0 ? 1 / frameStep : 30;
+      const totalFrames = Number.isFinite(Number(duration)) && Number(duration) > 0
+        ? Math.max(1, Math.round(Number(duration) * fps))
+        : Infinity;
+      if (Number.isFinite(totalFrames) && totalFrames < 2) return null;
+      let frameIndex = Math.round(Math.max(0, Number(value) || 0) * fps);
+      if (Number.isFinite(totalFrames)) {
+        frameIndex = Math.max(1, Math.min(totalFrames - 1, frameIndex));
+      } else {
+        frameIndex = Math.max(1, frameIndex);
+      }
+      return {
+        time: Math.round((frameIndex / fps) * 1000000) / 1000000,
+        frameIndex,
+        totalFrames,
+        fps,
+        frameStep,
+      };
+    }
+
+    function storyboardLeftRelativeTime(video, seg = timelineSegments[selectedTimelineIndex] || {}, options = {}) {
+      const rawCurrent = Number(video?.currentTime || 0);
+      const frameStep = Math.max(0.001, storyboardFrameStepSeconds(seg));
+      const duration = Math.max(0, Number(options.duration ?? storyboardSegmentDuration(seg)) || 0);
+      const subclipEdit = options.subclipEdit || null;
+      if (subclipEdit) {
+        const parentStart = Number(subclipEdit.parentMediaStart ?? 0);
+        const parentEnd = Number(subclipEdit.parentMediaEnd ?? 0);
+        const parentDuration = parentEnd > parentStart ? parentEnd - parentStart : duration;
+        if (subclipEdit.virtual && Number.isFinite(parentStart)) {
+          if (rawCurrent >= -frameStep && rawCurrent <= parentDuration + frameStep) {
+            return rawCurrent;
+          }
+          if (rawCurrent >= parentStart - frameStep && (!Number.isFinite(parentEnd) || parentEnd <= parentStart || rawCurrent <= parentEnd + frameStep)) {
+            return rawCurrent - parentStart;
+          }
+        }
+        if (!subclipEdit.virtual) {
+          return Number(subclipEdit.start || 0) + rawCurrent;
+        }
+      }
+      if (duration > 0 && rawCurrent >= -frameStep && rawCurrent <= duration + frameStep) {
+        return rawCurrent;
+      }
+      const segmentStart = Number(seg?.start || 0);
+      const segmentEnd = Number(seg?.end || (segmentStart + duration));
+      if (duration > 0 && Number.isFinite(segmentStart) && rawCurrent >= segmentStart - frameStep && rawCurrent <= segmentEnd + frameStep) {
+        return rawCurrent - segmentStart;
+      }
+      const datasetStart = Number(video?.dataset?.storyboardSegmentStart || 0);
+      const datasetEnd = Number(video?.dataset?.storyboardSegmentEnd || 0);
+      if (duration > 0 && datasetStart > 0 && rawCurrent >= datasetStart - frameStep) {
+        const upper = datasetEnd > datasetStart ? datasetEnd : datasetStart + duration;
+        if (rawCurrent <= upper + frameStep) return rawCurrent - datasetStart;
+      }
+      return rawCurrent;
+    }
+
+    function storyboardSubclipRangeKey(start, end) {
+      return `${Math.max(0, Math.round(Number(start || 0) * 1000))}:${Math.max(0, Math.round(Number(end || 0) * 1000))}`;
+    }
+
+    function localStoryboardShotCutResult(cutTimes = [], options = {}) {
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const payload = currentShotCutPayload(cutTimes, false, true);
+      const duration = Math.max(0.001, Number(payload.segment_duration || storyboardSegmentDuration(seg) || 0));
+      const frameStep = storyboardFrameStepSeconds(seg);
+      const fps = frameStep > 0 ? 1 / frameStep : 30;
+      const normalized = normalizeStoryboardCutTimes(payload.cut_times, duration, frameStep);
+      const points = [0, ...normalized, duration];
+      const minRange = Math.max(0.001, 0.5 / Math.max(fps, 1));
+      const previousByRange = new Map((seedanceReferenceSubclipState.subclips || []).map((item) => [
+        storyboardSubclipRangeKey(item.start, item.end),
+        item,
+      ]));
+      const subclips = [];
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const start = Math.max(0, Number(points[index]) || 0);
+        const end = Math.min(duration, Number(points[index + 1]) || 0);
+        if (end <= start + minRange) continue;
+        const previous = previousByRange.get(storyboardSubclipRangeKey(start, end)) || {};
+        const mediaStart = Math.max(0, Number(payload.video_offset || 0) + start);
+        const mediaEnd = Math.max(mediaStart + 0.001, Number(payload.video_offset || 0) + end);
+        const item = {
+          ...previous,
+          index: index + 1,
+          label: `子镜头 ${index + 1}`,
+          start: Math.round(start * 1000000) / 1000000,
+          end: Math.round(end * 1000000) / 1000000,
+          duration: Math.round((end - start) * 1000000) / 1000000,
+          media_start: Math.round(mediaStart * 1000000) / 1000000,
+          media_end: Math.round(mediaEnd * 1000000) / 1000000,
+          path: payload.video_path,
+          source_video_path: payload.video_path,
+          virtual_subclip: true,
+          source: "manual",
+          fps: Math.round(fps * 1000000) / 1000000,
+          needs_scail2_padding: end - start < 2.05,
+          scail2_repeat_count: end - start < 2.05 ? Math.max(2, Math.ceil(2.05 / Math.max(0.01, end - start))) : 1,
+        };
+        subclips.push(item);
+      }
+      const selectedIndex = Math.max(0, Math.min(Number(options.selectedIndex ?? seedanceReferenceSubclipState.selectedIndex) || 0, Math.max(0, subclips.length - 1)));
+      return {
+        project_dir: payload.project_dir,
+        segment_id: payload.segment_id,
+        source_video_path: payload.video_path,
+        duration: Math.round(duration * 1000000) / 1000000,
+        cut_times: normalized,
+        source: "manual",
+        cut_error: "",
+        compare_mode: "shot_cut_review",
+        output_label: "子镜头预览",
+        selected_index: selectedIndex,
+        subclips,
+        frontend_virtual: true,
+      };
+    }
+
+    function applyLocalShotCutWorkbench(cutTimes = [], options = {}) {
+      const result = localStoryboardShotCutResult(cutTimes, options);
+      if (!result.subclips.length) {
+        const lines = [
+          "x 当前切点没有形成有效子镜头",
+          "> 请把时间停在片段内部的某一帧，再点当前时间切一刀。",
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return false;
+      }
+      seedanceReferenceSubclipState.selectedIndex = Number(result.selected_index || 0);
+      renderSeedanceReferenceSubclips(result, seedanceMaskVideoIndex);
+      if (storyboardLeftPreviewMode === "subclip") {
+        showStoryboardSegmentVideo(timelineSegments[selectedTimelineIndex] || {});
+      }
+      const lines = [
+        "> 已按当前帧切出子镜头预览",
+        `> 子镜头：${result.subclips.length} 段`,
+        `> 切点：${result.cut_times.map((value) => formatNum(value)).join("s, ")}s`,
+      ];
+      if (options.debugLine) lines.push(options.debugLine);
+      setSeedanceSubmitStatus(lines, "good");
+      assistantSetStatus(lines, "good");
+      addLogs(lines);
+      queueStoryboardPhysicalSubclips(result.cut_times, {
+        selectedIndex: Number(result.selected_index || 0),
+        segmentId: String(result.segment_id || "").trim(),
+      });
+      return true;
+    }
+
+    function storyboardCutTimesSignature(cutTimes = [], seg = timelineSegments[selectedTimelineIndex] || {}) {
+      const duration = storyboardSegmentDuration(seg);
+      const frameStep = storyboardFrameStepSeconds(seg);
+      return normalizeStoryboardCutTimes(cutTimes, duration, frameStep)
+        .map((value) => storyboardCutTimeKey(value))
+        .join(",");
+    }
+
+    function queueStoryboardPhysicalSubclips(cutTimes = [], options = {}) {
+      const seg = timelineSegments[selectedTimelineIndex] || {};
+      const normalized = normalizeStoryboardCutTimes(
+        cutTimes,
+        storyboardSegmentDuration(seg),
+        storyboardFrameStepSeconds(seg),
+      );
+      if (!normalized.length) return;
+      storyboardShotCutMaterializeRevision += 1;
+      storyboardShotCutMaterializePending = {
+        revision: storyboardShotCutMaterializeRevision,
+        cutTimes: normalized,
+        signature: storyboardCutTimesSignature(normalized, seg),
+        segmentId: String(options.segmentId || seg.segment_id || "").trim(),
+        selectedIndex: Math.max(0, Number(options.selectedIndex ?? seedanceReferenceSubclipState.selectedIndex) || 0),
+      };
+      if (storyboardShotCutMaterializeTimer) clearTimeout(storyboardShotCutMaterializeTimer);
+      storyboardShotCutMaterializeTimer = window.setTimeout(runStoryboardPhysicalSubclips, 220);
+    }
+
+    async function runStoryboardPhysicalSubclips() {
+      storyboardShotCutMaterializeTimer = null;
+      if (storyboardShotCutMaterializeRunning || !storyboardShotCutMaterializePending) return;
+      const request = storyboardShotCutMaterializePending;
+      storyboardShotCutMaterializePending = null;
+      storyboardShotCutMaterializeRunning = true;
+      storyboardShotCutMaterializePromise = (async () => {
+        const payload = currentShotCutPayload(request.cutTimes, false, true);
+        payload.virtual_subclips = false;
+        try {
+          const response = await fetch(storyboardApiUrl("/api/storyboard-shot-subclips"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (!response.ok || data.error) throw new Error(data.error || "实体子镜头切分失败");
+          const currentSeg = timelineSegments[selectedTimelineIndex] || {};
+          const currentSegmentId = String(currentSeg.segment_id || "").trim();
+          const currentSignature = storyboardCutTimesSignature(seedanceReferenceSubclipState.cutTimes || [], currentSeg);
+          if (
+            request.revision !== storyboardShotCutMaterializeRevision
+            || request.segmentId !== currentSegmentId
+            || request.signature !== currentSignature
+          ) return;
+          data.selected_index = Math.max(0, Math.min(
+            Number(seedanceReferenceSubclipState.selectedIndex ?? request.selectedIndex) || 0,
+            Math.max(0, (data.subclips || []).length - 1),
+          ));
+          renderSeedanceReferenceSubclips(data, seedanceMaskVideoIndex);
+          const lines = [
+            "> 子镜头已真正切成独立视频",
+            `> 已生成 ${(data.subclips || []).length} 个独立 MP4；每段播放器从 0 秒开始。`,
+          ];
+          setSeedanceSubmitStatus(lines, "good");
+          assistantSetStatus(lines, "good");
+          addLogs(lines);
+        } catch (error) {
+          if (request.revision !== storyboardShotCutMaterializeRevision) return;
+          const lines = [
+            "x 独立子镜头生成失败，当前仍显示临时时间切片",
+            "> " + (error.message || error),
+          ];
+          setSeedanceSubmitStatus(lines, "warn");
+          assistantSetStatus(lines, "warn");
+          addLogs(lines);
+        }
+      })();
+      try {
+        await storyboardShotCutMaterializePromise;
+      } finally {
+        storyboardShotCutMaterializeRunning = false;
+        if (storyboardShotCutMaterializePending) {
+          storyboardShotCutMaterializeTimer = window.setTimeout(runStoryboardPhysicalSubclips, 0);
+        }
+      }
+    }
+
     function currentShotCutPayload(cutTimes = seedanceReferenceSubclipState.cutTimes || [], save = false, manualCut = false) {
       if (selectedTimelineIndex < 0 && timelineSegments.length) {
         selectTimelineSegment(0);
       }
       const seg = timelineSegments[selectedTimelineIndex] || {};
       const cutVideoPath = storyboardCutVideoPath(seg);
+      const duration = storyboardSegmentDuration(seg);
+      const frameStep = storyboardFrameStepSeconds(seg);
+      const segmentStart = Number(seg.start || 0);
+      const segmentEnd = Number(seg.end || segmentStart + duration);
+      const cutUsesFullSource = storyboardPathUsesFullSource(seg, cutVideoPath);
       return {
         project_dir: $("#projectDirInput")?.value.trim() || "",
         video_path: cutVideoPath,
         segment_id: String(seg.segment_id || "").trim(),
-        cut_times: normalizeStoryboardCutTimes(cutTimes),
+        segment_start: Number.isFinite(segmentStart) ? segmentStart : 0,
+        segment_end: Number.isFinite(segmentEnd) ? segmentEnd : 0,
+        segment_duration: duration,
+        video_offset: cutUsesFullSource && Number.isFinite(segmentStart) ? segmentStart : 0,
+        cut_times: normalizeStoryboardCutTimes(cutTimes, duration, frameStep),
         manual_cut: Boolean(manualCut),
         auto_cut: !manualCut,
+        virtual_subclips: !save,
         save: Boolean(save),
       };
     }
@@ -21889,7 +23461,7 @@
       setStoryboardShotCutBusy(true);
       assistantSetRunStatus([options.save ? "保存切段中" : "分析切段中", fileName(payload.video_path)], true);
       try {
-        const response = await fetch("/api/storyboard-shot-subclips", {
+        const response = await fetch(storyboardApiUrl("/api/storyboard-shot-subclips"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -22009,7 +23581,7 @@
       assistantSetRunStatus([mergeBackward ? "向前合并片段中" : "向后合并片段中"], true);
       setStoryboardShotCutBusy(true);
       try {
-        const response = await fetch("/api/storyboard-assets/edit-shot", {
+        const response = await fetch(storyboardApiUrl("/api/storyboard-assets/edit-shot"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -22065,31 +23637,57 @@
       }
       const video = $("#timelineOriginalVideo");
       const rawCurrent = Number(video?.currentTime || 0);
-      const sourcePath = storyboardFullSourcePath(seg);
-      const sourceModeUsesFullVideo = storyboardLeftPreviewMode === "source"
-        && !!sourcePath
-        && !sameStoryboardMediaPath(cutVideoPath, sourcePath);
       const segmentStart = Number(seg.start || 0);
       const segmentDuration = storyboardSegmentDuration(seg);
       const subclipEdit = storyboardLeftPreviewMode === "subclip" && storyboardLeftSubclipEdit
         ? storyboardLeftSubclipEdit
         : null;
-      const current = subclipEdit
-        ? Number(subclipEdit.start || 0) + rawCurrent
-        : sourceModeUsesFullVideo
-        ? rawCurrent - segmentStart
-        : rawCurrent;
-      const absolute = Math.max(0.05, current);
       const videoDuration = Number(video?.duration || 0);
-      const duration = subclipEdit && segmentDuration > 0
-        ? segmentDuration
-        : sourceModeUsesFullVideo && segmentDuration > 0
-        ? segmentDuration
-        : Number.isFinite(videoDuration) && videoDuration > 0
-        ? videoDuration
-        : Math.max(segmentDuration, ...(isCurrentReview ? subclips : []).map((item) => Number(item.end || 0)), absolute + 0.1);
-      const rounded = Math.round(absolute * 1000) / 1000;
-      if (sourceModeUsesFullVideo && (current <= 0.05 || current >= duration - 0.05)) {
+      const parentDuration = subclipEdit && Number(subclipEdit.parentMediaEnd) > Number(subclipEdit.parentMediaStart)
+        ? Number(subclipEdit.parentMediaEnd) - Number(subclipEdit.parentMediaStart)
+        : 0;
+      const duration = Math.max(
+        subclipEdit && parentDuration > 0 ? parentDuration : 0,
+        segmentDuration > 0 ? segmentDuration : 0,
+        !(segmentDuration > 0) && Number.isFinite(videoDuration) && videoDuration > 0 ? videoDuration : 0,
+        ...(isCurrentReview ? subclips : []).map((item) => Number(item.end || 0)),
+        0.001,
+      );
+      if (duration < STORYBOARD_MIN_CUT_SECONDS * 2) {
+        const lines = [
+          "x 当前镜头太短，不能再切",
+          `> 小于 ${STORYBOARD_MIN_CUT_SECONDS * 2} 秒的镜头不能切分；切开后每段至少 ${STORYBOARD_MIN_CUT_SECONDS} 秒。`,
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const current = storyboardLeftRelativeTime(video, seg, { subclipEdit, duration });
+      const absolute = Math.max(0, current);
+      const aligned = storyboardFrameAlignedCutTime(absolute, duration, seg);
+      if (!aligned) {
+        const lines = [
+          "x 当前片段太短，不能再按帧切分",
+          "> 至少需要 2 帧，左右各保留 1 帧。",
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      const rounded = aligned.time;
+      if (rounded < STORYBOARD_MIN_CUT_SECONDS || duration - rounded < STORYBOARD_MIN_CUT_SECONDS) {
+        const lines = [
+          "x 这个位置不能切",
+          `> 切点左右都要至少 ${STORYBOARD_MIN_CUT_SECONDS} 秒。当前左侧 ${rounded.toFixed(2)} 秒，右侧 ${(duration - rounded).toFixed(2)} 秒。`,
+        ];
+        setSeedanceSubmitStatus(lines, "warn");
+        assistantSetStatus(lines, "warn");
+        addLogs(lines);
+        return;
+      }
+      if (current < -aligned.frameStep * 0.5 || current > duration + aligned.frameStep * 0.5) {
         const lines = [
           "x 当前时间不在这个镜头片段里",
           `> 当前镜头范围约 ${formatNum(segmentStart)}-${formatNum(segmentStart + duration)}s，请把左侧视频拖到这个范围内再切。`,
@@ -22099,26 +23697,48 @@
         addLogs(lines);
         return;
       }
-      const existing = normalizeStoryboardCutTimes(isCurrentReview ? state.cutTimes : [], duration);
+      const existing = normalizeStoryboardCutTimes(isCurrentReview ? state.cutTimes : [], duration, aligned.frameStep);
+      let baseCutTimes = existing;
+      let replacedBoundaryFrameKey = null;
+      if (subclipEdit && isCurrentReview && subclips.length > 1) {
+        const selectedIndex = storyboardSelectedSubclipIndex(state, subclips);
+        const selectedClip = subclips[selectedIndex] || {};
+        const boundary = selectedIndex > 0 ? Number(selectedClip.start || 0) : Number(selectedClip.end || 0);
+        const replaceIndex = storyboardCutBoundaryIndex(existing, boundary);
+        if (replaceIndex >= 0) {
+          replacedBoundaryFrameKey = Math.round(Number(existing[replaceIndex] || 0) * aligned.fps);
+          baseCutTimes = existing.filter((_, index) => index !== replaceIndex);
+        }
+      }
       const boundaries = [
         0,
         duration,
-        ...existing,
+        ...baseCutTimes,
         ...(isCurrentReview ? subclips : []).flatMap((item) => [Number(item.start || 0), Number(item.end || 0)]),
       ].filter(Number.isFinite);
-      const tooClose = boundaries.some((value) => Math.abs(value - rounded) < 0.08);
+      const cutFrameKey = Math.round(rounded * aligned.fps);
+      const tooClose = boundaries.some((value) => {
+        const boundaryKey = Math.round(Number(value || 0) * aligned.fps);
+        if (replacedBoundaryFrameKey !== null && boundaryKey === replacedBoundaryFrameKey) return false;
+        return boundaryKey === cutFrameKey;
+      });
       if (tooClose) {
         const lines = [
-          "x 这个位置离已有切点太近",
-          `> 当前时间约 ${rounded.toFixed(2)}s，请把视频拖到更中间的位置再点“当前时间切一刀”。`,
+          "x 这一帧已经是切点边界",
+          `> 当前吸附到第 ${cutFrameKey} 帧，换到相邻帧再切。`,
         ];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
         addLogs(lines);
         return;
       }
-      const cutTimes = normalizeStoryboardCutTimes([...existing, rounded], duration);
-      openShotCutWorkbench(cutTimes, { manualCut: true });
+      const cutTimes = normalizeStoryboardCutTimes([...baseCutTimes, rounded], duration, aligned.frameStep);
+      const selectedIndex = Math.max(0, cutTimes.filter((value) => value <= rounded).length);
+      applyLocalShotCutWorkbench(cutTimes, {
+        manualCut: true,
+        selectedIndex,
+        debugLine: `> 当前帧：${cutFrameKey}/${Number.isFinite(aligned.totalFrames) ? aligned.totalFrames : "?"}，片段内 ${formatNum(rounded)}s`,
+      });
     }
 
     async function clearCurrentShotSubclips() {
@@ -22131,7 +23751,7 @@
       setStoryboardShotCutBusy(true);
       assistantSetRunStatus(["清空子镜头中", fileName(payload.video_path)], true);
       try {
-        const response = await fetch("/api/storyboard-shot-subclips", {
+        const response = await fetch(storyboardApiUrl("/api/storyboard-shot-subclips"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -22224,7 +23844,7 @@
       const nextSelectedIndex = mergeBackward ? selectedIndex - 1 : selectedIndex;
       const nextCutTimes = existing.filter((_, index) => index !== removeIndex);
       seedanceReferenceSubclipState.selectedIndex = nextSelectedIndex;
-      const ok = await openShotCutWorkbench(nextCutTimes, { manualCut: true });
+      const ok = applyLocalShotCutWorkbench(nextCutTimes, { manualCut: true, selectedIndex: nextSelectedIndex });
       if (!ok) {
         seedanceReferenceSubclipState.selectedIndex = previousSelectedIndex;
         updateStoryboardSubclipPreview();
@@ -22253,10 +23873,22 @@
       }
       const nextCutTimes = existing.filter((_, index) => index !== removeIndex);
       seedanceReferenceSubclipState.selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : 0;
-      openShotCutWorkbench(nextCutTimes, { manualCut: true });
+      applyLocalShotCutWorkbench(nextCutTimes, {
+        manualCut: true,
+        selectedIndex: seedanceReferenceSubclipState.selectedIndex,
+      });
     }
 
     async function saveCurrentShotCuts() {
+      storyboardShotCutMaterializeRevision += 1;
+      storyboardShotCutMaterializePending = null;
+      if (storyboardShotCutMaterializeTimer) {
+        clearTimeout(storyboardShotCutMaterializeTimer);
+        storyboardShotCutMaterializeTimer = null;
+      }
+      if (storyboardShotCutMaterializeRunning) {
+        try { await storyboardShotCutMaterializePromise; } catch (_) {}
+      }
       return openShotCutWorkbench(seedanceReferenceSubclipState.cutTimes || [], { save: true, promoteToTimeline: true });
     }
 
@@ -22280,9 +23912,12 @@
       if (selectedTimelineIndex < 0 && timelineSegments.length) {
         selectTimelineSegment(0);
       }
+      const packageId = String(options.packageId || "").trim();
+      const packagePack = packageId ? generationPackById(packageId) : null;
+      const forcePackageScail2 = Boolean(packagePack && generationPackBackend(packagePack) === "scail2");
       const seg = timelineSegments[selectedTimelineIndex] || {};
       const decision = generationRouteForShot(seg);
-      if (decision.backend !== "scail2") {
+      if (decision.backend !== "scail2" && !forcePackageScail2) {
         const lines = ["> 当前镜头固定走 Seedance", `> ${decision.reason}`, "> 请点“多人接口生成”。"];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
@@ -22291,11 +23926,15 @@
         return;
       }
       const projectDir = $("#projectDirInput")?.value.trim() || "";
-      const videoPath = shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
+      const packageSourcePath = packagePack ? generationPackSourceVideo(packagePack) : "";
+      const videoPath = packageSourcePath || shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
       const segmentId = String(seg.segment_id || "").trim();
       syncSeedanceDraftImagesFromCurrentShot(seg);
       const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
       const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
+      const selectedRefKeys = new Set(generationManualReferenceImages().map((path) => String(path || "").trim().toLowerCase()).filter(Boolean));
+      const preferredRole = readyRoles.find((asset) => roleReferenceOptions(asset)
+        .some((option) => selectedRefKeys.has(String(option || "").trim().toLowerCase()))) || readyRoles[0];
       if (!projectDir) {
         const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
@@ -22320,7 +23959,7 @@
         if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
         return;
       }
-      if (readyRoles.length !== 1) {
+      if (!forcePackageScail2 && readyRoles.length !== 1) {
         const lines = ["> 当前不是单人 Scail2 镜头", `> 已检测到 ${readyRoles.length} 个可替换角色`, "> 请改用“多人接口生成”。"];
         setSeedanceSubmitStatus(lines, "warn");
         assistantSetStatus(lines, "warn");
@@ -22332,7 +23971,7 @@
         project_dir: projectDir,
         video_path: videoPath,
         segment_id: segmentId,
-        role_ids: readyRoles.slice(0, 1).map((asset) => asset.id).filter(Boolean),
+        role_ids: [preferredRole].map((asset) => asset?.id).filter(Boolean),
         transfer_backend: "scail2",
         normalize_size: true,
         sampler_preset: "balanced",
@@ -22736,9 +24375,11 @@
         useCurrentShotPromptInSeedance();
       }
       pullSeedanceControls();
-      pullSeedanceMaterialSlots("images");
-      pullSeedanceMaterialSlots("videos");
-      pullSeedanceMaterialSlots("audios");
+      if (options.useDraftAsIs !== true) {
+        pullSeedanceMaterialSlots("images");
+        pullSeedanceMaterialSlots("videos");
+        pullSeedanceMaterialSlots("audios");
+      }
       const relay = loadSeedanceRelayConfig();
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = $("#videoPathInput")?.value.trim() || "";
@@ -23126,6 +24767,7 @@
     }
 
     function bindBaseUiEvents() {
+      bindClick("#reverseStoryboardBtn", startStoryboardDraft);
       bindClick("#showOriginalVideoBtn", () => showStoryboardOriginalVideo());
       bindClick("#storyboardFramePrevBtn", () => stepStoryboardFrame(-1));
       bindClick("#storyboardFrameNextBtn", () => stepStoryboardFrame(1));
@@ -23139,16 +24781,20 @@
       bindClick("#shotSaveCutsBtn", () => saveCurrentShotCuts());
       bindClick("#saveStoryboardBtn", () => saveStoryboardAndGoGenerate());
       bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
-      bindClick("#sourceVideoPreviewBox", () => pickPath("file", "#videoPathInput"));
+      bindClick("#sourceVideoPreviewBox", () => chooseSourceVideo());
+      bindClick("#pickSourceVideoBtn", () => chooseSourceVideo());
+      $("#sourceVideoFileInput")?.addEventListener("change", (event) => {
+        const file = event.target?.files?.[0];
+        if (file) uploadSourceVideoFile(file);
+      });
       $("#sourceVideoPreviewBox")?.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          pickPath("file", "#videoPathInput");
+          chooseSourceVideo();
         }
       });
       bindClick("#pickProjectBtn", () => pickPath("dir", "#projectDirInput"));
       bindClick("#loadProjectBtn", loadProject);
-      bindClick("#reverseStoryboardBtn", startStoryboardDraft);
       bindClick("#savePreDirectorConfigBtn", () => savePreDirectorConfig());
       bindClick("#openAssetLibraryBtn", openAssetLibraryPanel);
       bindClick("#manualAssetBtn", openManualAssetCreator);
@@ -23161,9 +24807,9 @@
       bindClick("#playStoryboardBtn", () => playStoryboardSequence());
       bindClick("#composeAutoPackBtn", () => composeCreateSmartPlan());
       bindClick("#composeAddPackBtn", () => composeAddPack());
+      bindClick("#composeRemovePackBtn", () => composeRemoveSelectedPack());
       bindClick("#composeClearBtn", () => composeClearPlan());
       bindClick("#composeConfirmBtn", () => confirmComposePlan());
-      bindClick("#composeStartGenerateBtn", () => confirmComposePlan());
       document.querySelectorAll(".module-step").forEach((step) => {
         step.addEventListener("click", (event) => {
           event.preventDefault();
@@ -23181,6 +24827,7 @@
     });
 
     runBootStep("初始化显示密度", initViewportDensityAdapter);
+    runBootStep("兼容本地文件入口", installFileApiFetchBridge);
     runBootStep("恢复输入", restoreInputs);
     runBootStep("绑定基础按钮", bindBaseUiEvents);
     runBootStep("初始化旧项目策略", initStoryReferenceStrategy);

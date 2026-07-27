@@ -84,12 +84,15 @@ def concat_videos(
     output_path: str | Path,
     *,
     reencode_fallback: bool = True,
+    force_reencode: bool = False,
+    expected_duration: float | None = None,
+    duration_tolerance: float = 0.35,
 ) -> Path:
     """Concatenate videos in order with FFmpeg concat demuxer.
 
-    The first pass uses stream copy for speed and exact frames. If copy fails
-    because segments have mismatched container/codec metadata, the optional
-    fallback re-encodes to a stable H.264 MP4.
+    The first pass uses stream copy for speed and exact frames. If copy fails,
+    or a caller asks for safer timestamp normalization, the fallback re-encodes
+    to a stable H.264 MP4.
     """
     if not segment_paths:
         raise FfmpegError("concat_videos_requires_segments")
@@ -105,26 +108,8 @@ def concat_videos(
     list_path = Path(raw_list_path)
     try:
         list_path.write_text("".join(_concat_file_line(path) for path in inputs), encoding="utf-8")
-        copy_args = [
-            ffmpeg_path(),
-            "-y",
-            "-loglevel",
-            "error",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            str(list_path),
-            "-c",
-            "copy",
-            str(output),
-        ]
-        try:
-            run_command(copy_args)
-        except FfmpegError:
-            if not reencode_fallback:
-                raise
+
+        def reencode_concat() -> None:
             output.unlink(missing_ok=True)
             reencode_args = [
                 ffmpeg_path(),
@@ -153,6 +138,49 @@ def concat_videos(
                 str(output),
             ]
             run_command(reencode_args)
+
+        if force_reencode:
+            reencode_concat()
+        else:
+            copy_args = [
+                ffmpeg_path(),
+                "-y",
+                "-loglevel",
+                "error",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(list_path),
+                "-c",
+                "copy",
+                str(output),
+            ]
+            try:
+                run_command(copy_args)
+            except FfmpegError:
+                if not reencode_fallback:
+                    raise
+                reencode_concat()
+
+        if (
+            expected_duration is not None
+            and expected_duration > 0
+            and output.exists()
+            and output.stat().st_size > 0
+        ):
+            actual_duration = float(probe_video(output).duration or 0.0)
+            tolerance = max(0.05, float(duration_tolerance))
+            if abs(actual_duration - expected_duration) > tolerance:
+                if not force_reencode and reencode_fallback:
+                    reencode_concat()
+                    actual_duration = float(probe_video(output).duration or 0.0)
+                if abs(actual_duration - expected_duration) > tolerance:
+                    raise FfmpegError(
+                        "concat_videos_duration_mismatch: "
+                        f"expected={expected_duration:.3f}, actual={actual_duration:.3f}, output={output}"
+                    )
         if not output.exists() or output.stat().st_size <= 0:
             raise FfmpegError(f"concat_videos_output_missing: {output}")
         return output

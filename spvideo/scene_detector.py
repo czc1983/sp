@@ -636,26 +636,7 @@ def subdivide_shot_by_person_presence(
             det for det in frame_detections
             if start - 1e-6 <= det.get("time", mid) <= end + 1e-6
         ] or frame_detections
-        person_detections = [
-            det for det in segment_detections
-            if det.get("person_count", 0) > 0
-        ]
-
-        if person_detections:
-            def person_score(det: dict[str, Any]) -> tuple[float, float, float, float]:
-                persons = det.get("persons", [])
-                max_area = max((p.get("area_ratio", 0.0) for p in persons), default=0.0)
-                max_conf = max((p.get("confidence", 0.0) for p in persons), default=0.0)
-                return (
-                    float(det.get("person_count", 0)),
-                    float(max_area),
-                    float(max_conf),
-                    -abs(det.get("time", mid) - mid),
-                )
-
-            closest = max(person_detections, key=person_score)
-        else:
-            closest = min(segment_detections, key=lambda d: abs(d.get("time", mid) - mid))
+        closest = min(segment_detections, key=lambda d: abs(d.get("time", mid) - mid))
         person_count = closest["person_count"]
         persons = closest.get("persons", [])
         max_bbox = persons[0]["bbox"] if persons else None
