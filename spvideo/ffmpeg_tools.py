@@ -124,6 +124,8 @@ def concat_videos(
                 str(list_path),
                 "-map",
                 "0:v:0",
+                "-map",
+                "0:a:0?",
                 "-c:v",
                 "libx264",
                 "-preset",
@@ -132,7 +134,10 @@ def concat_videos(
                 "18",
                 "-pix_fmt",
                 "yuv420p",
-                "-an",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
                 "-movflags",
                 "+faststart",
                 str(output),
@@ -186,6 +191,152 @@ def concat_videos(
         return output
     finally:
         list_path.unlink(missing_ok=True)
+
+
+def copy_audio_from_source(
+    source_video: str | Path,
+    generated_video: str | Path,
+    output_path: str | Path,
+) -> Path:
+    """Copy the source audio track onto a generated video when the result is silent."""
+    source = Path(source_video)
+    generated = Path(generated_video)
+    output = Path(output_path)
+    if not source.exists() or not generated.exists():
+        return generated
+
+    source_meta = probe_video(source)
+    generated_meta = probe_video(generated)
+    if not source_meta.audio_codec or generated_meta.audio_codec:
+        return generated
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    duration = max(0.01, float(generated_meta.duration or 0.0))
+    copy_args = [
+        ffmpeg_path(),
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(generated),
+        "-i",
+        str(source),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-t",
+        f"{duration:.3f}",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
+        str(output),
+    ]
+    try:
+        run_command(copy_args)
+    except FfmpegError:
+        output.unlink(missing_ok=True)
+        reencode_args = [
+            ffmpeg_path(),
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(generated),
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-t",
+            f"{duration:.3f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+        run_command(reencode_args)
+
+    if not output.exists() or output.stat().st_size <= 0:
+        raise FfmpegError(f"copy_audio_output_missing: {output}")
+    return output
+
+
+def strip_audio_from_video(
+    source_video: str | Path,
+    output_path: str | Path,
+) -> Path:
+    """Create a video-only copy for generators that should not receive audio."""
+    source = Path(source_video)
+    output = Path(output_path)
+    if not source.exists():
+        raise FfmpegError(f"strip_audio_source_missing: {source}")
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    copy_args = [
+        ffmpeg_path(),
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(source),
+        "-map",
+        "0:v:0",
+        "-c:v",
+        "copy",
+        "-an",
+        "-movflags",
+        "+faststart",
+        str(output),
+    ]
+    try:
+        run_command(copy_args)
+    except FfmpegError:
+        output.unlink(missing_ok=True)
+        reencode_args = [
+            ffmpeg_path(),
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            str(output),
+        ]
+        run_command(reencode_args)
+
+    if not output.exists() or output.stat().st_size <= 0:
+        raise FfmpegError(f"strip_audio_output_missing: {output}")
+    return output
 
 
 def probe_video(video_path: str | Path) -> VideoMeta:

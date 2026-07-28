@@ -62,6 +62,8 @@ MODE2_SCAIL2_TRANSFER_LOCK = threading.Lock()
 MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = ""
 SEEDANCE_A_TASKS: dict[str, dict[str, Any]] = {}
 SEEDANCE_A_TASKS_LOCK = threading.Lock()
+NUKO_CHANNEL1_TASKS: dict[str, dict[str, Any]] = {}
+NUKO_CHANNEL1_TASKS_LOCK = threading.Lock()
 SAM3_PROTECTION_FPS = 15.0
 SAM3_PROTECTION_MAX_FRAMES = 180
 SAM3_SHAPE_MIN_OVERLAP = 0.12
@@ -72,6 +74,36 @@ SCAIL2_COLOR_NAMES = ("蓝色", "红色", "绿色", "紫色", "青色", "黄色"
 WAN22_MASK_COLOR_KEYS = ("blue", "red", "green", "magenta", "cyan", "yellow")
 DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000"
 DEFAULT_SEEDANCE_A_UPLOAD_BASE_URL = "https://ai.szyqsc.cn"
+DEFAULT_NUKO_CHANNEL1_BASE_URL = "https://www.nukoai.com/api/ext/v1"
+DEFAULT_NUKO_CHANNEL1_API_KEY = "sk_aa827CgwCAxqNQzTq47S5UVrUvZxjRMf4HPLksMp"
+GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v1"
+NUKO_CHANNEL1_KNOWN_MODELS = {
+    "SD 2.0 720P_官转": {
+        "durations": list(range(4, 16)),
+        "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
+        "video_ref": True,
+    },
+    "SD2.0 480P": {
+        "durations": list(range(4, 16)),
+        "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+        "video_ref": True,
+    },
+    "SD2.0 720P": {
+        "durations": list(range(4, 16)),
+        "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+        "video_ref": True,
+    },
+    "SD2.0 Fast 480P": {
+        "durations": list(range(4, 16)),
+        "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
+        "video_ref": True,
+    },
+    "SD2.0 Fast 720P": {
+        "durations": list(range(4, 16)),
+        "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
+        "video_ref": True,
+    },
+}
 DEFAULT_WAN22_API_KEY = ""
 DEFAULT_WAN22_MULTI_ROLE_LIMIT = 0
 DEFAULT_WAN22_ALLOW_EXPERIMENTAL_MULTI_FOCUS = False
@@ -780,6 +812,24 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/nuko-channel1-submit":
+            try:
+                payload = self._read_json()
+                result = _submit_nuko_channel1_task(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/nuko-channel1-status":
+            try:
+                payload = self._read_json()
+                result = _query_nuko_channel1_task(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/storyboard-draft":
             try:
                 payload = self._read_json()
@@ -1389,6 +1439,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/generation-package/list-white-masks":
+            try:
+                self._send_json(_list_generation_package_white_masks(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/generation-package/split-output":
             try:
                 self._send_json(_split_generation_package_output(self._read_json()))
@@ -1830,6 +1887,10 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 sampler_preset = str(payload.get("sampler_preset") or "balanced")
                 video_window = payload.get("video_window") or {}
                 normalize_size = bool(payload.get("normalize_size", True))
+                scail2_upload_audio = _bool_value(
+                    payload.get("scail2_upload_audio", payload.get("scail2UploadAudio")),
+                    True,
+                )
                 raw_transfer_backend = payload.get("transfer_backend") or "scail2"
                 transfer_backend = _normalize_transfer_backend(raw_transfer_backend)
                 if transfer_backend is None:
@@ -1850,6 +1911,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 if not segment_id:
                     shot = next((item for item in (data.get("shots") or []) if isinstance(item, dict)), None)
                     segment_id = str((shot or {}).get("segment_id") or "").strip()
+                role_ids = _string_list(payload.get("role_ids"))
+                manual_ref_images = _string_list(
+                    payload.get("manual_reference_images")
+                    or payload.get("reference_images")
+                    or payload.get("ref_images")
+                )
+                manual_scail2_override = bool(payload.get("manual_scail2_override") or payload.get("force_single_role_scail2"))
                 role_pairs, pair_warnings = _mode2_reference_mask_role_pairs_from_store(
                     str(root),
                     segment_id,
@@ -1862,8 +1930,92 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     (shot for shot in shots if str(shot.get("segment_id") or "").strip() == segment_id),
                     None,
                 )
+                original_role_pairs = list(role_pairs)
+                if role_ids:
+                    role_id_set = set(role_ids)
+                    role_pairs = [
+                        pair for pair in role_pairs
+                        if str(pair.get("asset_id") or "") in role_id_set
+                    ]
+                if manual_ref_images:
+                    manual_ref_keys = {str(Path(value)).lower() for value in manual_ref_images if str(value or "").strip()}
+
+                    def _pair_uses_manual_ref(pair: dict[str, Any]) -> bool:
+                        values = [
+                            str(pair.get("ref_image") or ""),
+                            *_string_list(pair.get("extra_ref_images")),
+                        ]
+                        return any(str(Path(value)).lower() in manual_ref_keys for value in values if value)
+
+                    manual_ref_pairs = [pair for pair in role_pairs if _pair_uses_manual_ref(pair)]
+                    if not manual_ref_pairs:
+                        manual_ref_pairs = [pair for pair in original_role_pairs if _pair_uses_manual_ref(pair)]
+                    if manual_ref_pairs:
+                        role_pairs = manual_ref_pairs
+                    elif manual_scail2_override:
+                        matched_asset = next(
+                            (
+                                asset for asset in assets
+                                if str(asset.get("kind") or "") == "role"
+                                and any(
+                                    str(Path(option)).lower() in manual_ref_keys
+                                    for option in _mode2_role_reference_options(asset)
+                                    if str(option or "").strip()
+                                )
+                            ),
+                            None,
+                        )
+                        manual_ref = manual_ref_images[0]
+                        role_pairs = [{
+                            "name": str((matched_asset or {}).get("name") or "参考图1").strip() or "参考图1",
+                            "ref_image": manual_ref,
+                            "extra_ref_images": [],
+                            "asset_id": str((matched_asset or {}).get("id") or (role_ids[0] if role_ids else "manual_reference")),
+                            "source_point": None,
+                            "source_shape": None,
+                            "source_time": None,
+                        }]
+                        pair_warnings.append("单人 Scail2 已按手动参考图强制绑定，未再回退到当前镜头角色。")
+                        if len(manual_ref_images) > 1:
+                            pair_warnings.append("单人 Scail2 只使用“会上传的参考图”里的第 1 张。")
+                if manual_scail2_override and not role_pairs and manual_ref_images:
+                    role_pairs = [{
+                        "name": "手动参考图",
+                        "ref_image": manual_ref_images[0],
+                        "extra_ref_images": [],
+                        "asset_id": role_ids[0] if role_ids else "manual_reference",
+                        "source_point": None,
+                        "source_shape": None,
+                        "source_time": None,
+                    }]
+                if not role_pairs:
+                    self._send_json({"error": "mode2_role_pairs_required"}, status=400)
+                    return
+                if _backend_uses_scail2_worker(transfer_backend) and len(role_pairs) != 1:
+                    if manual_scail2_override:
+                        pair_warnings.append("手动单人 Scail2 已按人工选择收窄为 1 个参考图。")
+                        role_pairs = role_pairs[:1]
+                    else:
+                        self._send_json(
+                            {
+                                "error": "multi_person_seedance_required",
+                                "message": "Mode2 Scail2 only accepts one clean role. Multi-person or contact shots must use Seedance.",
+                                "role_count": len(role_pairs),
+                            },
+                            status=400,
+                        )
+                        return
                 if _backend_uses_scail2_worker(transfer_backend):
-                    route_ok, route_reason, route_meta = _mode2_scail2_route_check(current_shot, assets)
+                    if manual_scail2_override:
+                        route_ok = True
+                        route_reason = "manual_scail2_override"
+                        route_meta = {
+                            "role_count": len(role_pairs),
+                            "person_count": _safe_int((current_shot or {}).get("person_count"), -1),
+                            "contact_risk": bool(_MODE2_SEEDANCE_RISK_RE.search(_mode2_shot_route_text(current_shot or {}))),
+                        }
+                    else:
+                        route_ok, route_reason, route_meta = _mode2_scail2_route_check(current_shot, assets)
                     if not route_ok:
                         self._send_json(
                             {
@@ -1874,26 +2026,6 @@ class SplitterHandler(BaseHTTPRequestHandler):
                             status=400,
                         )
                         return
-                role_ids = _string_list(payload.get("role_ids"))
-                if role_ids:
-                    role_id_set = set(role_ids)
-                    role_pairs = [
-                        pair for pair in role_pairs
-                        if str(pair.get("asset_id") or "") in role_id_set
-                    ]
-                if not role_pairs:
-                    self._send_json({"error": "mode2_role_pairs_required"}, status=400)
-                    return
-                if _backend_uses_scail2_worker(transfer_backend) and len(role_pairs) != 1:
-                    self._send_json(
-                        {
-                            "error": "multi_person_seedance_required",
-                            "message": "Mode2 Scail2 only accepts one clean role. Multi-person or contact shots must use Seedance.",
-                            "role_count": len(role_pairs),
-                        },
-                        status=400,
-                    )
-                    return
                 from spvideo.ffmpeg_tools import probe_video
                 meta = probe_video(Path(video_path)) if Path(video_path).exists() else None
                 if meta and meta.duration and meta.duration > 120:
@@ -1958,6 +2090,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         "mapping": public_mapping,
                         "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
                         "transfer_backend": transfer_backend,
+                        "scail2_upload_audio": scail2_upload_audio,
                         "logs": [
                             f"> Scail2 生成: {Path(video_path).name}",
                             f"> 当前后端: {transfer_backend}",
@@ -1991,6 +2124,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         str(payload.get("positive_prompt") or ""),
                         str(payload.get("sam_text") or ""),
                         transfer_backend,
+                        scail2_upload_audio,
                     ),
                     daemon=True,
                 )
@@ -9206,6 +9340,32 @@ def _run_scail2_hardcut_transfer(
     }
 
 
+def _mode2_copy_source_audio_to_generated(
+    source_video: str,
+    generated_video: str,
+    output_dir: Path,
+    add_log,
+) -> str:
+    source_text = str(source_video or "").strip()
+    generated_text = str(generated_video or "").strip()
+    if not source_text or not generated_text:
+        return generated_text
+    try:
+        from spvideo.ffmpeg_tools import copy_audio_from_source
+
+        generated_path = Path(generated_text)
+        audio_path = output_dir / f"audio_{generated_path.name}"
+        if audio_path.exists():
+            audio_path = output_dir / f"audio_{generated_path.stem}_{uuid.uuid4().hex[:8]}{generated_path.suffix}"
+        merged = copy_audio_from_source(source_text, generated_text, audio_path)
+        if Path(merged).resolve() != generated_path.resolve():
+            add_log(f"> 已把原视频音轨写回生成结果: {merged}")
+        return str(merged)
+    except Exception as exc:  # noqa: BLE001
+        add_log(f"> 音轨写回跳过: {exc}")
+        return generated_text
+
+
 def _scail2_role_appearance_constraints(role_pairs: list[dict[str, Any]]) -> str:
     constraints: list[str] = []
     for pair in role_pairs:
@@ -10814,6 +10974,7 @@ def _run_transfer_job(
     positive_prompt: str = "",
     sam_text: str = "",
     transfer_backend: str | None = None,
+    scail2_upload_audio: bool = True,
 ) -> None:
     """后台执行单人 SCAIL2 或多人 Wan2.2 换人。"""
     def add_log(message: str) -> None:
@@ -10872,6 +11033,8 @@ def _run_transfer_job(
 
     output_dir = Path(video_path).parent.parent.parent / "04_AI输出成片"
     output_dir.mkdir(parents=True, exist_ok=True)
+    source_video_path = video_path
+    scail2_input_video_path = video_path
 
     try:
         if uses_scail2_worker:
@@ -10883,6 +11046,26 @@ def _run_transfer_job(
             scail2_lock_acquired = True
             MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = job_id
             add_log("> Scail2 已进入单任务队列：5 段会严格按顺序一段一段跑")
+            if not _bool_value(scail2_upload_audio, True):
+                try:
+                    from spvideo.ffmpeg_tools import strip_audio_from_video
+
+                    silent_dir = output_dir / "_scail2_inputs"
+                    silent_path = silent_dir / f"silent_{Path(video_path).stem}_{job_id}.mp4"
+                    scail2_input_video_path = str(strip_audio_from_video(video_path, silent_path))
+                    add_log("> Scail2 上传声音: 关；已生成静音输入，只把画面送去做动作参考")
+                    add_log("> 生成完成后仍会把原视频音轨补回结果，方便预览对比")
+                    with JOBS_LOCK:
+                        job = JOBS.get(job_id)
+                        if job is not None:
+                            job["scail2_input_video_path"] = scail2_input_video_path
+                            job["scail2_upload_audio"] = False
+                            job["updated_at"] = time.time()
+                except Exception as exc:  # noqa: BLE001
+                    fail(f"scail2_strip_audio_failed: {exc}")
+                    return
+            else:
+                add_log("> Scail2 上传声音: 开；原视频音轨会随输入一起上传")
         if use_wan22:
             if len(role_pairs) > 1:
                 add_log("> 正在自动建立每个角色的 SAM3 轨迹")
@@ -10926,7 +11109,7 @@ def _run_transfer_job(
             add_log(f"> 使用已保存镜头切段: {len(saved_subshot_ranges)} 段")
             result = _run_scail2_hardcut_transfer(
                 client=client,
-                video_path=video_path,
+                video_path=scail2_input_video_path,
                 role_pairs=role_pairs,
                 project_dir=project_dir,
                 segment_id=segment_id,
@@ -10940,11 +11123,12 @@ def _run_transfer_job(
                 add_log=add_log,
             )
             final_output_path = str(result["output_path"])
+            final_output_path = _mode2_copy_source_audio_to_generated(source_video_path, final_output_path, output_dir, add_log)
             with JOBS_LOCK:
                 job = JOBS.get(job_id)
                 if job is not None:
                     job["status"] = "done"
-                    job["result"] = result
+                    job["result"] = {**result, "output_path": final_output_path}
                     job["updated_at"] = time.time()
                     job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
             _snapshot_running_job(job_id, force=True)
@@ -10956,7 +11140,7 @@ def _run_transfer_job(
             add_log("> RunningHub Bernini path: exported API workflow")
             client = RunningHubClient()
             result = client.transfer_bernini(
-                video_path=video_path,
+                video_path=scail2_input_video_path,
                 ref_images=ref_images,
                 role_names=[str(pair.get("name") or "") for pair in role_pairs],
                 video_window=video_window,
@@ -10970,7 +11154,7 @@ def _run_transfer_job(
             client = Scail2Client()
             add_log("> Bernini test path: WanAnimatePlus Bernini rv2v")
             result = client.transfer_bernini_test(
-                video_path=video_path,
+                video_path=scail2_input_video_path,
                 ref_images=ref_images,
                 role_names=[str(pair.get("name") or "") for pair in role_pairs],
                 video_window=video_window,
@@ -10985,7 +11169,7 @@ def _run_transfer_job(
             client = Scail2Client()
             add_log("> SCAIL-2 colored mask path AUTO_SEG_V2: explicit SCAIL2ColoredMask + WanSCAILToVideo")
             result = client.transfer_colored_mask_test(
-                video_path=video_path,
+                video_path=scail2_input_video_path,
                 ref_images=ref_images,
                 role_names=[str(pair.get("name") or "") for pair in role_pairs],
                 source_positions=[pair.get("source_x") for pair in role_pairs],
@@ -11002,7 +11186,7 @@ def _run_transfer_job(
             client = Scail2Client()
             add_log("> SCAIL-2 masked test path: WanAnimatePlus + explicit colored masks")
             result = client.transfer_wananimate_masked_test(
-                video_path=video_path,
+                video_path=scail2_input_video_path,
                 ref_images=ref_images,
                 role_names=[str(pair.get("name") or "") for pair in role_pairs],
                 video_window=video_window,
@@ -11019,7 +11203,7 @@ def _run_transfer_job(
             if len(role_pairs) > 1:
                 result = _run_scail2_sequential_transfer(
                     client=client,
-                    video_path=video_path,
+                    video_path=scail2_input_video_path,
                     role_pairs=role_pairs,
                     output_dir=output_dir,
                     video_window=video_window,
@@ -11031,7 +11215,7 @@ def _run_transfer_job(
                 )
             else:
                 result = client.transfer(
-                    video_path=video_path,
+                    video_path=scail2_input_video_path,
                     ref_images=ref_images,
                     subject_extra_ref_images=subject_extra_ref_images,
                     role_names=[str(pair.get("name") or "") for pair in role_pairs],
@@ -11049,7 +11233,7 @@ def _run_transfer_job(
             if len(ref_images) > 1 and not (result.get("mask_output_paths") or {}):
                 add_log("> SCAIL-2 normal path produced no colored masks; running mask inspection fallback")
                 mask_result = client.inspect_masks(
-                    video_path=video_path,
+                    video_path=scail2_input_video_path,
                     ref_images=ref_images,
                     role_names=[str(pair.get("name") or "") for pair in role_pairs],
                     video_window=video_window,
@@ -11060,6 +11244,7 @@ def _run_transfer_job(
                 )
                 result["mask_output_paths"] = mask_result.get("mask_output_paths") or {}
         final_output_path = str(result["output_path"])
+        final_output_path = _mode2_copy_source_audio_to_generated(source_video_path, final_output_path, output_dir, add_log)
 
         protection_track_dir = ""
         if protection_annotation_id:
@@ -11076,7 +11261,7 @@ def _run_transfer_job(
             from spvideo.protection_compositor import composite_protected_region
 
             composite_protected_region(
-                source_video=video_path,
+                source_video=source_video_path,
                 generated_video=final_output_path,
                 track_dir=protection_track_dir,
                 output_path=protected_path,
@@ -13262,6 +13447,750 @@ def _download_seedance_a_result(
     return str(output_path)
 
 
+def _nuko_channel1_api_key() -> str:
+    return (
+        _plain_secret(_runtime_or_user_env("NUKO_CHANNEL1_API_KEY"))
+        or _plain_secret(_runtime_or_user_env("NUKOAI_API_KEY"))
+        or _plain_secret(_runtime_or_user_env("NUKO_API_KEY"))
+        or _plain_secret(_runtime_or_user_env("MA_VIDEO_API_KEY"))
+        or DEFAULT_NUKO_CHANNEL1_API_KEY
+    ).strip()
+
+
+def _nuko_channel1_base_url() -> str:
+    return (
+        _runtime_or_user_env("NUKO_CHANNEL1_BASE_URL")
+        or _runtime_or_user_env("NUKOAI_BASE_URL")
+        or _runtime_or_user_env("NUKO_BASE_URL")
+        or DEFAULT_NUKO_CHANNEL1_BASE_URL
+    ).strip().rstrip("/")
+
+
+def _nuko_channel1_is_known_relay_base_url(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    try:
+        parsed = urlparse(text)
+        return parsed.hostname == "152.136.38.202" and parsed.port == 3000
+    except Exception:  # noqa: BLE001
+        return "152.136.38.202:3000" in text
+
+
+def _nuko_channel1_key_source_hint() -> str:
+    for key in ("NUKO_CHANNEL1_API_KEY", "NUKOAI_API_KEY", "NUKO_API_KEY", "MA_VIDEO_API_KEY"):
+        if _plain_secret(_runtime_or_user_env(key)):
+            return f"environment variable {key}"
+    if DEFAULT_NUKO_CHANNEL1_API_KEY:
+        return "Mode2 内置通道1默认 API Key"
+    return "Mode2 04 视频生成填写的通道1 API Key 或环境变量 NUKO_CHANNEL1_API_KEY"
+
+
+def _nuko_channel1_config_sources(payload: dict[str, Any], request: dict[str, Any]) -> list[dict[str, Any]]:
+    sources: list[dict[str, Any]] = []
+    seen: set[int] = set()
+
+    def add_source(source: Any) -> None:
+        if not isinstance(source, dict):
+            return
+        marker = id(source)
+        if marker in seen:
+            return
+        seen.add(marker)
+        sources.append(source)
+
+    for source in (request, payload):
+        add_source(source)
+        if not isinstance(source, dict):
+            continue
+        for key in ("channel1", "channel_1", "nuko", "nukoai", "nuko_channel1", "nukoChannel1"):
+            add_source(source.get(key))
+    return sources
+
+
+def _nuko_channel1_request_config_value(
+    payload: dict[str, Any],
+    request: dict[str, Any],
+    keys: tuple[str, ...],
+) -> Any:
+    sources = _nuko_channel1_config_sources(payload, request)
+    for key in keys:
+        for source in sources:
+            value = source.get(key)
+            if value is not None:
+                return value
+    return ""
+
+
+def _nuko_channel1_request_api_key(payload: dict[str, Any], request: dict[str, Any]) -> tuple[str, str]:
+    api_key = _plain_secret(
+        _nuko_channel1_request_config_value(
+            payload,
+            request,
+            (
+                "channel1_api_key",
+                "channel1ApiKey",
+                "nuko_api_key",
+                "nukoApiKey",
+                "nukoai_api_key",
+                "nukoaiApiKey",
+                "api_key",
+                "apiKey",
+            ),
+        )
+    )
+    if api_key:
+        return api_key, "Mode2 04 视频生成填写的通道1 API Key"
+    return _nuko_channel1_api_key(), _nuko_channel1_key_source_hint()
+
+
+def _nuko_channel1_request_base_url(payload: dict[str, Any], request: dict[str, Any]) -> str:
+    base_url = _plain_secret(
+        _nuko_channel1_request_config_value(
+            payload,
+            request,
+            (
+                "channel1_base_url",
+                "channel1BaseUrl",
+                "nuko_base_url",
+                "nukoBaseUrl",
+                "nukoai_base_url",
+                "nukoaiBaseUrl",
+                "base_url",
+                "baseUrl",
+            ),
+        )
+    )
+    picked = (base_url or _nuko_channel1_base_url()).strip().rstrip("/")
+    if _nuko_channel1_is_known_relay_base_url(picked):
+        return DEFAULT_NUKO_CHANNEL1_BASE_URL
+    return picked
+
+
+def _nuko_channel1_friendly_error(
+    message: str,
+    status_code: int | None = None,
+    key_source_hint: str = "",
+) -> str:
+    text = str(message or "").strip()
+    if status_code in {401, 403} or "unauthorized" in text.lower() or "api key" in text.lower():
+        hint = str(key_source_hint or _nuko_channel1_key_source_hint()).strip()
+        return f"通道1鉴权失败：{text or 'API Key 无效'}。请检查{hint}。"
+    return text
+
+
+def _nuko_channel1_response_error_message(data: dict[str, Any], fallback: str, status_code: int) -> str:
+    error = data.get("error")
+    if isinstance(error, dict):
+        return str(error.get("message") or error.get("code") or fallback or f"通道1 HTTP {status_code}")
+    return str(error or data.get("message") or fallback or f"通道1 HTTP {status_code}")
+
+
+def _nuko_channel1_should_treat_query_error_as_pending(status_code: int | None) -> bool:
+    status = int(status_code or 0)
+    return status == 0 or status in {408, 409, 425, 429} or status >= 500
+
+
+def _nuko_channel1_output_dir(project_dir: str, source_video_path: str) -> Path:
+    project_text = str(project_dir or "").strip()
+    if project_text:
+        base = Path(project_text)
+    else:
+        source = Path(str(source_video_path or "")).expanduser()
+        base = source.parent if source.name else ROOT.parent
+    output_dir = base / "04_AI输出成片"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def _nuko_channel1_debug_dir(project_dir: str, source_video_path: str, package_id: str = "") -> Path:
+    output_dir = _nuko_channel1_output_dir(project_dir, source_video_path)
+    safe_package = _safe_output_name(str(package_id or ""))
+    if safe_package:
+        debug_dir = output_dir / "generation_packages" / safe_package / "channel1_debug"
+    else:
+        debug_dir = output_dir / "nuko_channel1_debug"
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    return debug_dir
+
+
+def _nuko_channel1_write_debug_json(debug_dir: Path, prefix: str, data: dict[str, Any]) -> str:
+    safe_prefix = _safe_output_name(prefix or "nuko_channel1")
+    path = debug_dir / f"{safe_prefix}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+    path.write_text(
+        json.dumps(_seedance_a_redacted(data), ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
+def _nuko_channel1_https_url(url: str, label: str) -> str:
+    text = str(url or "").strip()
+    if text.startswith("https://"):
+        return text
+    if text.startswith("http://"):
+        raise RuntimeError(f"通道1 {label} 必须是公网 https URL，当前是 http URL")
+    return ""
+
+
+def _nuko_channel1_public_url(url: str, label: str, *, require_https: bool = False) -> str:
+    text = str(url or "").strip()
+    if text.startswith("https://"):
+        return text
+    if text.startswith("http://") and not require_https:
+        return text
+    if text.startswith("http://"):
+        raise RuntimeError(f"通道1 {label} 必须是公网 https URL，当前是 http URL")
+    return ""
+
+
+def _nuko_channel1_upload_ref(ref: Any, api_key: str, *, require_https: bool = False) -> str:
+    text = str(ref or "").strip()
+    if not text:
+        return ""
+    if text.startswith(("http://", "https://")):
+        return _nuko_channel1_public_url(text, "素材", require_https=require_https)
+
+    from spvideo.yuanqi_upload import upload_file_for_url
+
+    if text.startswith("data:"):
+        import base64
+
+        header, _, encoded = text.partition(",")
+        if not encoded:
+            return ""
+        content_type = header.split(";", 1)[0].replace("data:", "") or "application/octet-stream"
+        ext = mimetypes.guess_extension(content_type) or ".bin"
+        temp_dir = ROOT.parent / ".nuko_channel1_upload_cache"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_path = temp_dir / f"nuko_channel1_ref_{uuid.uuid4().hex}{ext}"
+        temp_path.write_bytes(base64.b64decode(encoded))
+        try:
+            uploaded = str(upload_file_for_url(temp_path, api_key=api_key, base_url=_seedance_a_upload_base_url()).get("url") or "")
+            return _nuko_channel1_public_url(uploaded, "上传后素材", require_https=require_https)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    local_path = Path(_decode_media_ref_path(text))
+    if not local_path.exists() or not local_path.is_file():
+        return ""
+    uploaded = str(upload_file_for_url(local_path, api_key=api_key, base_url=_seedance_a_upload_base_url()).get("url") or "")
+    return _nuko_channel1_public_url(uploaded, "上传后素材", require_https=require_https)
+
+
+def _nuko_channel1_collect_refs(*values: Any) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for item in _string_list(value):
+            key = item.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            refs.append(item)
+    return refs
+
+
+def _nuko_channel1_number_list(value: Any) -> list[float]:
+    if isinstance(value, (int, float)):
+        return [round(float(value), 3)]
+    if isinstance(value, str):
+        parts = [part.strip() for part in value.split(",")]
+        values: list[float] = []
+        for part in parts:
+            if not part:
+                continue
+            try:
+                values.append(round(float(part), 3))
+            except ValueError:
+                continue
+        return values
+    if isinstance(value, list):
+        values = []
+        for item in value:
+            try:
+                values.append(round(float(item), 3))
+            except (TypeError, ValueError):
+                continue
+        return values
+    return []
+
+
+def _nuko_channel1_model_spec(model: str) -> dict[str, Any]:
+    return NUKO_CHANNEL1_KNOWN_MODELS.get(str(model or "").strip()) or {}
+
+
+def _nuko_channel1_normalize_duration(value: Any, spec: dict[str, Any]) -> int:
+    allowed = spec.get("durations") if isinstance(spec.get("durations"), list) else list(range(4, 16))
+    allowed = [int(item) for item in allowed if isinstance(item, (int, float))]
+    if not allowed:
+        allowed = list(range(4, 16))
+    try:
+        requested = int(round(float(value)))
+    except (TypeError, ValueError):
+        requested = 4 if 4 in allowed else allowed[0]
+    if requested in allowed:
+        return requested
+    return min(allowed, key=lambda item: abs(item - requested))
+
+
+def _nuko_channel1_normalize_ratio(value: Any, spec: dict[str, Any]) -> str:
+    allowed = spec.get("ratios") if isinstance(spec.get("ratios"), list) else ["16:9"]
+    allowed = [str(item).strip() for item in allowed if str(item or "").strip()]
+    if not allowed:
+        allowed = ["16:9"]
+    requested = str(value or "").strip()
+    if requested in allowed:
+        return requested
+    return "16:9" if "16:9" in allowed else allowed[0]
+
+
+def _nuko_channel1_normalize_video_durations(
+    values: list[float],
+    video_count: int,
+    fallback_duration: int | float,
+) -> list[float]:
+    result: list[float] = []
+    for index in range(max(0, video_count)):
+        value = values[index] if index < len(values) else fallback_duration
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            number = float(fallback_duration or 1)
+        if not math.isfinite(number) or number <= 0:
+            number = float(fallback_duration or 1)
+        result.append(round(number, 3))
+    return result
+
+
+def _submit_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
+    request = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+    model = str(request.get("model") or "").strip()
+    prompt = str(request.get("prompt") or "").strip()
+    if not model:
+        raise ValueError("通道1 model 必填")
+    if not prompt:
+        raise ValueError("通道1 prompt 不得为空")
+
+    api_key, api_key_hint = _nuko_channel1_request_api_key(payload, request)
+    if not api_key:
+        raise ValueError("缺少通道1 API Key，请在 Mode2 04 视频生成填写通道1 API Key，或设置环境变量 NUKO_CHANNEL1_API_KEY。")
+
+    duration = round(_mode2_float(request.get("duration") or request.get("seconds"), 5.0), 3)
+    if duration < 4 or duration > 15:
+        raise ValueError(f"通道1时长必须在 4-15 秒内，当前 {duration:g} 秒")
+    duration_payload: int | float = int(duration) if float(duration).is_integer() else duration
+    ratio = str(request.get("ratio") or request.get("aspect_ratio") or request.get("size") or "").strip()
+    if not re.fullmatch(r"\d+:\d+", ratio):
+        ratio = "9:16"
+    spec = _nuko_channel1_model_spec(model)
+    requested_output_duration = _nuko_channel1_normalize_duration(duration, spec)
+    ratio = _nuko_channel1_normalize_ratio(ratio, spec)
+
+    warnings: list[str] = []
+    project_dir = str(payload.get("project_dir") or payload.get("projectDir") or "").strip()
+    image_deny_keys = _mode2_seedance_generation_image_deny_keys(project_dir)
+    ref_images = _nuko_channel1_collect_refs(
+        request.get("images"),
+        request.get("refImages"),
+        request.get("image_urls"),
+        request.get("imageUrls"),
+        request.get("reference_images"),
+        request.get("referenceImages"),
+        request.get("reference_image_urls"),
+        request.get("referenceImageUrls"),
+    )
+    ref_images = _mode2_filter_seedance_generation_images(
+        ref_images,
+        warnings,
+        field="channel1 image_urls",
+        deny_keys=image_deny_keys,
+    )
+    videos = _nuko_channel1_collect_refs(
+        request.get("videos"),
+        request.get("video_urls"),
+        request.get("videoUrls"),
+        request.get("video_url"),
+        request.get("videoUrl"),
+        request.get("referenceVideos"),
+        request.get("reference_videos"),
+        request.get("referenceVideoUrls"),
+        request.get("reference_video_urls"),
+    )
+    audios = _nuko_channel1_collect_refs(
+        request.get("audios"),
+        request.get("audio_urls"),
+        request.get("audioUrls"),
+        request.get("audio_url"),
+        request.get("audioUrl"),
+        request.get("referenceAudios"),
+        request.get("reference_audios"),
+    )
+
+    uploaded_images: list[str] = []
+    for ref in ref_images[:9]:
+        url = _nuko_channel1_upload_ref(ref, api_key, require_https=True)
+        if url:
+            uploaded_images.append(url)
+
+    uploaded_videos: list[str] = []
+    for index, ref in enumerate(videos[:3], 1):
+        url = _nuko_channel1_upload_ref(ref, api_key)
+        if not url:
+            raise RuntimeError(f"通道1 reference_video {index} 处理失败")
+        uploaded_videos.append(url)
+
+    uploaded_audios: list[str] = []
+    for index, ref in enumerate(audios[:3], 1):
+        url = _nuko_channel1_upload_ref(ref, api_key)
+        if not url:
+            raise RuntimeError(f"通道1 reference_audio {index} 处理失败")
+        uploaded_audios.append(url)
+
+    video_durations = _nuko_channel1_number_list(
+        request.get("video_durations")
+        or request.get("videoDurations")
+        or payload.get("video_durations")
+        or payload.get("videoDurations")
+        or payload.get("package_duration")
+        or payload.get("packageDuration")
+    )
+    if uploaded_videos:
+        video_durations = _nuko_channel1_normalize_video_durations(
+            video_durations,
+            len(uploaded_videos),
+            requested_output_duration,
+        )
+        output_duration = _nuko_channel1_normalize_duration(video_durations[0], spec)
+    else:
+        video_durations = []
+        output_duration = requested_output_duration
+
+    upstream_payload: dict[str, Any] = {
+        "prompt": prompt,
+        "model": model,
+        "duration": output_duration,
+        "ratio": ratio,
+        "image_urls": uploaded_images,
+        "audio_urls": uploaded_audios,
+        "video_urls": uploaded_videos,
+        "video_durations": video_durations,
+    }
+
+    base_url = _nuko_channel1_request_base_url(payload, request)
+    headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+    source_video_path = str(payload.get("source_video_path") or payload.get("video_path") or "").strip()
+    package_id = str(payload.get("package_id") or payload.get("packageId") or "").strip()
+    output_role = _mode2_safe_asset_slug(
+        payload.get("output_role")
+        or payload.get("outputRole")
+        or request.get("output_role")
+        or request.get("outputRole")
+        or "result",
+        fallback="result",
+    )
+    if output_role not in {"mask", "result"}:
+        output_role = "result"
+    task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
+    debug_dir = _nuko_channel1_debug_dir(project_dir, source_video_path, package_id)
+    submit_url = f"{base_url}/videos"
+    debug_prefix = _safe_output_name("_".join(part for part in [task_name, "channel1_submit"] if part))
+    debug_path = _nuko_channel1_write_debug_json(debug_dir, debug_prefix, {
+        "stage": "submit_request",
+        "route": "channel1",
+        "submit_url": submit_url,
+        "task_name": task_name,
+        "package_id": package_id,
+        "project_dir": project_dir,
+        "source_video_path": source_video_path,
+        "local_inputs": {
+            "images": ref_images,
+            "videos": videos,
+            "audios": audios,
+        },
+        "uploaded": {
+            "image_urls": uploaded_images,
+            "video_urls": uploaded_videos,
+            "audio_urls": uploaded_audios,
+        },
+        "upstream_payload": upstream_payload,
+    })
+
+    response = requests.post(
+        submit_url,
+        headers=headers,
+        json=upstream_payload,
+        timeout=600,
+    )
+    text = response.text
+    try:
+        data = response.json()
+    except ValueError:
+        data = {"_raw": text}
+    _nuko_channel1_write_debug_json(debug_dir, f"{debug_prefix}_response", {
+        "stage": "submit_response",
+        "route": "channel1",
+        "submit_url": submit_url,
+        "http_status": response.status_code,
+        "response_ok": response.ok,
+        "response": data,
+        "debug_request_path": debug_path,
+    })
+    if not response.ok or data.get("success") is False:
+        message = _nuko_channel1_response_error_message(data, text, response.status_code)
+        friendly = _nuko_channel1_friendly_error(str(message)[:800], response.status_code, api_key_hint)
+        raise RuntimeError(f"{friendly}\n调试记录: {debug_path}")
+
+    response_data = data.get("data") if isinstance(data.get("data"), dict) else data
+    task_id = str(response_data.get("id") or response_data.get("task_id") or data.get("id") or "").strip()
+    if not task_id:
+        raise RuntimeError(f"通道1未返回任务 id: {str(data)[:500]}\n调试记录: {debug_path}")
+
+    with NUKO_CHANNEL1_TASKS_LOCK:
+        NUKO_CHANNEL1_TASKS[task_id] = {
+            "api_key": api_key,
+            "base_url": base_url,
+            "project_dir": project_dir,
+            "source_video_path": source_video_path,
+            "task_name": task_name,
+            "segment_id": str(payload.get("segment_id") or "").strip(),
+            "package_id": package_id,
+            "output_role": output_role,
+            "submitted_at": time.time(),
+            "output_path": "",
+            "raw_submit": data,
+            "debug_path": debug_path,
+            "submit_url": submit_url,
+            "model": model,
+            "route": "channel1",
+        }
+    if package_id and project_dir:
+        try:
+            root = _resolve_storyboard_mode2_project_dir(project_dir)
+            task_field = "maskTaskId" if output_role == "mask" else "resultTaskId"
+            context_field = "maskPollContext" if output_role == "mask" else "resultPollContext"
+            _write_generation_package_state(root, package_id, {
+                "status": "mask_running" if output_role == "mask" else "result_running",
+                task_field: task_id,
+                context_field: {
+                    "packageId": package_id,
+                    "outputRole": output_role,
+                    "sourcePath": source_video_path,
+                    "outputLabel": "白膜视频" if output_role == "mask" else "结果视频",
+                    "apiChannel": "channel1",
+                },
+                "sourcePath": source_video_path,
+                "lastMessage": f"通道1任务已提交\ntask_id: {task_id}",
+                "lastTone": "warn",
+                "errorMessage": "",
+            })
+        except Exception as exc:  # noqa: BLE001
+            warnings.append(f"生成包运行态写入失败：{exc}")
+
+    return {
+        "success": True,
+        "task_id": task_id,
+        "taskId": task_id,
+        "status": "SUBMITTED",
+        "model": model,
+        "uploaded": {
+            "image_urls": uploaded_images,
+            "video_urls": uploaded_videos,
+            "audio_urls": uploaded_audios,
+        },
+        "debug_path": debug_path,
+        "warnings": warnings,
+        "raw": data,
+    }
+
+
+def _parse_nuko_channel1_status(data: dict[str, Any]) -> tuple[str, str, str]:
+    outer = data.get("data") if isinstance(data.get("data"), dict) else data
+    raw_status = str(outer.get("status") or data.get("status") or "").strip().lower()
+    fail_reason = str(
+        outer.get("error_message")
+        or outer.get("errorMessage")
+        or outer.get("error_code")
+        or data.get("message")
+        or ""
+    ).strip()
+    if raw_status in {"completed", "success", "succeeded", "done", "finished"}:
+        return "SUCCESS", "100%", ""
+    if raw_status in {"failed", "failure", "error", "cancelled", "canceled"}:
+        return "FAILED", "100%", fail_reason or "任务失败"
+    if raw_status in {"processing", "running", "in_progress"}:
+        return "RUNNING", "", ""
+    if raw_status in {"pending", "queued", "created", "waiting", ""}:
+        if _extract_nuko_channel1_result_url(data):
+            return "SUCCESS", "100%", ""
+        return "PENDING", "", ""
+    if _extract_nuko_channel1_result_url(data):
+        return "SUCCESS", "100%", ""
+    return "RUNNING", "", ""
+
+
+def _extract_nuko_channel1_result_url(data: dict[str, Any]) -> str:
+    outer = data.get("data") if isinstance(data.get("data"), dict) else data
+    candidates = [
+        outer.get("video_url"),
+        outer.get("videoUrl"),
+        outer.get("download_url"),
+        outer.get("downloadUrl"),
+        outer.get("url"),
+        data.get("video_url"),
+        data.get("videoUrl"),
+        data.get("download_url"),
+        data.get("downloadUrl"),
+        data.get("url"),
+    ]
+    for value in candidates:
+        text = str(value or "").strip()
+        if text.startswith(("http://", "https://")):
+            return text
+    return ""
+
+
+def _download_nuko_channel1_result(
+    result_url: str,
+    task_id: str,
+    task_meta: dict[str, Any],
+    api_key: str,
+) -> str:
+    output_dir = _nuko_channel1_output_dir(
+        str(task_meta.get("project_dir") or ""),
+        str(task_meta.get("source_video_path") or ""),
+    )
+    task_name = _safe_output_name(str(task_meta.get("task_name") or "shot_retake"))
+    segment_id = _safe_output_name(str(task_meta.get("segment_id") or "")) if task_meta.get("segment_id") else ""
+    stem = "_".join(part for part in ["channel1", task_name, segment_id, task_id[:8]] if part)
+    output_path = output_dir / f"{stem}.mp4"
+    if output_path.exists() and output_path.stat().st_size > 0:
+        return str(output_path)
+
+    def fetch(headers: dict[str, str] | None = None) -> requests.Response:
+        return requests.get(result_url, headers=headers or {}, stream=True, timeout=300)
+
+    response = fetch()
+    if response.status_code in {401, 403}:
+        response.close()
+        response = fetch({"X-API-Key": api_key})
+    response.raise_for_status()
+    try:
+        with output_path.open("wb") as handle:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    handle.write(chunk)
+    finally:
+        response.close()
+    return str(output_path)
+
+
+def _query_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
+    task_id = str(payload.get("task_id") or payload.get("taskId") or "").strip()
+    if not task_id:
+        raise ValueError("缺少 task_id")
+    with NUKO_CHANNEL1_TASKS_LOCK:
+        task_meta = dict(NUKO_CHANNEL1_TASKS.get(task_id) or {})
+    api_key = str(task_meta.get("api_key") or payload.get("channel1_api_key") or payload.get("nuko_api_key") or payload.get("api_key") or _nuko_channel1_api_key()).strip()
+    if not api_key:
+        raise ValueError("缺少通道1 API Key")
+    base_url = str(task_meta.get("base_url") or payload.get("channel1_base_url") or payload.get("nuko_base_url") or payload.get("base_url") or _nuko_channel1_base_url()).rstrip("/")
+    project_dir = str(task_meta.get("project_dir") or payload.get("project_dir") or payload.get("projectDir") or "")
+    source_video_path = str(task_meta.get("source_video_path") or payload.get("source_video_path") or payload.get("video_path") or "")
+    package_id = str(task_meta.get("package_id") or payload.get("package_id") or payload.get("packageId") or "")
+    output_role = _mode2_safe_asset_slug(
+        task_meta.get("output_role")
+        or payload.get("output_role")
+        or payload.get("outputRole")
+        or "result",
+        fallback="result",
+    )
+    if output_role not in {"mask", "result"}:
+        output_role = "result"
+    task_meta.update({
+        "api_key": api_key,
+        "base_url": base_url,
+        "project_dir": project_dir,
+        "source_video_path": source_video_path,
+        "package_id": package_id,
+        "output_role": output_role,
+        "task_name": str(task_meta.get("task_name") or payload.get("taskName") or payload.get("task_name") or "shot_retake").strip(),
+        "segment_id": str(task_meta.get("segment_id") or payload.get("segment_id") or "").strip(),
+    })
+    debug_dir = _nuko_channel1_debug_dir(project_dir, source_video_path, package_id)
+    query_url = f"{base_url}/videos/{task_id}"
+    try:
+        response = requests.get(
+            query_url,
+            headers={"X-API-Key": api_key},
+            timeout=60,
+        )
+        text = response.text
+        try:
+            data = response.json()
+        except ValueError:
+            data = {"_raw": text}
+        http_status = response.status_code
+        response_ok = response.ok
+    except requests.RequestException as error:
+        text = str(error)
+        data = {"success": True, "data": {"status": "pending", "_transientError": text}}
+        http_status = 0
+        response_ok = False
+    query_debug_path = _nuko_channel1_write_debug_json(debug_dir, f"query_channel1_{task_id[:8]}", {
+        "stage": "query_response",
+        "route": "channel1",
+        "query_url": query_url,
+        "task_id": task_id,
+        "http_status": http_status,
+        "response_ok": response_ok,
+        "response": data,
+    })
+    if (not response_ok or data.get("success") is False) and _nuko_channel1_should_treat_query_error_as_pending(http_status):
+        message = _nuko_channel1_response_error_message(data, text, http_status)
+        data = {"success": True, "data": {"status": "pending", "_transientError": str(message)}}
+    elif not response_ok or data.get("success") is False:
+        message = _nuko_channel1_response_error_message(data, text, http_status)
+        raise RuntimeError(_nuko_channel1_friendly_error(str(message)[:800], http_status))
+
+    status, progress, fail_reason = _parse_nuko_channel1_status(data)
+    result_url = _extract_nuko_channel1_result_url(data)
+    output_path = str(task_meta.get("output_path") or "")
+    if status == "SUCCESS" and result_url and not (output_path and Path(output_path).exists()):
+        output_path = _download_nuko_channel1_result(result_url, task_id, task_meta, api_key)
+        with NUKO_CHANNEL1_TASKS_LOCK:
+            NUKO_CHANNEL1_TASKS.setdefault(task_id, {}).update({"output_path": output_path, "finished_at": time.time()})
+    if status == "FAILED" and package_id and project_dir:
+        try:
+            root = _resolve_storyboard_mode2_project_dir(project_dir)
+            _write_generation_package_state(root, package_id, {
+                "status": "failed",
+                "lastMessage": f"通道1任务失败\ntask_id: {task_id}",
+                "lastTone": "bad",
+                "errorMessage": fail_reason or "任务失败",
+            })
+        except Exception:  # noqa: BLE001
+            pass
+
+    return {
+        "success": status != "FAILED",
+        "task_id": task_id,
+        "taskId": task_id,
+        "status": status,
+        "progress": progress,
+        "video_url": output_path or result_url,
+        "videoUrl": output_path or result_url,
+        "output_path": output_path,
+        "result_url": result_url,
+        "result_url_found": bool(result_url),
+        "downloaded": bool(output_path),
+        "debug_path": str(task_meta.get("debug_path") or ""),
+        "query_debug_path": query_debug_path,
+        "fail_reason": fail_reason,
+        "raw": data,
+    }
+
+
 def _single_role_transfer_backend() -> str:
     backend = os.environ.get(
         "SINGLE_ROLE_TRANSFER_BACKEND",
@@ -14915,6 +15844,8 @@ def _generation_package_run_from_manifest(
         "id": str(data.get("run_id") or manifest_path.stem).strip(),
         "role": output_role,
         "source_path": source_path,
+        "input_source_path": str(data.get("input_source_path") or data.get("source_video_path") or "").strip(),
+        "package_identity_id": str(data.get("package_identity_id") or "").strip(),
         "manifest_path": str(manifest_path),
         "clips": clips,
         "shot_count": len(clips),
@@ -14980,6 +15911,7 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
         return {
             "sourcePath": state_path,
             "packageSourcePath": state_path,
+            "packageSourceVersion": str(state.get("packageSourceVersion") or "").strip(),
             "packageSegments": state_segments,
             "packageDuration": _mode2_float(state.get("packageDuration"), _generation_package_timeline_duration(segments)),
         }
@@ -14997,6 +15929,7 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
         return {
             "sourcePath": output_path,
             "packageSourcePath": output_path,
+            "packageSourceVersion": str(data.get("packageSourceVersion") or data.get("package_source_version") or "").strip(),
             "packageSegments": data.get("segments") or segments,
             "packageDuration": _mode2_float(data.get("duration"), _generation_package_timeline_duration(segments)),
         }
@@ -15018,6 +15951,8 @@ def _restore_generation_package_role(
 ) -> dict[str, Any]:
     path_key, clips_key, manifest_key = _generation_package_role_fields(output_role)
     runs_key = "maskRuns" if output_role == "mask" else "resultRuns"
+    source_key = "maskSourcePath" if output_role == "mask" else "resultSourcePath"
+    identity_key = "maskPackageIdentityId" if output_role == "mask" else "resultPackageIdentityId"
     runs = _dedupe_generation_package_runs([
         *_generation_package_runs_from_state(state, output_role, segments),
         *_generation_package_runs_from_dir(root, package_id, output_role, segments),
@@ -15029,6 +15964,8 @@ def _restore_generation_package_role(
             clips_key: latest["clips"],
             manifest_key: latest["manifest_path"],
             runs_key: runs,
+            source_key: str(latest.get("input_source_path") or "").strip(),
+            identity_key: str(latest.get("package_identity_id") or "").strip(),
         }
 
     state_path = _generation_package_file_exists(state.get(path_key))
@@ -15041,6 +15978,8 @@ def _restore_generation_package_role(
                 path_key: state_path,
                 clips_key: state_clips,
                 manifest_key: state_manifest,
+                source_key: str(state.get(source_key) or manifest_data.get("input_source_path") or manifest_data.get("source_video_path") or "").strip(),
+                identity_key: str(state.get(identity_key) or manifest_data.get("package_identity_id") or "").strip(),
             }
 
     role_dir = _generation_package_work_dir(root, package_id) / output_role
@@ -15056,6 +15995,8 @@ def _restore_generation_package_role(
             path_key: source_path,
             clips_key: clips,
             manifest_key: str(manifest_path),
+            source_key: str(data.get("input_source_path") or data.get("source_video_path") or "").strip(),
+            identity_key: str(data.get("package_identity_id") or "").strip(),
         }
     return {}
 
@@ -15086,6 +16027,12 @@ def _generation_package_segments(payload: dict[str, Any]) -> list[dict[str, Any]
             "video_path": str(path),
             "duration": round(max(0.01, duration), 3),
         })
+    long_segments = [
+        segment for segment in segments
+        if _mode2_float(segment.get("duration"), 0.0) >= MODE2_MIN_SHOT_CUT_SECONDS
+    ]
+    if long_segments:
+        segments = long_segments
     if not segments:
         raise ValueError("generation_package_requires_shot_videos")
     start = 0.0
@@ -15118,6 +16065,8 @@ def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]
         "package_id": package_id,
         "output_path": str(output_path),
         "source_path": str(output_path),
+        "packageSourceVersion": GENERATION_PACKAGE_SOURCE_VERSION,
+        "package_source_version": GENERATION_PACKAGE_SOURCE_VERSION,
         "segments": segments,
         "duration": timeline_duration,
         "shot_count": len(segments),
@@ -15126,6 +16075,7 @@ def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]
     _write_generation_package_state(root, package_id, {
         "sourcePath": str(output_path),
         "packageSourcePath": str(output_path),
+        "packageSourceVersion": GENERATION_PACKAGE_SOURCE_VERSION,
         "packageSegments": segments,
         "packageDuration": result["duration"],
     })
@@ -15155,6 +16105,7 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
         "lastMessage",
         "lastTone",
         "errorMessage",
+        "packageSourceVersion",
     ):
         if key in state:
             restored[key] = state.get(key)
@@ -15194,6 +16145,150 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     if state:
         restored["statePath"] = str(_generation_package_state_path(root, package_id))
     return restored
+
+
+def _generation_package_run_from_saved_item(item: Any, output_role: str) -> dict[str, Any]:
+    if not isinstance(item, dict):
+        return {}
+    manifest_text = _generation_package_file_exists(item.get("manifest_path") or item.get("manifestPath"))
+    if manifest_text:
+        manifest_path = Path(manifest_text)
+        run = _generation_package_run_from_manifest(
+            manifest_path,
+            _read_generation_package_manifest(manifest_path),
+            output_role,
+        )
+        if run:
+            return run
+    source_path = _generation_package_file_exists(
+        item.get("source_path")
+        or item.get("output_path")
+        or item.get("whiteMaskPath")
+        or item.get("resultPath")
+    )
+    clips = _generation_package_existing_clips(item.get("clips") or item.get("maskSegments") or item.get("resultSegments"))
+    if not source_path or not clips:
+        return {}
+    return {
+        "id": str(item.get("id") or item.get("run_id") or item.get("runId") or Path(source_path).stem).strip(),
+        "role": output_role,
+        "source_path": source_path,
+        "input_source_path": str(item.get("input_source_path") or item.get("source_video_path") or item.get("sourcePath") or "").strip(),
+        "package_identity_id": str(item.get("package_identity_id") or item.get("packageIdentityId") or "").strip(),
+        "manifest_path": manifest_text,
+        "clips": clips,
+        "shot_count": len(clips),
+        "created_at": _mode2_float(item.get("created_at") or item.get("createdAt"), Path(source_path).stat().st_mtime),
+        "timeline_duration": _mode2_float(item.get("timeline_duration"), 0.0),
+        "source_duration": _mode2_float(item.get("source_duration"), 0.0),
+        "duration_scale": _mode2_float(item.get("duration_scale"), 1.0),
+    }
+
+
+def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, Any]:
+    include_history = bool(payload.get("include_history"))
+    primary_root: Path | None = None
+    roots: list[Path] = []
+    project_dir_text = str(payload.get("project_dir") or "").strip()
+    if project_dir_text:
+        try:
+            primary_root = _resolve_storyboard_mode2_project_dir(project_dir_text)
+            roots.append(primary_root)
+        except Exception:  # noqa: BLE001
+            primary_root = None
+    projects_root = Path(__file__).resolve().parent.parent / ".storyboard_mode2_projects"
+    if include_history or not roots:
+        for candidate in projects_root.iterdir() if projects_root.exists() else []:
+            if not candidate.is_dir():
+                continue
+            if (candidate / "04_AI输出成片" / "generation_packages").exists():
+                roots.append(candidate)
+    deduped_roots: list[Path] = []
+    seen_roots: set[str] = set()
+    for root in roots:
+        try:
+            key = str(root.resolve()).lower()
+        except Exception:  # noqa: BLE001
+            key = str(root).lower()
+        if key in seen_roots:
+            continue
+        seen_roots.add(key)
+        deduped_roots.append(root)
+    items: list[dict[str, Any]] = []
+    for root in deduped_roots:
+        packages_root = root / "04_AI输出成片" / "generation_packages"
+        package_dirs: set[Path] = set()
+        if packages_root.exists() and packages_root.is_dir():
+            package_dirs.update(path.parent for path in packages_root.glob("*/generation_state.json"))
+            package_dirs.update(path.parent.parent for path in packages_root.glob("*/mask/mask_*.json"))
+        for package_dir in sorted(
+            package_dirs,
+            key=lambda path: path.stat().st_mtime if path.exists() else 0,
+            reverse=True,
+        ):
+            package_id = package_dir.name
+            state = _read_generation_package_state(root, package_id)
+            runs: list[dict[str, Any]] = []
+            raw_runs = state.get("maskRuns")
+            for raw_run in raw_runs if isinstance(raw_runs, list) else []:
+                run = _generation_package_run_from_saved_item(raw_run, "mask")
+                if run:
+                    runs.append(run)
+            state_run = _generation_package_run_from_saved_item(
+                {
+                    "id": state.get("maskRunId") or "latest-mask",
+                    "source_path": state.get("whiteMaskPath"),
+                    "manifest_path": state.get("maskSplitManifest"),
+                    "clips": state.get("maskSegments"),
+                    "created_at": state.get("updated_at"),
+                },
+                "mask",
+            )
+            if state_run:
+                runs.append(state_run)
+            for manifest_path in _generation_package_json_files(package_dir / "mask", "mask_*.json"):
+                run = _generation_package_run_from_manifest(
+                    manifest_path,
+                    _read_generation_package_manifest(manifest_path),
+                    "mask",
+                )
+                if run:
+                    runs.append(run)
+            for run in _dedupe_generation_package_runs(runs):
+                clips = run.get("clips") if isinstance(run.get("clips"), list) else []
+                shot_ids = [
+                    str(clip.get("shot_id") or clip.get("id") or "").strip()
+                    for clip in clips
+                    if isinstance(clip, dict) and str(clip.get("shot_id") or clip.get("id") or "").strip()
+                ]
+                items.append({
+                    "id": str(run.get("id") or run.get("manifest_path") or run.get("source_path") or "").strip(),
+                    "role": "mask",
+                    "project_dir": str(root),
+                    "project_id": root.name,
+                    "package_id": package_id,
+                    "package_label": package_id,
+                    "shot_ids": shot_ids,
+                    "source_path": str(run.get("source_path") or "").strip(),
+                    "manifest_path": str(run.get("manifest_path") or "").strip(),
+                    "clips": clips,
+                    "shot_count": len(clips),
+                    "created_at": _mode2_float(run.get("created_at"), 0.0),
+                    "timeline_duration": _mode2_float(run.get("timeline_duration"), 0.0),
+                    "source_duration": _mode2_float(run.get("source_duration"), 0.0),
+                    "duration_scale": _mode2_float(run.get("duration_scale"), 1.0),
+                })
+    items = sorted(
+        _dedupe_generation_package_runs(items),
+        key=lambda item: _mode2_float(item.get("created_at"), 0.0),
+        reverse=True,
+    )
+    return {
+        "success": True,
+        "project_dir": str(primary_root or ""),
+        "count": len(items),
+        "items": items,
+    }
 
 
 def _generation_package_resolve_role_path(root: Path, package_id: str, output_role: str, value: Any, *, suffix: str) -> Path:
@@ -15318,6 +16413,8 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
     package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
     output_role = _mode2_safe_asset_slug(payload.get("output_role") or "result", fallback="result")
     video_path = str(payload.get("video_path") or payload.get("output_path") or "").strip()
+    input_source_path = str(payload.get("source_video_path") or payload.get("input_source_path") or "").strip()
+    package_identity_id = str(payload.get("package_identity_id") or payload.get("packageIdentityId") or "").strip()
     if not video_path:
         raise ValueError("generation_package_output_path_required")
     source = Path(video_path)
@@ -15359,6 +16456,9 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         "package_id": package_id,
         "run_id": token,
         "source_path": str(source),
+        "input_source_path": input_source_path,
+        "source_video_path": input_source_path,
+        "package_identity_id": package_identity_id,
         "output_role": output_role,
         "clips": clips,
         "segments": segments,
@@ -15375,6 +16475,8 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         "id": token,
         "role": output_role,
         "source_path": str(source),
+        "input_source_path": input_source_path,
+        "package_identity_id": package_identity_id,
         "manifest_path": str(manifest_path),
         "clips": clips,
         "shot_count": len(clips),
@@ -15390,6 +16492,8 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         _write_generation_package_state(root, package_id, {
             "status": "mask_done",
             "whiteMaskPath": str(source),
+            "maskSourcePath": input_source_path,
+            "maskPackageIdentityId": package_identity_id,
             "maskSegments": clips,
             "maskSplitManifest": str(manifest_path),
             "maskRuns": mask_runs,
@@ -15399,6 +16503,8 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         _write_generation_package_state(root, package_id, {
             "status": "result_done",
             "resultPath": str(source),
+            "resultSourcePath": input_source_path,
+            "resultPackageIdentityId": package_identity_id,
             "resultSegments": clips,
             "resultSplitManifest": str(manifest_path),
             "resultRuns": result_runs,

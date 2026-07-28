@@ -238,6 +238,15 @@
       font-weight: 700;
     }
 
+    .generate-channel-select {
+      width: 104px;
+      min-width: 96px;
+      height: 32px;
+      padding: 0 30px 0 10px;
+      margin: 0;
+      font-weight: 800;
+    }
+
     .generate-param-select {
       width: 92px;
       min-width: 78px;
@@ -264,6 +273,10 @@
 
       .generate-model-select {
         width: min(100%, 260px);
+      }
+
+      .generate-channel-select {
+        width: min(100%, 120px);
       }
 
       .generate-param-select {
@@ -5680,6 +5693,26 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
     }
 
+    .generation-package-card.has-mask {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 1px rgba(139,92,246,.55), inset 0 0 0 1px rgba(139,92,246,.18);
+    }
+
+    .generation-package-card.has-result {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34,197,94,.58), inset 0 0 0 1px rgba(34,197,94,.2);
+    }
+
+    .generation-package-card.selected.has-mask {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 2px rgba(139,92,246,.72), inset 0 0 0 1px rgba(167,139,250,.25);
+    }
+
+    .generation-package-card.selected.has-result {
+      border-color: #34d399;
+      box-shadow: 0 0 0 2px rgba(34,197,94,.75), inset 0 0 0 1px rgba(52,211,153,.25);
+    }
+
     .generation-package-card strong {
       font-size: 14px;
       color: #fff;
@@ -5767,16 +5800,14 @@
 
     .generation-player {
       width: 100%;
-      height: min(100%, 46vw);
+      height: 100%;
       min-height: 0;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 8px;
       background: #000;
-      display: grid;
-      place-items: center;
+      display: block;
       overflow: hidden;
-      aspect-ratio: 9 / 16;
-      justify-self: center;
+      justify-self: stretch;
       align-self: stretch;
       margin: 0 auto;
     }
@@ -6214,6 +6245,43 @@
 
     .generation-actions .btn[hidden] {
       display: none !important;
+    }
+
+    .generation-audio-toggle {
+      min-width: 0;
+      min-height: 34px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: #0b0b0b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #d8d8d8;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .generation-audio-toggle[hidden] {
+      display: none !important;
+    }
+
+    .generation-audio-toggle input {
+      width: 15px;
+      height: 15px;
+      accent-color: #f4f4f4;
+    }
+
+    .generation-audio-toggle small {
+      min-width: 0;
+      color: #888;
+      font-size: 10px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .generation-step-list {
@@ -8091,6 +8159,7 @@
     }
 
     .compose-workbench {
+      --compose-scroll-safe-bottom: clamp(260px, 28vh, 380px);
       flex: 1 1 0;
       min-height: 0;
       height: 100%;
@@ -8233,10 +8302,13 @@
       align-content: start;
       justify-content: start;
       gap: 8px;
-      padding: 8px;
+      padding: 8px 8px var(--compose-scroll-safe-bottom);
       border: 1px solid transparent;
       border-radius: 8px;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-color: #3a3a3a #08090a;
+      scrollbar-width: thin;
     }
 
     .compose-shot-grid.drop-target {
@@ -8251,7 +8323,8 @@
       align-content: start;
       justify-content: start;
       gap: 8px;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       scrollbar-width: thin;
     }
 
@@ -8712,8 +8785,11 @@
       grid-auto-rows: 124px;
       align-content: start;
       gap: 8px;
-      padding: 8px;
-      overflow: hidden;
+      padding: 8px 8px var(--compose-scroll-safe-bottom);
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-color: #3a3a3a #08090a;
+      scrollbar-width: thin;
     }
 
     .compose-pack-list.dense {
@@ -9822,7 +9898,7 @@
                   <div class="compose-pack-tools">
                     <button class="compose-add-pack-btn" id="composeRemovePackBtn" type="button" title="删除当前卡包" aria-label="删除当前卡包">-</button>
                     <button class="compose-add-pack-btn" id="composeAddPackBtn" type="button" title="新增卡包" aria-label="新增卡包">+</button>
-                    <span id="composePackSummary">0 个卡包 · 5-15 秒</span>
+                    <span id="composePackSummary">0 个卡包 · 单人2-15秒 · 多人5-15秒</span>
                   </div>
                 </div>
                 <div class="compose-pack-list compose-pack-shelf" id="composePackList"></div>
@@ -9843,6 +9919,7 @@
         <div class="panel-head">
           <span>生成包执行台</span>
           <div class="generate-toolbar">
+            <select class="input generate-channel-select" id="seedanceApiChannelSelect" title="上级通道" aria-label="上级通道"></select>
             <select class="input generate-model-select" id="seedanceModelSelect" title="模型选择"></select>
             <select class="input generate-param-select" id="seedanceRatioSelect" title="比例" aria-label="比例"></select>
             <select class="input generate-param-select" id="seedanceDurationSelect" title="时长" aria-label="时长"></select>
@@ -9900,6 +9977,11 @@
                   <button class="btn" id="rerunResultBtn" type="button" hidden>重跑结果</button>
                   <button class="btn" id="generateScail2PackageBtn" type="button" hidden>Scail2 生成</button>
                 </div>
+                <label class="generation-audio-toggle" id="scail2UploadAudioRow" title="关闭后，上传给 Scail2 的输入视频会去掉声音；生成完成后仍会补回原视频音轨。">
+                  <input id="scail2UploadAudioToggle" type="checkbox" />
+                  <span>上传带声音</span>
+                  <small>Scail2 输入</small>
+                </label>
                 <div class="generation-step-list" id="generationStepList"></div>
               </div>
             </aside>
@@ -10064,6 +10146,19 @@
                 </button>
               </div>
             </div>
+            <div class="field">
+              <div class="label"><span>通道1直连 URL</span><span>NukoAi 公网 API，不走中转</span></div>
+              <input class="input" id="settingsNukoChannel1BaseUrlInput" placeholder="https://www.nukoai.com/api/ext/v1" />
+            </div>
+            <div class="field">
+              <div class="label"><span>通道1 API Key</span><span>可留空，使用后端内置密钥</span></div>
+              <div class="secret-input-wrap">
+                <input class="input" id="settingsNukoChannel1ApiKeyInput" type="text" placeholder="留空使用内置 key" autocomplete="off" />
+                <button class="secret-toggle" type="button" data-secret-toggle="settingsNukoChannel1ApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="settings-page-note">这里的设置会直接影响当前流程，不再用弹窗单独打断页面。</div>
           <div class="settings-page-actions">
@@ -10123,6 +10218,8 @@
     const PLAN_PATH = "E:\\sp\\计划.md";
     const SEEDANCE_A_DRAFT_KEY = "sp_story_seedance_channel_a_draft";
     const SEEDANCE_A_RELAY_CONFIG_KEY = "sp_story_seedance_channel_a_relay";
+    const SEEDANCE_API_CHANNEL_KEY = "sp_story_seedance_api_channel";
+    const NUKO_CHANNEL1_CONFIG_KEY = "sp_story_nuko_channel1_config";
     const PRE_DIRECTOR_CONFIG_KEY = "sp_story_pre_director_config";
     const ASSISTANT_MODEL_KEY = "sp_story_assistant_model";
     const ASSISTANT_WIDTH_KEY = "sp_story_assistant_width";
@@ -10133,7 +10230,7 @@
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
     const STORY_GENERATION_ROUTE_KEY = "sp_story_generation_route";
     const STORY_GENERATION_RUNTIME_KEY_PREFIX = "sp_mode2_generation_runtime:";
-    const GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_v2";
+    const GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v1";
     const STORY_WHITE_MASK_SHELF_KEY_PREFIX = "sp_mode2_white_mask_shelf:";
     const DEFAULT_PRE_DIRECTOR_BASE_URL = "https://ws-b8anhpvi1n7lp628.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
     const DEFAULT_PRE_DIRECTOR_API_KEY = "sk-ws-H.EHEYHRH.MmIP.MEUCIFR5bqIfGINteyGg4h74owHUSlJWFLhI-DPn7xNTk9fwAiEApZm4OqN_Z4Y5w3nj92Y6ayQaS-a7slo3yYHVBNwP8fw";
@@ -10148,12 +10245,28 @@
       "videos_stable",
     ];
     const DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000";
+    const DEFAULT_NUKO_CHANNEL1_BASE_URL = "https://www.nukoai.com/api/ext/v1";
+    const SEEDANCE_API_CHANNELS = [
+      { value: "channel2", label: "通道2", provider: "stable-video-ch2" },
+      { value: "channel1", label: "通道1", provider: "nukoai-channel1" },
+    ];
+    const NUKO_CHANNEL1_MODELS = [
+      "SD 2.0 720P_官转",
+      "SD2.0 480P",
+      "SD2.0 720P",
+      "SD2.0 Fast 480P",
+      "SD2.0 Fast 720P",
+    ];
     const SEEDANCE_A_RATIOS = ["9:16", "16:9"];
+    const NUKO_CHANNEL1_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
     const SEEDANCE_A_DURATIONS = Array.from({ length: 11 }, (_, index) => index + 5);
+    const NUKO_CHANNEL1_DURATIONS = Array.from({ length: 12 }, (_, index) => index + 4);
     const SEEDANCE_A_RESOLUTIONS = ["720x1280", "1280x720", "1024x1024", "1024x1792", "1792x1024"];
     const SEEDANCE_MATERIAL_LIMITS = { images: 4, videos: 3, audios: 3 };
     const STORY_COMPOSE_PLAN_KEY_PREFIX = "sp_mode2_compose_plan:";
+    const GENERATION_SCAIL2_UPLOAD_AUDIO_KEY = "sp_mode2_scail2_upload_audio";
     const COMPOSE_PACK_MIN_SECONDS = 5;
+    const SCAIL2_PACK_MIN_SECONDS = 2;
     const COMPOSE_PACK_TARGET_SECONDS = 10;
     const COMPOSE_PACK_MAX_SECONDS = 15;
     const COMPOSE_PACK_SOFT_MAX_SHOTS = 8;
@@ -10208,16 +10321,28 @@
     ];
     const STORY_GENERATION_ROUTES = [
       {
-        value: "auto_fixed_route",
-        label: "自动路线",
-        button: "自动路线",
-        note: "固定规则：单人干净镜头走 Scail2；多人、粘连、只有别人手脚参与的镜头走 Seedance。",
+        value: "seedance",
+        label: "多人接口",
+        button: "多人",
+        note: "手动选择多人/API 生成。",
+      },
+      {
+        value: "scail2",
+        label: "单人 Scail2",
+        button: "单人",
+        note: "手动选择单人 Scail2 生成。",
       },
     ];
     const STORY_RATIO_OPTIONS = ["9:16", "16:9"];
     const STORY_REBUILD_DEFAULT = STORY_REBUILD_GOALS[0].value;
     let storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
-    let storyGenerationRoute = "auto_fixed_route";
+    let storyGenerationRoute = (() => {
+      try {
+        return normalizeStoryGenerationRoute(localStorage.getItem(STORY_GENERATION_ROUTE_KEY) || "seedance");
+      } catch (_) {
+        return "seedance";
+      }
+    })();
     let storyProjectConfig = {
       rebuild_goal: STORY_REBUILD_DEFAULT,
       style_preset: STORY_STYLE_PRESETS[1].value,
@@ -10242,6 +10367,11 @@
       base_url: DEFAULT_SEEDANCE_A_BASE_URL,
       api_key: "",
     };
+    let seedanceApiChannel = "channel2";
+    let nukoChannel1Config = {
+      base_url: DEFAULT_NUKO_CHANNEL1_BASE_URL,
+      api_key: "",
+    };
     let preDirectorConfig = {
       base_url: DEFAULT_PRE_DIRECTOR_BASE_URL,
       api_key: DEFAULT_PRE_DIRECTOR_API_KEY,
@@ -10262,6 +10392,7 @@
     let roleTrackPollErrorCount = 0;
     let roleTrackLatestLogs = [];
     let currentSeedanceTaskId = null;
+    let currentSeedanceTaskApiChannel = "channel2";
     let currentSeedanceTimelineIndex = -1;
     let seedancePollTimer = null;
     let seedanceSubmitting = false;
@@ -10309,6 +10440,8 @@
     let composeBoardMode = "all";
     let composeHidePackedCards = false;
     let composeSelectedMaskShelfId = "";
+    let whiteMaskShelfProjectRestoreKey = "";
+    let whiteMaskShelfProjectRestorePromise = null;
     let generationWorkbench = {
       selectedPackId: "",
       packageRuntime: {},
@@ -10327,6 +10460,7 @@
     let storyboardPlayAllRunning = false;
     let storyboardPlayAllToken = 0;
     let storyAssets = [];
+    let mode2ProjectRestorePromise = null;
     let fullVideoUnderstanding = null;
     let storyUnderstandingOptions = { use_pre_director: true, force_understand: false };
     let editingAssetId = "";
@@ -10607,7 +10741,7 @@
       return /(多人|两人|雙人|粘连|粘在|串人|遮挡|接触|拥抱|亲吻|搂|抱住|压住|别人.{0,8}(手|脚|腿|胳膊|手臂)|他人.{0,8}(手|脚|腿|胳膊|手臂)|另一.{0,8}(手|脚|腿|胳膊|手臂)|只露.{0,8}(手|脚|腿|胳膊|手臂)|partial.*(hand|foot|leg|arm|body)|another.{0,20}(hand|foot|leg|arm|body)|other.{0,20}(hand|foot|leg|arm|body)|occlusion|contact|embrace|kiss)/i.test(text);
     }
 
-    function generationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
+    function autoGenerationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
       const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
       const fallbackRoleCount = roles.length || Number(seg?.role_count || 0);
       const rawPersonCount = Number(seg?.person_count);
@@ -10623,7 +10757,7 @@
           return {
             backend: "seedance",
             label: "Seedance",
-          action: "点多人接口生成",
+            action: "点多人接口生成",
             roleCount,
             personCount,
             reason: hasRisk
@@ -10668,7 +10802,19 @@
           ? "检测到多人/粘连/别人手脚或遮挡风险。"
           : personCount !== 1
             ? `当前镜头 person_count=${personCount === null ? "未知" : personCount}，不能确认是单人干净镜头。`
-          : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
+            : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
+      };
+    }
+
+    function generationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
+      const backend = storyGenerationRoute === "scail2" ? "scail2" : "seedance";
+      return {
+        backend,
+        label: backend === "scail2" ? "单人 Scail2" : "Seedance",
+        action: backend === "scail2" ? "点 Scail2 生成" : "点多人接口生成",
+        reason: backend === "scail2"
+          ? "当前页面手动选择单人 Scail2。"
+          : "当前页面手动选择多人接口。",
       };
     }
 
@@ -10677,7 +10823,7 @@
     }
 
     function isSeedanceDirectRoute(route = storyGenerationRoute) {
-      return generationRouteForShot().backend === "seedance";
+      return String(route || storyGenerationRoute) !== "scail2";
     }
 
     function assistantSetStatus(lines, tone = "info") {
@@ -10725,10 +10871,9 @@
     function updateGenerationRouteUi() {
       const submitBtn = $("#batchGenerateBtn");
       const transferBtn = $("#openTransferWorkbenchBtn");
-      const decision = generationRouteForShot();
       if (submitBtn) {
-        submitBtn.classList.toggle("primary", decision.backend === "seedance");
-        submitBtn.classList.toggle("warn", decision.backend !== "seedance");
+        submitBtn.classList.add("primary");
+        submitBtn.classList.remove("warn");
         submitBtn.textContent = "多人接口生成";
       }
       if (transferBtn) {
@@ -10738,7 +10883,7 @@
     }
 
     function setStoryGenerationRoute(route) {
-      storyGenerationRoute = "auto_fixed_route";
+      storyGenerationRoute = normalizeStoryGenerationRoute(route);
       localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
       renderAssistantRouteCard();
       updateGenerationRouteUi();
@@ -11028,8 +11173,128 @@
       return relay;
     }
 
+    function normalizeSeedanceApiChannel(value) {
+      const channel = String(value || "").trim();
+      return SEEDANCE_API_CHANNELS.some((item) => item.value === channel) ? channel : "channel2";
+    }
+
+    function seedanceApiChannelMeta(channel = seedanceApiChannel) {
+      const safe = normalizeSeedanceApiChannel(channel);
+      return SEEDANCE_API_CHANNELS.find((item) => item.value === safe) || SEEDANCE_API_CHANNELS[0];
+    }
+
+    function seedanceApiChannelLabel(channel = seedanceApiChannel) {
+      return seedanceApiChannelMeta(channel).label;
+    }
+
+    function loadSeedanceApiChannel() {
+      seedanceApiChannel = normalizeSeedanceApiChannel(localStorage.getItem(SEEDANCE_API_CHANNEL_KEY) || seedanceApiChannel);
+      syncSeedanceApiChannelControl();
+      return seedanceApiChannel;
+    }
+
+    function syncSeedanceApiChannelControl() {
+      fillSelect("seedanceApiChannelSelect", SEEDANCE_API_CHANNELS.map((item) => item.value), seedanceApiChannel, (value) => seedanceApiChannelLabel(value));
+    }
+
+    function setSeedanceApiChannel(value, options = {}) {
+      seedanceApiChannel = normalizeSeedanceApiChannel(value);
+      localStorage.setItem(SEEDANCE_API_CHANNEL_KEY, seedanceApiChannel);
+      syncSeedanceApiChannelControl();
+      if (!options.silent) {
+        setSeedanceSubmitStatus([`> 已切换上级通道: ${seedanceApiChannelLabel(seedanceApiChannel)}`], "warn");
+      }
+      syncSeedanceControls();
+      renderGenerationPackageWorkbench();
+      return seedanceApiChannel;
+    }
+
+    function normalizeNukoChannel1Config(raw) {
+      const next = raw && typeof raw === "object" ? raw : {};
+      return {
+        base_url: String(next.base_url || next.baseUrl || DEFAULT_NUKO_CHANNEL1_BASE_URL).trim() || DEFAULT_NUKO_CHANNEL1_BASE_URL,
+        api_key: String(next.api_key || next.apiKey || "").trim(),
+      };
+    }
+
+    function loadNukoChannel1Config() {
+      try {
+        nukoChannel1Config = normalizeNukoChannel1Config(JSON.parse(localStorage.getItem(NUKO_CHANNEL1_CONFIG_KEY) || "{}"));
+      } catch (_) {
+        nukoChannel1Config = normalizeNukoChannel1Config({});
+      }
+      syncNukoChannel1Controls();
+      return { ...nukoChannel1Config };
+    }
+
+    function syncNukoChannel1Controls() {
+      const baseUrl = $("#settingsNukoChannel1BaseUrlInput");
+      const apiKey = $("#settingsNukoChannel1ApiKeyInput");
+      if (baseUrl) baseUrl.value = nukoChannel1Config.base_url;
+      if (apiKey) apiKey.value = nukoChannel1Config.api_key;
+    }
+
+    function pullNukoChannel1Controls() {
+      nukoChannel1Config = normalizeNukoChannel1Config({
+        base_url: $("#settingsNukoChannel1BaseUrlInput")?.value || nukoChannel1Config.base_url,
+        api_key: $("#settingsNukoChannel1ApiKeyInput")?.value || nukoChannel1Config.api_key,
+      });
+      return { ...nukoChannel1Config };
+    }
+
+    function saveNukoChannel1Config(options = {}) {
+      const config = pullNukoChannel1Controls();
+      localStorage.setItem(NUKO_CHANNEL1_CONFIG_KEY, JSON.stringify(config));
+      if (!options.silent) {
+        setSeedanceSubmitStatus([
+          "> 通道1直连配置已保存",
+          `> base URL: ${config.base_url}`,
+          config.api_key ? "> API Key: 已填写" : "> API Key: 留空，使用后端内置密钥",
+        ], "good");
+      }
+      renderSeedancePayload();
+      return config;
+    }
+
+    function seedanceApiRequestConfig(channel = seedanceApiChannel) {
+      const safe = normalizeSeedanceApiChannel(channel);
+      if (safe === "channel1") {
+        const config = pullNukoChannel1Controls();
+        return {
+          channel1_base_url: config.base_url,
+          channel1_api_key: config.api_key,
+        };
+      }
+      const relay = pullSeedanceRelayControls();
+      return {
+        relay_base_url: relay.base_url,
+        relay_api_key: relay.api_key,
+      };
+    }
+
+    function seedanceSubmitEndpoint(channel = seedanceApiChannel) {
+      return normalizeSeedanceApiChannel(channel) === "channel1" ? "/api/nuko-channel1-submit" : "/api/seedance-a-submit";
+    }
+
+    function seedanceStatusEndpoint(channel = seedanceApiChannel) {
+      return normalizeSeedanceApiChannel(channel) === "channel1" ? "/api/nuko-channel1-status" : "/api/seedance-a-status";
+    }
+
+    function seedanceModelOptions(channel = seedanceApiChannel) {
+      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_MODELS : SEEDANCE_A_MODELS;
+    }
+
+    function seedanceRatioOptions(channel = seedanceApiChannel) {
+      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_RATIOS : SEEDANCE_A_RATIOS;
+    }
+
+    function seedanceDurationOptions(channel = seedanceApiChannel) {
+      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_DURATIONS : SEEDANCE_A_DURATIONS;
+    }
+
     function openGlobalSettings() {
       syncSeedanceRelayControls();
+      syncNukoChannel1Controls();
       switchModule("settings");
     }
 
@@ -11040,8 +11305,10 @@
     function resetGlobalSettings() {
       preDirectorConfig = normalizePreDirectorConfig({});
       seedanceRelayConfig = normalizeSeedanceRelayConfig({});
+      nukoChannel1Config = normalizeNukoChannel1Config({});
       syncPreDirectorControls();
       syncSeedanceRelayControls();
+      syncNukoChannel1Controls();
       renderSeedancePayload();
       assistantSetStatus(["设置已恢复默认。", "确认后点“保存设置”。"]);
     }
@@ -11925,7 +12192,9 @@
     }
 
     function applyLoadedProject(result, autoDirector = {}, options = {}) {
-      const segments = Array.isArray(result.segments) ? result.segments : [];
+      const segments = Array.isArray(result.segments)
+        ? result.segments
+        : (Array.isArray(result.timeline_segments) ? result.timeline_segments : []);
       const storyboard = result.storyboard || {};
       const story = autoDirector.story || storyboard || {};
       const incomingStrategy = storyboard.reference_strategy || result.reference_strategy || "";
@@ -11961,6 +12230,7 @@
       renderStoryAssets();
       renderTimeline(segments);
       renderSegmentPreview(segments);
+      rerenderActiveProjectConsumers();
       return segments;
     }
 
@@ -12191,7 +12461,12 @@
 
     function assetHasTargetReference(asset) {
       if (isMixedSceneAsset(asset) || hasRefinementProvenanceIssue(asset)) return false;
-      return Boolean(String(asset?.target_image || asset?.target_asset?.active_image || "").trim());
+      return Boolean(assetTargetReferenceImage(asset));
+    }
+
+    function assetTargetReferenceImage(asset) {
+      if (isMixedSceneAsset(asset) || hasRefinementProvenanceIssue(asset)) return "";
+      return String(asset?.target_image || asset?.target_asset?.active_image || "").trim();
     }
 
     function assetDisplayStatus(asset) {
@@ -12423,9 +12698,9 @@
     }
 
     function assetDisplayInfo(asset) {
-      const image = asset?.target_image || asset?.refined_image || asset?.representative_image || asset?.source_image || asset?.thumbnail || "";
+      const image = assetTargetReferenceImage(asset);
       const status = asset?.source_quality_status || asset?.visual_status || "ready";
-      const isClean = Boolean(asset?.target_image || asset?.refined_image || asset?.representative_image);
+      const isClean = Boolean(image);
       const label = asset?.kind === "role"
         ? "角色参考"
         : asset?.kind === "scene"
@@ -12566,14 +12841,13 @@
 
     function assetMediaHtml(asset, side) {
       const info = assetDisplayInfo(asset);
-      const image = side === "target"
-        ? (asset?.target_image || asset?.refined_image || info.image)
-        : info.image;
+      const targetImage = assetTargetReferenceImage(asset);
+      const sourceImage = targetImage
+        ? String(asset?.source_image || asset?.representative_image || asset?.thumbnail || "").trim()
+        : "";
+      const image = side === "target" ? targetImage : sourceImage;
       if (image) return `<img src="${escapeHtml(mediaSrc(image, asset?.source_time || 0.1))}" alt="asset image">`;
-      if (asset?.source_video_path) {
-        return `<video muted preload="metadata" src="${escapeHtml(mediaSrc(asset.source_video_path, asset.source_time || 0.1))}"></video>`;
-      }
-      return `<div class="asset-empty-side">\u6682\u65e0\u7d20\u6750</div>`;
+      return `<div class="asset-empty-side">${escapeHtml(side === "target" ? "点击上传参考图" : "待上传参考图")}</div>`;
     }
 
     function assetTrackPreviewHtml(asset) {
@@ -13941,7 +14215,20 @@
         try { renderStoryAssets(); } catch (_) {}
       }
       if (target === "compose") {
-        try { ensureComposePlan(); renderComposePage(); } catch (_) {}
+        try {
+          if (!timelineSegments.length && ($("#projectDirInput")?.value.trim() || "")) {
+            renderComposePage();
+            ensureMode2ProjectLoaded({ silent: true }).then((loaded) => {
+              if (loaded) {
+                ensureComposePlan();
+                renderComposePage();
+              }
+            }).catch(() => {});
+          } else {
+            ensureComposePlan();
+            renderComposePage();
+          }
+        } catch (_) {}
       }
       if (target === "generate") {
         try { renderGenerationPackageWorkbench(); } catch (_) {}
@@ -16139,20 +16426,44 @@
       }
     }
 
+    function rerenderActiveProjectConsumers() {
+      const active = document.querySelector(".module-view.active")?.dataset.moduleView || "";
+      try {
+        if (active === "compose") {
+          ensureComposePlan();
+          renderComposePage();
+        } else if (active === "generate") {
+          renderGenerationPackageWorkbench();
+        }
+      } catch (_) {}
+    }
+
+    async function ensureMode2ProjectLoaded(options = {}) {
+      if (timelineSegments.length) return true;
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!projectDir) return false;
+      if (!mode2ProjectRestorePromise) {
+        mode2ProjectRestorePromise = refreshStoryAssetsFromBackend({
+          silent: options.silent !== false,
+          preserveStrategy: true,
+          expectedVideoPath: $("#videoPathInput")?.value.trim() || "",
+          requireVideoMatch: false,
+        }).finally(() => {
+          mode2ProjectRestorePromise = null;
+        });
+      }
+      const data = await mode2ProjectRestorePromise;
+      return Boolean(timelineSegments.length || (data && Array.isArray(data.segments) && data.segments.length));
+    }
+
     async function autoRestoreMode2ProjectCache() {
       const projectDir = $("#projectDirInput")?.value.trim() || "";
-      const videoPath = $("#videoPathInput")?.value.trim() || "";
-      if (!projectDir || !videoPath || storyAssets.length) return;
-      const data = await refreshStoryAssetsFromBackend({
-        silent: true,
-        preserveStrategy: true,
-        expectedVideoPath: videoPath,
-        requireVideoMatch: true,
-      });
-      if (!data || !Array.isArray(data.assets) || !data.assets.length) return;
+      if (!projectDir || timelineSegments.length) return;
+      const loaded = await ensureMode2ProjectLoaded({ silent: true });
+      if (!loaded || !timelineSegments.length) return;
       setStoryStatus([
         "> 已自动恢复上次分镜项目缓存",
-        `> 资产: ${data.assets.length}`,
+        `> 资产: ${storyAssets.length}`,
         "> 只读取本地 storyboard_assets.json，没有重新分析，也没有调用模型",
       ], "good");
     }
@@ -17530,6 +17841,7 @@
       };
       window.__storyboardFileApiFetchBridgeInstalled = true;
     }
+    installFileApiFetchBridge();
 
     function fileName(path) {
       return String(path || "").split(/[\\/]/).pop();
@@ -17639,7 +17951,7 @@
       return "镜头";
     }
 
-    function composeShotType(seg = {}, decision = generationRouteForShot(seg)) {
+    function composeShotType(seg = {}, decision = autoGenerationRouteForShot(seg)) {
       const personCount = Number(decision.personCount ?? seg.person_count);
       if (decision.backend === "scail2") return "单人";
       if (shotHasMultiOrContactRisk(seg) || Number(decision.roleCount || 0) > 1 || personCount > 1) return "多人";
@@ -17648,7 +17960,7 @@
     }
 
     function composeShotRoute(seg = {}) {
-      const decision = generationRouteForShot(seg);
+      const decision = autoGenerationRouteForShot(seg);
       return {
         ...decision,
         type: composeShotType(seg, decision),
@@ -17713,12 +18025,13 @@
             seenInPack.add(id);
             return true;
           });
+        const rawBackend = String(pack?.backend || pack?.route || "").trim().toLowerCase();
         return {
           id: String(pack?.id || `P${String(index + 1).padStart(3, "0")}`).trim(),
           key: String(pack?.key || "").trim(),
           label: String(pack?.label || "未分配").trim(),
           route: String(pack?.route || "Seedance").trim(),
-          backend: String(pack?.backend || "seedance").trim(),
+          backend: rawBackend.includes("scail2") ? "scail2" : "seedance",
           type: String(pack?.type || "待定").trim(),
           shotIds: composeSortedShotIds(ids),
         };
@@ -17764,13 +18077,19 @@
         const rawText = localStorage.getItem(composePlanStorageKey()) || "";
         if (!rawText) return false;
         const draft = normalizeComposePlanDraft(JSON.parse(rawText));
-        if (!draft.packs.length || draft.stale.length) return false;
+        const usablePacks = draft.packs.filter((pack) => Array.isArray(pack.shotIds) && pack.shotIds.length);
+        if (!usablePacks.length) return false;
         composePlan = {
-          packs: draft.packs,
-          selectedPackId: draft.packs.some((pack) => pack.id === draft.selectedPackId)
+          packs: usablePacks,
+          selectedPackId: usablePacks.some((pack) => pack.id === draft.selectedPackId)
             ? draft.selectedPackId
-            : draft.packs[0].id,
+            : usablePacks[0].id,
         };
+        if (draft.stale.length) {
+          composeConfirmedPlan = null;
+          saveComposePlanDraft();
+          addLogs([`> 已保留可恢复卡包，移除失效镜头: ${draft.stale.length}`]);
+        }
         return true;
       } catch (_) {
         return false;
@@ -17933,7 +18252,7 @@
       for (let index = 0; index < next.length; index += 1) {
         const pack = next[index];
         const duration = composePackDurationForPacking(pack);
-        if (duration >= COMPOSE_PACK_MIN_SECONDS) continue;
+        if (duration >= generationPackMinSeconds(pack)) continue;
         const previous = next[index - 1];
         const following = next[index + 1];
         const previousDuration = previous ? composePackDurationForPacking(previous) : 0;
@@ -18002,6 +18321,7 @@
     }
 
     function composeCreateSmartPlan() {
+      if (!timelineSegments.length) return false;
       const packs = [];
       let current = null;
       timelineSegments.forEach((seg, index) => {
@@ -18010,16 +18330,17 @@
           current = composeCreatePackFromMeta(meta, packs.length + 1);
         }
         const currentDuration = composePackDurationForPacking(current);
+        const currentMinSeconds = generationPackMinSeconds(current);
         const nextDuration = currentDuration + meta.duration;
         const samePack = composeCanAutoPackTogether(current, meta);
         const sameRoute = composeCanAutoPackRouteTogether(current, meta);
         const shouldClose = current.shotIds.length && (
           nextDuration > COMPOSE_PACK_MAX_SECONDS
           || !sameRoute
-          || (!samePack && currentDuration >= COMPOSE_PACK_MIN_SECONDS)
+          || (!samePack && currentDuration >= currentMinSeconds)
           || (
             samePack
-            && currentDuration >= COMPOSE_PACK_MIN_SECONDS
+            && currentDuration >= currentMinSeconds
             && (
               nextDuration > COMPOSE_PACK_TARGET_SECONDS
               || current.shotIds.length >= COMPOSE_PACK_SOFT_MAX_SHOTS
@@ -18041,15 +18362,20 @@
       composeConfirmedPlan = null;
       saveComposePlanDraft();
       renderComposePage();
+      return true;
     }
 
     function ensureComposePlan() {
+      if (!timelineSegments.length) return false;
       if (!composePlan.packs?.length) {
         loadComposePlanDraft();
       }
+      const hasUsablePack = (composePlan.packs || []).some((pack) => Array.isArray(pack.shotIds) && pack.shotIds.length);
+      if ((composePlan.packs || []).length && !hasUsablePack && composeUnpackedShotIds().length) {
+        return composeCreateSmartPlan();
+      }
       if (!composePlan.packs?.length) {
-        composeCreateSmartPlan();
-        return;
+        return composeCreateSmartPlan();
       }
       const validShotIds = new Set(timelineSegments.map((seg, index) => composeShotKey(seg, index)));
       let changed = false;
@@ -18086,6 +18412,7 @@
         composeConfirmedPlan = null;
         saveComposePlanDraft();
       }
+      return true;
     }
 
     function composeShotImagePath(seg = {}) {
@@ -18222,6 +18549,7 @@
         : (composePlan.packs || []);
       const runnablePacks = activePacks.filter((pack) => Array.isArray(pack?.shotIds) && pack.shotIds.length);
       if (runnablePacks.length) ensureGenerationRuntimeForPacks(runnablePacks);
+      restoreWhiteMaskShelfFromProject();
       return saveWhiteMaskShelf([
         ...loadWhiteMaskShelf(),
         ...runnablePacks.flatMap((pack) => composeMaskRunsForPack(pack)),
@@ -18318,6 +18646,7 @@
       ` : (options.deletable ? `
         <button class="compose-mask-delete-btn" type="button"
           data-delete-white-mask-clip
+          data-project-dir="${escapeHtml(options.projectDir || "")}"
           data-package-id="${escapeHtml(options.packageId || "")}"
           data-mask-id="${escapeHtml(options.maskId || "")}"
           data-manifest-path="${escapeHtml(options.manifestPath || "")}"
@@ -18371,9 +18700,10 @@
       const label = packId || `白膜包${(entry.packageIndex || 0) + 1}`;
       const selected = maskId && maskId === composeSelectedMaskShelfId;
       const manifestPath = String(item.manifest_path || "").trim();
+      const projectDir = String(item.project_dir || "").trim();
       return `
         <article class="compose-shot-card compose-mask-card${selected ? " selected" : ""}" data-compose-mask-card data-mask-id="${escapeHtml(maskId)}" data-pack="${escapeHtml(packId)}" title="${escapeHtml(label + " " + shotId + " - " + path)}">
-          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { action: "grab", deletable: true, packageId: packId, maskId, manifestPath, shotId })}
+          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { action: "grab", deletable: true, projectDir, packageId: packId, maskId, manifestPath, shotId })}
           <div class="compose-shot-id"><b>${escapeHtml(shotId)}</b><span>${escapeHtml(label)}</span></div>
         </article>
       `;
@@ -18645,7 +18975,7 @@
     }
 
     function openWhiteMaskClipDeleteDialog(detail = {}) {
-      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const projectDir = String(detail.projectDir || "").trim() || $("#projectDirInput")?.value.trim() || "";
       const packageId = String(detail.packageId || "").trim();
       const maskId = String(detail.maskId || "").trim();
       const manifestPath = String(detail.manifestPath || "").trim();
@@ -18785,6 +19115,7 @@
           event.stopPropagation();
           const button = event.currentTarget;
           openWhiteMaskClipDeleteDialog({
+            projectDir: button.dataset.projectDir,
             packageId: button.dataset.packageId,
             maskId: button.dataset.maskId,
             manifestPath: button.dataset.manifestPath,
@@ -19056,7 +19387,7 @@
       if (title) title.textContent = "卡包架";
       const packs = composePlan.packs || [];
       const summary = $("#composePackSummary");
-      if (summary) summary.textContent = `${packs.length} 个卡包 · 5-15 秒`;
+      if (summary) summary.textContent = `${packs.length} 个卡包 · 单人2-15秒 · 多人5-15秒`;
       list.classList.toggle("dense", packs.length > 6 && packs.length <= 12);
       list.classList.toggle("extra-dense", packs.length > 12);
       if (!packs.length) {
@@ -19066,7 +19397,8 @@
       }
       list.innerHTML = packs.map((pack) => {
         const duration = composePackDuration(pack);
-        const warn = duration > COMPOSE_PACK_MAX_SECONDS || (duration > 0 && duration < COMPOSE_PACK_MIN_SECONDS);
+        const minSeconds = generationPackMinSeconds(pack);
+        const warn = duration > COMPOSE_PACK_MAX_SECONDS || (duration > 0 && duration < minSeconds);
         const width = Math.min(100, (duration / COMPOSE_PACK_MAX_SECONDS) * 100);
         const shotListText = composePackShotListText(pack);
         const identityId = generationPackIdentityId(pack);
@@ -19204,14 +19536,18 @@
         return;
       }
       const duration = composePackDuration(pack);
+      const minSeconds = generationPackMinSeconds(pack);
+      const rangeText = generationPackBackend(pack) === "scail2"
+        ? `${SCAIL2_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒`
+        : `${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒`;
       if (title) title.textContent = composePackTitle(pack);
       if (meta) {
         if (duration > COMPOSE_PACK_MAX_SECONDS) {
-          meta.textContent = `当前 ${duration.toFixed(1)} 秒，超过 15 秒，不能确认。`;
-        } else if (duration > 0 && duration < COMPOSE_PACK_MIN_SECONDS) {
-          meta.textContent = `当前 ${duration.toFixed(1)} 秒，少于 5 秒，请并入相邻包。`;
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，超过 ${COMPOSE_PACK_MAX_SECONDS} 秒，不能确认。`;
+        } else if (duration > 0 && duration < minSeconds) {
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，少于 ${minSeconds} 秒，请并入相邻包。`;
         } else {
-          meta.textContent = `当前 ${duration.toFixed(1)} 秒，在 5-15 秒范围内。`;
+          meta.textContent = `当前 ${duration.toFixed(1)} 秒，在 ${rangeText} 范围内。`;
         }
       }
       if (hand) {
@@ -19318,8 +19654,10 @@
     }
 
     function openComposePage({ rebuild = false } = {}) {
-      if (rebuild) composeCreateSmartPlan();
-      else ensureComposePlan();
+      if (timelineSegments.length) {
+        if (rebuild) composeCreateSmartPlan();
+        else ensureComposePlan();
+      }
       switchModuleLocal("compose");
       renderComposePage();
     }
@@ -19331,7 +19669,6 @@
         assistantSetStatus(["还没有生成包。请先点“智能合包”。"], "warn");
         return;
       }
-      const totalDuration = timelineSegments.reduce((sum, seg) => sum + composeShotDuration(seg), 0);
       const tooLongPacks = packs
         .map((pack) => ({ pack, duration: composePackDuration(pack) }))
         .filter((item) => item.duration > COMPOSE_PACK_MAX_SECONDS);
@@ -19345,12 +19682,12 @@
         return;
       }
       const tooShortPacks = packs
-        .map((pack) => ({ pack, duration: composePackDuration(pack) }))
-        .filter((item) => item.duration > 0 && item.duration < COMPOSE_PACK_MIN_SECONDS);
-      if (tooShortPacks.length && totalDuration >= COMPOSE_PACK_MIN_SECONDS) {
+        .map((pack) => ({ pack, duration: composePackDuration(pack), minSeconds: generationPackMinSeconds(pack) }))
+        .filter((item) => item.duration > 0 && item.duration < item.minSeconds);
+      if (tooShortPacks.length) {
         assistantSetStatus([
-          "有生成包少于 5 秒，请先并入相邻包再确认。",
-          ...tooShortPacks.map(({ pack, duration }) => `> ${pack.id}: ${duration.toFixed(1)} 秒`),
+          "有生成包少于当前路线允许时长，请先并入相邻包再确认。",
+          ...tooShortPacks.map(({ pack, duration, minSeconds }) => `> ${pack.id}: ${duration.toFixed(1)} 秒，最低 ${minSeconds} 秒`),
         ], "warn");
         composePlan.selectedPackId = tooShortPacks[0].pack.id;
         renderComposePage();
@@ -19368,7 +19705,7 @@
       };
       resetGenerationRuntimeForConfirmedPlan(composeConfirmedPlan.packs);
       generationWorkbench.referencePlanKey = "";
-      resetGenerationManualReferences({ render: false });
+      resetGenerationManualReferences({ render: false, persist: false });
       switchModuleLocal("generate");
       const lines = [
         "> 生成计划已确认",
@@ -19460,6 +19797,15 @@
         "packageSourcePath",
         "packageSegments",
         "packageDuration",
+        "outputSourcePath",
+        "outputPackageIdentityId",
+        "maskSourcePath",
+        "maskPackageIdentityId",
+        "resultSourcePath",
+        "resultPackageIdentityId",
+        "apiChannel",
+        "referenceImages",
+        "referenceCount",
         "sourcePreviewFailed",
         "whiteMaskPath",
         "maskPath",
@@ -19507,6 +19853,7 @@
         String(runtime.packageSourcePath || runtime.sourcePath || "").trim()
         || String(runtime.whiteMaskPath || runtime.maskPath || "").trim()
         || String(runtime.resultPath || "").trim()
+        || (Array.isArray(runtime.referenceImages) && runtime.referenceImages.length)
         || String(runtime.maskTaskId || runtime.maskJobId || runtime.resultTaskId || "").trim()
         || (Array.isArray(runtime.packageSegments) && runtime.packageSegments.length)
         || (Array.isArray(runtime.maskSegments) && runtime.maskSegments.length)
@@ -19515,6 +19862,20 @@
         || (Array.isArray(runtime.resultRuns) && runtime.resultRuns.length)
         || !["", "idle"].includes(String(runtime.status || "idle"))
       );
+    }
+
+    function generationRuntimeCanRestoreForPack(runtime = {}, pack = {}, strictSignature = generationPackSignature(pack)) {
+      if (!runtime || typeof runtime !== "object") return false;
+      if (String(runtime.planSignature || "") === String(strictSignature || "")) return true;
+      if (!generationRuntimeHasStoredValue(runtime)) return false;
+      const outputPath = String(runtime.resultPath || runtime.whiteMaskPath || runtime.maskPath || "").trim();
+      if (outputPath) return true;
+      const packageSegments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
+      const shotCount = generationPackShots(pack).length;
+      if (packageSegments.length && shotCount && packageSegments.length === shotCount) return true;
+      const runtimeDuration = Number(runtime.packageDuration || 0);
+      const packDuration = Number(composePackDuration(pack) || pack.duration || 0);
+      return runtimeDuration > 0 && packDuration > 0 && Math.abs(runtimeDuration - packDuration) < 0.25;
     }
 
     function saveGenerationRuntimeDraft(options = {}) {
@@ -19529,6 +19890,8 @@
         const runtime = normalizeGenerationRuntimeForStorage(generationWorkbench.packageRuntime[id] || {});
         runtime.planSignature = generationPackSignature(pack);
         runtime.packageIdentityId = generationPackIdentityId(pack);
+        if (String(runtime.whiteMaskPath || runtime.maskPath || "").trim()) runtime.maskPackageIdentityId = runtime.packageIdentityId;
+        if (String(runtime.resultPath || "").trim()) runtime.resultPackageIdentityId = runtime.packageIdentityId;
         if (generationRuntimeHasStoredValue(runtime)) packageRuntime[id] = runtime;
       });
         localStorage.setItem(generationRuntimeStorageKey(), JSON.stringify({
@@ -19552,14 +19915,13 @@
         const rawText = localStorage.getItem(generationRuntimeStorageKey()) || "";
         if (!rawText) return false;
         const saved = JSON.parse(rawText);
-        if (String(saved?.planKey || "") !== planKey) return false;
         const savedRuntime = saved?.packageRuntime && typeof saved.packageRuntime === "object" ? saved.packageRuntime : {};
         let restored = 0;
         packs.forEach((pack) => {
           const id = String(pack.id || "").trim();
           const signature = generationPackSignature(pack);
           const runtime = savedRuntime[id];
-          if (!id || !runtime || String(runtime.planSignature || "") !== signature) return;
+          if (!id || !runtime || !generationRuntimeCanRestoreForPack(runtime, pack, signature)) return;
           const current = generationWorkbench.packageRuntime[id] || {};
           const useSavedLast = Number(runtime.updatedAt || 0) >= Number(current.updatedAt || 0);
           generationWorkbench.packageRuntime[id] = {
@@ -19597,7 +19959,7 @@
         if (!id) return;
         const signature = generationPackSignature(pack);
         const current = generationWorkbench.packageRuntime[id] || {};
-        const keepCurrent = current.planSignature === signature && String(current.status || "") !== "failed";
+        const keepCurrent = generationRuntimeCanRestoreForPack(current, pack, signature) && String(current.status || "") !== "failed";
         const packageIdentityId = generationPackIdentityId(pack);
         nextRuntime[id] = keepCurrent
           ? { ...current, planSignature: signature, packageIdentityId }
@@ -19657,10 +20019,13 @@
     }
 
     function generationPackBackend(pack = {}) {
-      const backend = String(pack.backend || "").trim();
-      if (backend) return backend;
-      const first = generationPackShots(pack)[0];
-      return composeShotRoute(first?.seg || {}).backend || "seedance";
+      const backend = String(pack.backend || pack.route || "").trim().toLowerCase();
+      if (backend) return backend.includes("scail2") ? "scail2" : "seedance";
+      return storyGenerationRoute === "scail2" ? "scail2" : "seedance";
+    }
+
+    function generationPackMinSeconds(pack = {}) {
+      return generationPackBackend(pack) === "scail2" ? SCAIL2_PACK_MIN_SECONDS : COMPOSE_PACK_MIN_SECONDS;
     }
 
     function generationBackendLabel(pack = {}) {
@@ -19673,6 +20038,8 @@
       const pack = (composePlan.packs || []).find((item) => String(item.id || "") === id);
       if (!pack) return;
       const nextBackend = String(backend || "").trim() === "scail2" ? "scail2" : "seedance";
+      storyGenerationRoute = nextBackend;
+      localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
       if (String(pack.backend || "") === nextBackend) return;
       pack.backend = nextBackend;
       pack.route = nextBackend === "scail2" ? "Scail2" : "Seedance";
@@ -19699,11 +20066,24 @@
       assistantSetStatus(["> 已手动切换生成路线", `> ${id}: ${generationBackendLabel(nextPack)}`], "good");
     }
 
+    function generationScail2UploadAudioEnabled() {
+      const input = $("#scail2UploadAudioToggle");
+      if (input) return Boolean(input.checked);
+      return localStorage.getItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY) === "1";
+    }
+
+    function setGenerationScail2UploadAudioEnabled(value) {
+      const enabled = Boolean(value);
+      const input = $("#scail2UploadAudioToggle");
+      if (input) input.checked = enabled;
+      try { localStorage.setItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY, enabled ? "1" : "0"); } catch (_) {}
+    }
+
     function generationPackSourceInfo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const shots = generationPackShots(pack);
       const runtimePath = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
-      if (runtimePath && generationRuntimeMatchesPack(runtime, pack)) {
+      if (runtimePath && generationRuntimeCanRestoreForPack(runtime, pack)) {
         return { path: runtimePath, time: 0.1, shotId: shots.length > 1 ? `整包 ${shots.length} 段` : "" };
       }
       if (shots.length > 1) {
@@ -19731,14 +20111,17 @@
 
     function generationPackMaskVideo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
-      return String(runtime.whiteMaskPath || runtime.maskPath || "").trim();
+      const path = String(runtime.whiteMaskPath || runtime.maskPath || "").trim();
+      return path && generationRuntimeOutputMatchesPack(runtime, pack, "mask") ? path : "";
     }
 
     function generationPackResultVideo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const runtimePath = String(runtime.resultPath || "").trim();
-      if (runtimePath) return runtimePath;
-      const item = generationPackShots(pack).find(({ seg }) => String(seg?.generated_path || "").trim());
+      if (runtimePath && generationRuntimeOutputMatchesPack(runtime, pack, "result")) return runtimePath;
+      const shots = generationPackShots(pack);
+      if (shots.length !== 1) return "";
+      const item = shots.find(({ seg }) => String(seg?.generated_path || "").trim());
       return String(item?.seg?.generated_path || "").trim();
     }
 
@@ -19768,8 +20151,18 @@
         .slice(0, SEEDANCE_MATERIAL_LIMITS.images);
     }
 
-    function generationManualReferenceImages() {
+    function generationPackReferenceImages(pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
+      const id = String(pack?.id || "").trim();
+      if (id) {
+        const runtime = generationRuntimeForPack(id);
+        const savedRefs = compactMaterials(runtime.referenceImages || []).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
+        if (savedRefs.length || runtime.referenceImages !== undefined) return savedRefs;
+      }
       return compactMaterials(seedanceDraft.images).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
+    }
+
+    function generationManualReferenceImages(pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
+      return generationPackReferenceImages(pack);
     }
 
     function generationReferenceAssetsForPicker() {
@@ -19778,7 +20171,7 @@
       storyAssets
         .filter((asset) => asset && asset.kind === "role" && !assetApprovalRestricted(asset) && !assetHiddenFromMainBoard(asset))
         .forEach((asset) => {
-          const value = roleAssetPrimaryReference(asset);
+          const value = assetTargetReferenceImage(asset);
           const key = value.toLowerCase();
           if (!value || seen.has(key)) return;
           seen.add(key);
@@ -19813,7 +20206,7 @@
       return `替换参考视频1中第 ${index + 1} 个主要人物。`;
     }
 
-    function generationPackReferenceBindingLines(pack = {}, refImages = generationManualReferenceImages()) {
+    function generationPackReferenceBindingLines(pack = {}, refImages = generationManualReferenceImages(pack)) {
       const refs = compactMaterials(refImages).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
       if (!refs.length) return [];
       return refs.map((path, index) => {
@@ -19823,7 +20216,15 @@
     }
 
     function setGenerationReferenceImages(refImages = [], options = {}) {
-      seedanceDraft.images = normalizeMaterialList(compactMaterials(refImages).slice(0, SEEDANCE_MATERIAL_LIMITS.images), 1);
+      const refs = normalizeMaterialList(compactMaterials(refImages).slice(0, SEEDANCE_MATERIAL_LIMITS.images), 1);
+      seedanceDraft.images = refs;
+      const pack = generationPackById(options.packId || generationWorkbench.selectedPackId);
+      if (options.persist !== false && pack?.id) {
+        patchGenerationPackRuntime(pack.id, {
+          referenceImages: refs,
+          referenceCount: refs.length,
+        }, { render: false });
+      }
       renderSeedanceMaterialSlots("images");
       renderSeedancePayload();
       try { localStorage.setItem(SEEDANCE_A_DRAFT_KEY, JSON.stringify(seedanceDraft)); } catch (_) {}
@@ -19831,17 +20232,13 @@
     }
 
     function resetGenerationManualReferences(options = {}) {
-      seedanceDraft.images = normalizeMaterialList([], 1);
-      renderSeedanceMaterialSlots("images");
-      renderSeedancePayload();
-      try { localStorage.setItem(SEEDANCE_A_DRAFT_KEY, JSON.stringify(seedanceDraft)); } catch (_) {}
-      if (options.render !== false) renderGenerationPackageWorkbench();
+      setGenerationReferenceImages([], options);
     }
 
-    function addGenerationReferenceImage(path) {
+    function addGenerationReferenceImage(path, pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
       const value = String(path || "").trim();
       if (!value) return;
-      const refs = generationManualReferenceImages();
+      const refs = generationManualReferenceImages(pack);
       const key = value.toLowerCase();
       if (refs.some((item) => String(item || "").trim().toLowerCase() === key)) {
         removeGenerationReferenceImage(value);
@@ -19851,7 +20248,7 @@
         setSeedanceSubmitStatus([`x 参考图最多 ${SEEDANCE_MATERIAL_LIMITS.images} 张`, "> 请先移除一张已选参考图"], "warn");
         return;
       }
-      setGenerationReferenceImages([...refs, value]);
+      setGenerationReferenceImages([...refs, value], { packId: pack?.id });
       setSeedanceSubmitStatus(["> 已选择参考图", `> ${generationReferenceLabelForPath(value, refs.length)}: ${fileName(value)}`], "good");
     }
 
@@ -19869,7 +20266,8 @@
     }
 
     function ensureGenerationPackageManualReferences(pack = {}, actionLabel = "生成") {
-      const refs = generationManualReferenceImages();
+      const refs = generationManualReferenceImages(pack);
+      seedanceDraft.images = normalizeMaterialList(refs, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
       if (refs.length) return refs;
       const lines = [
         "x 缺参考图",
@@ -19987,7 +20385,7 @@
     }
 
     function generationPackPrompt(pack = {}, options = {}) {
-      const selectedRefs = generationManualReferenceImages();
+      const selectedRefs = generationManualReferenceImages(pack);
       const referenceBlock = selectedRefs.length
         ? ["人物参考图绑定：", ...generationPackReferenceBindingLines(pack, selectedRefs)].join("\n")
         : "";
@@ -20018,7 +20416,14 @@
     }
 
     function generationPackShotPayload(pack = {}) {
-      return generationPackShots(pack)
+      const shots = generationPackShots(pack)
+        .map(({ seg, id }) => ({
+          shot_id: id,
+          video_path: shotVideoPath(seg),
+          duration: composeShotDuration(seg),
+        }))
+        .filter((item) => item.video_path && Number(item.duration || 0) >= STORYBOARD_MIN_CUT_SECONDS);
+      return shots.length ? shots : generationPackShots(pack)
         .map(({ seg, id }) => ({
           shot_id: id,
           video_path: shotVideoPath(seg),
@@ -20190,7 +20595,7 @@
       }
     }
 
-    async function splitGenerationPackageOutput(packageId, outputPath, outputRole = "result") {
+    async function splitGenerationPackageOutput(packageId, outputPath, outputRole = "result", sourcePath = "") {
       const pack = generationPackById(packageId);
       if (!pack || !outputPath) return null;
       const runtime = generationRuntimeForPack(pack.id);
@@ -20206,6 +20611,8 @@
           package_id: pack.id,
           output_path: outputPath,
           output_role: outputRole,
+          source_video_path: String(sourcePath || "").trim(),
+          package_identity_id: generationPackIdentityId(pack),
           shots,
         }),
       });
@@ -20257,8 +20664,11 @@
       const sourcePath = String(item?.source_path || "").trim();
       if (!clips.length && !sourcePath) return null;
       const packageId = String(item?.package_id || "").trim();
+      const currentProjectDir = $("#projectDirInput")?.value.trim() || "";
       return {
         id: String(item?.id || item?.manifest_path || sourcePath || Date.now()).trim(),
+        project_dir: String(item?.project_dir || item?.projectDir || currentProjectDir).trim(),
+        project_id: String(item?.project_id || item?.projectId || "").trim(),
         package_id: packageId,
         package_label: String(item?.package_label || packageId || "白膜包").trim(),
         shot_ids: Array.isArray(item?.shot_ids) ? item.shot_ids.map((id) => String(id || "").trim()).filter(Boolean) : [],
@@ -20323,6 +20733,101 @@
       if (!item) return;
       saveWhiteMaskShelf([item, ...loadWhiteMaskShelf()]);
       if (composeBoardMode === "mask") renderComposePage();
+    }
+
+    function whiteMaskShelfSnapshotKey(items = []) {
+      return (Array.isArray(items) ? items : [])
+        .map((item) => composeMaskShelfKey(item))
+        .filter(Boolean)
+        .sort()
+        .join("|");
+    }
+
+    function applyWhiteMaskShelfItemsToRuntime(items = []) {
+      const packs = generationPacks();
+      if (!packs.length) return false;
+      let changed = false;
+      packs.forEach((pack) => {
+        const packId = String(pack?.id || "").trim();
+        if (!packId) return;
+        const packShotKey = composeSortedShotIds(pack.shotIds).join("|");
+        const currentProjectKey = normalizeLocalPathKey($("#projectDirInput")?.value.trim() || "");
+        const item = (Array.isArray(items) ? items : [])
+          .filter((entry) => {
+            const sourcePath = String(entry?.source_path || "").trim();
+            const entryProjectKey = normalizeLocalPathKey(entry?.project_dir || "");
+            return (
+              String(entry?.package_id || "") === packId
+              && sourcePath
+              && !sourcePath.startsWith("manual:")
+              && !composeIsManualWhiteMaskItem(entry)
+              && (!entryProjectKey || !currentProjectKey || entryProjectKey === currentProjectKey)
+            );
+          })
+          .filter((entry) => {
+            const entryShotKey = composeSortedShotIds(entry?.shot_ids || []).join("|");
+            return !entryShotKey || !packShotKey || entryShotKey === packShotKey;
+          })
+          .sort((a, b) => Number(b?.created_at || 0) - Number(a?.created_at || 0))[0];
+        if (!item) return;
+        const runtime = generationRuntimeForPack(packId);
+        if (String(runtime.whiteMaskPath || runtime.maskPath || "").trim()) return;
+        const maskRun = {
+          id: String(item.id || item.manifest_path || item.source_path || Date.now()).trim(),
+          role: "mask",
+          source_path: String(item.source_path || "").trim(),
+          manifest_path: String(item.manifest_path || "").trim(),
+          clips: Array.isArray(item.clips) ? item.clips : [],
+          shot_count: Number(item.shot_count || item.clips?.length || 0),
+          created_at: Number(item.created_at || Date.now() / 1000),
+        };
+        generationWorkbench.packageRuntime[packId] = {
+          ...runtime,
+          status: "mask_done",
+          whiteMaskPath: maskRun.source_path,
+          maskSegments: maskRun.clips,
+          maskSplitManifest: maskRun.manifest_path,
+          maskRuns: appendGenerationRun(runtime.maskRuns, maskRun),
+          lastMessage: "已从本地白膜包恢复白膜视频",
+          lastTone: "good",
+          errorMessage: "",
+          updatedAt: Date.now(),
+        };
+        changed = true;
+      });
+      if (changed) saveGenerationRuntimeDraft();
+      return changed;
+    }
+
+    function restoreWhiteMaskShelfFromProject(options = {}) {
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      const requestKey = whiteMaskShelfStorageKey();
+      if (!options.force && whiteMaskShelfProjectRestoreKey === requestKey) return whiteMaskShelfProjectRestorePromise;
+      whiteMaskShelfProjectRestoreKey = requestKey;
+      whiteMaskShelfProjectRestorePromise = fetch("/api/generation-package/list-white-masks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_dir: projectDir, include_history: true }),
+      })
+        .then((response) => response.json().then((data) => ({ response, data })))
+        .then(({ response, data }) => {
+          if (!response.ok || data.error) throw new Error(data.error || "白膜包恢复失败");
+          const incoming = (Array.isArray(data.items) ? data.items : [])
+            .map((item) => normalizeWhiteMaskShelfItem(item))
+            .filter(Boolean);
+          const before = loadWhiteMaskShelf();
+          const beforeKey = whiteMaskShelfSnapshotKey(before);
+          const merged = incoming.length ? saveWhiteMaskShelf([...incoming, ...before]) : before;
+          const changed = whiteMaskShelfSnapshotKey(merged) !== beforeKey;
+          const runtimeChanged = applyWhiteMaskShelfItemsToRuntime(merged);
+          if ((changed || runtimeChanged) && composeBoardMode === "mask") renderComposePage();
+          return data;
+        })
+        .catch((error) => {
+          addLogs(["x 白膜包恢复失败", "> " + (error.message || error)]);
+          return null;
+        });
+      return whiteMaskShelfProjectRestorePromise;
     }
 
     function generationRuntimeHasActivePackageTask(runtime = {}) {
@@ -20423,9 +20928,6 @@
       ].forEach((key) => {
         if (data[key] !== undefined) patch[key] = data[key];
       });
-      if (String(data.packageSourcePath || data.sourcePath || "").trim()) {
-        patch.packageSourceVersion = GENERATION_PACKAGE_SOURCE_VERSION;
-      }
       patchGenerationPackRuntime(id, patch);
       return data;
     }
@@ -20492,13 +20994,15 @@
     }
 
     function ensureGenerationPackageDurationInRange(pack = {}, actionLabel = "生成") {
-      const duration = generationPackageSeedanceDuration(pack);
-      const error = seedanceDurationRangeError(duration);
+      const minSeconds = generationPackMinSeconds(pack);
+      const duration = generationPackageSeedanceDuration(pack, minSeconds);
+      const error = generationDurationRangeError(duration, minSeconds, COMPOSE_PACK_MAX_SECONDS);
       if (!error) return true;
+      const routeLabel = generationPackBackend(pack) === "scail2" ? "单人 Scail2" : "多人接口";
       const lines = [
-        `x ${actionLabel}已停止：时长不符合通道2范围`,
+        `x ${actionLabel}已停止：时长不符合${routeLabel}范围`,
         "> " + error,
-        `> 请把卡包调整到 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒内，再重新生成。`,
+        `> 请把卡包调整到 ${minSeconds}-${COMPOSE_PACK_MAX_SECONDS} 秒内，再重新生成。`,
       ];
       setSeedanceSubmitStatus(lines, "bad");
       assistantSetStatus(lines, "bad");
@@ -20538,21 +21042,27 @@
       }
       const refs = generationManualReferenceImages();
       const duration = generationPackageSeedanceDuration(pack, composeShotDuration(first.seg) || COMPOSE_PACK_MIN_SECONDS);
-      seedanceDraft.model = "sd-2.0-r3";
+      const apiChannel = normalizeSeedanceApiChannel(seedanceApiChannel);
+      const models = seedanceModelOptions(apiChannel);
+      seedanceDraft.model = models.includes(seedanceDraft.model)
+        ? seedanceDraft.model
+        : (models[0] || seedanceDraft.model || "sd-2.0-r3");
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio || "9:16";
       seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
       seedanceDraft.duration = duration;
       seedanceDraft.taskName = `${useMask ? "result" : "mask"}_${pack.id || "P000"}`;
       seedanceDraft.prompt = generationEditorPromptText(pack, generationPromptStage(pack, { useMask }));
-      seedanceDraft.images = normalizeMaterialList(seedanceDraft.images, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
+      seedanceDraft.images = normalizeMaterialList(refs, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
       seedanceDraft.videos = normalizeMaterialList([videoPath], 1).slice(0, SEEDANCE_MATERIAL_LIMITS.videos);
       const promptInput = $("#seedancePromptInput");
       const taskNameInput = $("#seedanceTaskNameInput");
+      const modelSelect = $("#seedanceModelSelect");
       const durationSelect = $("#seedanceDurationSelect");
       const ratioSelect = $("#seedanceRatioSelect");
       const resolutionSelect = $("#seedanceResolutionSelect");
       if (promptInput) promptInput.value = seedanceDraft.prompt;
       if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
+      if (modelSelect) fillSelect("seedanceModelSelect", models, seedanceDraft.model);
       if (durationSelect) syncSeedanceDurationSelect(seedanceDraft.duration);
       if (ratioSelect) ratioSelect.value = seedanceDraft.ratio;
       if (resolutionSelect) resolutionSelect.value = seedanceDraft.resolution;
@@ -20561,6 +21071,7 @@
       renderSeedancePayload();
       patchGenerationPackRuntime(pack.id, {
         sourcePath,
+        referenceImages: refs,
         referenceCount: refs.length,
       }, { render: false });
       return { first, sourcePath, videoPath, refs };
@@ -20569,7 +21080,8 @@
     function generationPlayerHtml(path, emptyText, time = 0.1) {
       const value = String(path || "").trim();
       if (!value) return `<div class="generation-player-empty">${escapeHtml(emptyText || "待生成")}</div>`;
-      return `<video controls muted playsinline preload="metadata" data-generation-sync-video src="${escapeHtml(mediaSrc(value, time))}"></video>`;
+      const safeTime = Math.max(0, Number(time) || 0.1);
+      return `<video controls playsinline preload="metadata" data-generation-sync-video data-generation-start-time="${escapeHtml(String(safeTime))}" src="${escapeHtml(mediaSrc(value, safeTime))}"></video>`;
     }
 
     function generationSplitClipCardsHtml(pack = {}) {
@@ -20634,6 +21146,43 @@
       if (String(runtime.status || "") === "failed" && errorMessage) return errorMessage;
       const lastMessage = String(runtime.lastMessage || "").trim();
       return lastMessage || generationRuntimeLabel(runtime, pack);
+    }
+
+    function generationRuntimeOutputMatchesPack(runtime = {}, pack = {}, role = "result") {
+      const canRestore = generationRuntimeCanRestoreForPack(runtime, pack);
+      if (!generationRuntimeMatchesPack(runtime, pack) && !canRestore) return false;
+      const outputPath = role === "mask"
+        ? String(runtime.whiteMaskPath || runtime.maskPath || "").trim()
+        : String(runtime.resultPath || "").trim();
+      if (!outputPath) return false;
+      const identityId = generationPackIdentityId(pack);
+      const storedIdentity = String(
+        role === "mask"
+          ? (runtime.maskPackageIdentityId || runtime.outputPackageIdentityId || "")
+          : (runtime.resultPackageIdentityId || runtime.outputPackageIdentityId || "")
+      ).trim();
+      if (storedIdentity && storedIdentity !== identityId && !canRestore) return false;
+      const expectedSource = role === "result" && generationPackBackend(pack) !== "scail2"
+        ? generationPackMaskVideo(pack)
+        : generationPackSourceInfo(pack).path;
+      const storedSource = String(
+        role === "mask"
+          ? (runtime.maskSourcePath || runtime.outputSourcePath || "")
+          : (runtime.resultSourcePath || runtime.outputSourcePath || "")
+      ).trim();
+      const expectedSourceKey = normalizeLocalPathKey(expectedSource);
+      if (storedSource && expectedSourceKey && normalizeLocalPathKey(storedSource) !== expectedSourceKey && !canRestore) return false;
+      if (!storedIdentity && !storedSource && generationPackShots(pack).length > 1) {
+        const sourceName = fileName(expectedSource).replace(/\.[^.]+$/, "");
+        return Boolean(sourceName && fileName(outputPath).includes(sourceName));
+      }
+      return true;
+    }
+
+    function generationPackageCardStateClass(pack = {}) {
+      if (generationPackResultVideo(pack)) return " has-result";
+      if (generationPackMaskVideo(pack)) return " has-mask";
+      return "";
     }
 
     function generationPackOutputPath(pack = {}) {
@@ -20748,16 +21297,32 @@
       const root = $("#generatePackageWorkbench");
       if (!root) return;
       const videos = Array.from(root.querySelectorAll("[data-generation-sync-video]"));
+      videos.forEach((video) => {
+        if (video.dataset.generationPlayerBound === "1") return;
+        video.dataset.generationPlayerBound = "1";
+        const startTime = () => Math.max(0, Number(video.dataset.generationStartTime || 0) || 0);
+        const seekStart = () => {
+          const start = startTime();
+          if (start > 0 && Math.abs(Number(video.currentTime || 0) - start) > 0.08) {
+            try { video.currentTime = start; } catch (_) {}
+          }
+        };
+        video.addEventListener("loadedmetadata", seekStart);
+        video.addEventListener("loadeddata", seekStart);
+        if (video.readyState >= 1) seekStart();
+      });
       if (videos.length < 2) return;
       let syncing = false;
       const peers = (source) => videos.filter((video) => video !== source && video.readyState >= 1);
+      const baseTime = (video) => Math.max(0, Number(video?.dataset?.generationStartTime || 0) || 0);
       const syncTime = (source) => {
         if (syncing) return;
         syncing = true;
-        const time = Number(source.currentTime || 0);
+        const time = Math.max(0, Number(source.currentTime || 0) - baseTime(source));
         peers(source).forEach((video) => {
-          if (Math.abs(Number(video.currentTime || 0) - time) > 0.12) {
-            try { video.currentTime = Math.max(0, Math.min(Number(video.duration || time), time)); } catch (_) {}
+          const target = baseTime(video) + time;
+          if (Math.abs(Number(video.currentTime || 0) - target) > 0.12) {
+            try { video.currentTime = Math.max(0, Math.min(Number(video.duration || target), target)); } catch (_) {}
           }
         });
         syncing = false;
@@ -20793,7 +21358,7 @@
       const referencePlanKey = generationReferencePlanKey(packs);
       if (referencePlanKey && generationWorkbench.referencePlanKey !== referencePlanKey) {
         generationWorkbench.referencePlanKey = referencePlanKey;
-        resetGenerationManualReferences({ render: false });
+        resetGenerationManualReferences({ render: false, persist: false });
       }
       if (!packs.length) {
         generationWorkbench.selectedPackId = "";
@@ -20812,6 +21377,8 @@
           runStatus.textContent = "等待生成包";
         }
         $("#generationStepList").innerHTML = "";
+        const audioRow = $("#scail2UploadAudioRow");
+        if (audioRow) audioRow.hidden = true;
         ["#generateWhiteMaskBtn", "#generateResultBtn", "#generateFullPipelineBtn", "#rerunWhiteMaskBtn", "#rerunResultBtn", "#generateScail2PackageBtn"].forEach((selector) => {
           const button = $(selector);
           if (button) button.disabled = true;
@@ -20842,7 +21409,7 @@
           const durationText = duration > 0 ? `${duration >= 10 ? duration.toFixed(0) : duration.toFixed(1)}s` : "0s";
           const identityId = generationPackIdentityId(pack);
           return `
-            <button class="generation-package-card${pack.id === generationWorkbench.selectedPackId ? " selected" : ""}" type="button" data-generation-pack="${escapeHtml(pack.id || "")}" data-pack-identity="${escapeHtml(identityId)}" title="${escapeHtml(identityId)}">
+            <button class="generation-package-card${pack.id === generationWorkbench.selectedPackId ? " selected" : ""}${generationPackageCardStateClass(pack)}" type="button" data-generation-pack="${escapeHtml(pack.id || "")}" data-pack-identity="${escapeHtml(identityId)}" title="${escapeHtml(identityId)}">
               ${generationPackThumbHtml(pack)}
               <strong>${escapeHtml(`${pack.id || "P000"} ${durationText}`)}</strong>
               <span>${escapeHtml(generationPackRoleLabel(pack))}</span>
@@ -20905,6 +21472,8 @@
           button.disabled = running;
         });
       }
+      const audioRow = $("#scail2UploadAudioRow");
+      if (audioRow) audioRow.hidden = backend !== "scail2";
       $("#generationStepList").innerHTML = backend === "scail2"
         ? `<div class="generation-step${running ? " active" : ""}${resultDone ? " done" : ""}">
             <div class="generation-step-title"><span>单人 Scail2 生成</span><b>${resultDone ? "完成" : (running ? "运行中" : "待生成")}</b></div>
@@ -21219,6 +21788,7 @@
         setSeedanceSubmitStatus(["> Scail2 任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
         return;
       }
+      if (!ensureGenerationPackageDurationInRange(pack, "Scail2 生成")) return;
       if (!ensureGenerationPackageManualReferences(pack, "Scail2 生成")) return;
       try {
         await prepareGenerationPackageInputFromWorkbench(pack, { silent: true });
@@ -21250,6 +21820,10 @@
     }
 
     function initGenerationWorkbench() {
+      setGenerationScail2UploadAudioEnabled(localStorage.getItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY) === "1");
+      $("#scail2UploadAudioToggle")?.addEventListener("change", (event) => {
+        setGenerationScail2UploadAudioEnabled(Boolean(event.target.checked));
+      });
       $("#generationLoadPackagesBtn")?.addEventListener("click", () => reloadGenerationPackagesFromCompose());
       $("#generationRouteSwitch")?.querySelectorAll("[data-generation-route]").forEach((button) => {
         button.addEventListener("click", () => setGenerationPackBackend(generationWorkbench.selectedPackId, button.dataset.generationRoute));
@@ -21352,7 +21926,7 @@
     }
 
     function seedanceDurationSelectValues(current = seedanceDraft.duration) {
-      const values = SEEDANCE_A_DURATIONS.map((value) => formatSeedanceDurationValue(value));
+      const values = seedanceDurationOptions(seedanceApiChannel).map((value) => formatSeedanceDurationValue(value));
       const currentValue = formatSeedanceDurationValue(current);
       if (currentValue && !values.includes(currentValue)) values.push(currentValue);
       return values.sort((left, right) => Number(left) - Number(right));
@@ -21364,12 +21938,16 @@
       seedanceDraft.duration = normalizeSeedanceDurationValue(value);
     }
 
-    function seedanceDurationRangeError(duration) {
-      const value = normalizeSeedanceDurationValue(duration);
-      if (value < COMPOSE_PACK_MIN_SECONDS || value > COMPOSE_PACK_MAX_SECONDS) {
-        return `当前包 ${formatSeedanceDurationValue(value)} 秒，不在 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒范围内。`;
+    function generationDurationRangeError(duration, minSeconds = COMPOSE_PACK_MIN_SECONDS, maxSeconds = COMPOSE_PACK_MAX_SECONDS) {
+      const value = normalizeSeedanceDurationValue(duration, minSeconds);
+      if (value < minSeconds || value > maxSeconds) {
+        return `当前包 ${formatSeedanceDurationValue(value)} 秒，不在 ${minSeconds}-${maxSeconds} 秒范围内。`;
       }
       return "";
+    }
+
+    function seedanceDurationRangeError(duration) {
+      return generationDurationRangeError(duration, COMPOSE_PACK_MIN_SECONDS, COMPOSE_PACK_MAX_SECONDS);
     }
 
     function loadSeedanceDraft() {
@@ -21390,17 +21968,20 @@
       if (seedanceDraft.model === "videos_stable_fast") {
         seedanceDraft.model = "sd-2.0-r3";
       }
-      if (!SEEDANCE_A_MODELS.includes(seedanceDraft.model)) {
-        seedanceDraft.model = "sd-2.0-r3";
+      const models = seedanceModelOptions(seedanceApiChannel);
+      if (!models.includes(seedanceDraft.model)) {
+        seedanceDraft.model = models[0] || "sd-2.0-r3";
       }
       seedanceDraft.duration = normalizeSeedanceDurationValue(seedanceDraft.duration, 6);
-      if (seedanceDraft.duration < COMPOSE_PACK_MIN_SECONDS || seedanceDraft.duration > COMPOSE_PACK_MAX_SECONDS) {
-        seedanceDraft.duration = 6;
+      const durations = seedanceDurationOptions(seedanceApiChannel);
+      if (!durations.some((value) => Number(value) === Number(seedanceDraft.duration))) {
+        seedanceDraft.duration = durations.includes(6) ? 6 : (durations[0] || 6);
       }
-      if (!SEEDANCE_A_RATIOS.includes(seedanceDraft.ratio)) {
-        seedanceDraft.ratio = SEEDANCE_A_RATIOS.includes(storyProjectConfig.output_ratio)
+      const ratios = seedanceRatioOptions(seedanceApiChannel);
+      if (!ratios.includes(seedanceDraft.ratio)) {
+        seedanceDraft.ratio = ratios.includes(storyProjectConfig.output_ratio)
           ? storyProjectConfig.output_ratio
-          : SEEDANCE_A_RATIOS[0];
+          : ratios[0];
       }
       if (/^\d+p$/i.test(String(seedanceDraft.resolution || ""))) {
         seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
@@ -21426,8 +22007,13 @@
     }
 
     function syncSeedanceControls() {
-      fillSelect("seedanceModelSelect", SEEDANCE_A_MODELS, seedanceDraft.model);
-      fillSelect("seedanceRatioSelect", SEEDANCE_A_RATIOS, seedanceDraft.ratio);
+      syncSeedanceApiChannelControl();
+      const models = seedanceModelOptions(seedanceApiChannel);
+      if (!models.includes(seedanceDraft.model)) seedanceDraft.model = models[0] || seedanceDraft.model;
+      const ratios = seedanceRatioOptions(seedanceApiChannel);
+      if (!ratios.includes(seedanceDraft.ratio)) seedanceDraft.ratio = ratios[0] || seedanceDraft.ratio;
+      fillSelect("seedanceModelSelect", models, seedanceDraft.model);
+      fillSelect("seedanceRatioSelect", ratios, seedanceDraft.ratio);
       syncSeedanceDurationSelect(seedanceDraft.duration);
       fillSelect("seedanceResolutionSelect", SEEDANCE_A_RESOLUTIONS, seedanceDraft.resolution);
       const prompt = $("#seedancePromptInput");
@@ -21443,6 +22029,8 @@
     }
 
     function pullSeedanceControls() {
+      seedanceApiChannel = normalizeSeedanceApiChannel($("#seedanceApiChannelSelect")?.value || seedanceApiChannel);
+      localStorage.setItem(SEEDANCE_API_CHANNEL_KEY, seedanceApiChannel);
       seedanceDraft.model = $("#seedanceModelSelect")?.value || seedanceDraft.model;
       seedanceDraft.ratio = $("#seedanceRatioSelect")?.value || seedanceDraft.ratio;
       seedanceDraft.duration = normalizeSeedanceDurationValue($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 6, 6);
@@ -23102,6 +23690,8 @@
             patchGenerationPackRuntime(packageId, {
               status: outputPath ? "mask_done" : "failed",
               whiteMaskPath: outputPath || "",
+              maskSourcePath: sourcePath,
+              maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
               maskJobId: displayJobId,
               sourcePath,
               pendingAutoResult: shouldAutoGenerateResult,
@@ -23182,7 +23772,10 @@
 
     function buildSeedancePayload() {
       pullSeedanceControls();
-      const relay = pullSeedanceRelayControls();
+      const apiChannel = normalizeSeedanceApiChannel(seedanceApiChannel);
+      const channelMeta = seedanceApiChannelMeta(apiChannel);
+      const relay = apiChannel === "channel2" ? pullSeedanceRelayControls() : null;
+      const channel1 = apiChannel === "channel1" ? pullNukoChannel1Controls() : null;
       const imageRefs = compactMaterials(seedanceDraft.images).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
       const videoRefs = compactMaterials(seedanceDraft.videos).slice(0, SEEDANCE_MATERIAL_LIMITS.videos);
       const audioRefs = compactMaterials(seedanceDraft.audios).slice(0, SEEDANCE_MATERIAL_LIMITS.audios);
@@ -23204,19 +23797,31 @@
       if (videoRefs.length) {
         payload.videos = videoRefs;
         payload.referenceVideos = videoRefs;
+        if (apiChannel === "channel1") {
+          const videoDurations = videoRefs.map(() => duration);
+          payload.video_durations = videoDurations;
+          payload.videoDurations = videoDurations;
+          payload.referenceVideoDurations = videoDurations;
+        }
       }
       if (audioRefs.length) payload.audios = audioRefs;
       if (Number(seedanceDraft.seed) > 0) payload.seed = Number(seedanceDraft.seed);
       return {
         taskName: seedanceDraft.taskName || "shot_retake_001",
-        channel: "通道2",
-        provider: "stable-video-ch2",
+        channel: channelMeta.label,
+        apiChannel,
+        provider: channelMeta.provider,
         projectConfig: pullStoryProjectControls(),
         materialLimits: SEEDANCE_MATERIAL_LIMITS,
-        relay: {
+        relay: relay ? {
           base_url: relay.base_url,
           api_key_configured: Boolean(relay.api_key),
-        },
+        } : undefined,
+        channel1: channel1 ? {
+          base_url: channel1.base_url,
+          api_key_configured: Boolean(channel1.api_key),
+          backend_default_key: !channel1.api_key,
+        } : undefined,
         payload,
       };
     }
@@ -24056,17 +24661,8 @@
       }
       const packageId = String(options.packageId || "").trim();
       const packagePack = packageId ? generationPackById(packageId) : null;
-      const forcePackageScail2 = Boolean(packagePack && generationPackBackend(packagePack) === "scail2");
+      const manualScail2Override = true;
       const seg = timelineSegments[selectedTimelineIndex] || {};
-      const decision = generationRouteForShot(seg);
-      if (decision.backend !== "scail2" && !forcePackageScail2) {
-        const lines = ["> 当前镜头固定走 Seedance", `> ${decision.reason}`, "> 请点“多人接口生成”。"];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines, "warn");
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        return;
-      }
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const packageSourcePath = packagePack ? generationPackSourceVideo(packagePack) : "";
       const videoPath = packageSourcePath || shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
@@ -24074,9 +24670,14 @@
       syncSeedanceDraftImagesFromCurrentShot(seg);
       const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
       const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
-      const selectedRefKeys = new Set(generationManualReferenceImages().map((path) => String(path || "").trim().toLowerCase()).filter(Boolean));
-      const preferredRole = readyRoles.find((asset) => roleReferenceOptions(asset)
-        .some((option) => selectedRefKeys.has(String(option || "").trim().toLowerCase()))) || readyRoles[0];
+      const selectedRefs = generationManualReferenceImages(packagePack || generationPackById(generationWorkbench.selectedPackId) || {});
+      const selectedRefKeys = new Set(selectedRefs.map((path) => String(path || "").trim().toLowerCase()).filter(Boolean));
+      const matchedRoles = readyRoles.filter((asset) => roleReferenceOptions(asset)
+        .some((option) => selectedRefKeys.has(String(option || "").trim().toLowerCase())));
+      const selectedRoleIds = (selectedRefs.length ? matchedRoles : readyRoles)
+        .slice(0, 1)
+        .map((asset) => asset?.id)
+        .filter(Boolean);
       if (!projectDir) {
         const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
         setSeedanceSubmitStatus(lines, "bad");
@@ -24093,18 +24694,10 @@
         if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
         return;
       }
-      if (!readyRoles.length) {
+      if (!readyRoles.length && !selectedRefs.length) {
         const lines = ["x 当前镜头没有可替换角色参考图", "> 请先在资产库给角色绑定参考图。"];
         setSeedanceSubmitStatus(lines, "bad");
         assistantSetStatus(lines, "bad");
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        return;
-      }
-      if (!forcePackageScail2 && readyRoles.length !== 1) {
-        const lines = ["> 当前不是单人 Scail2 镜头", `> 已检测到 ${readyRoles.length} 个可替换角色`, "> 请改用“多人接口生成”。"];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines, "warn");
         const packageId = String(options.packageId || "").trim();
         if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
         return;
@@ -24113,8 +24706,13 @@
         project_dir: projectDir,
         video_path: videoPath,
         segment_id: segmentId,
-        role_ids: [preferredRole].map((asset) => asset?.id).filter(Boolean),
+        package_id: packageId,
+        role_ids: selectedRoleIds,
+        manual_reference_images: selectedRefs,
+        reference_images: selectedRefs,
         transfer_backend: "scail2",
+        manual_scail2_override: manualScail2Override,
+        scail2_upload_audio: generationScail2UploadAudioEnabled(),
         normalize_size: true,
         sampler_preset: "balanced",
         video_window: {
@@ -24128,7 +24726,8 @@
       const intro = [
         "> 正在提交 Scail2 生成...",
         `> 视频: ${fileName(videoPath)}`,
-        `> 角色: ${readyRoles.map((asset) => asset.name || asset.id).join(", ")}`,
+        `> 参考图: ${selectedRefs.map((path, index) => `${generationReferenceLabelForPath(path, index)} / ${fileName(path)}`).join(", ")}`,
+        `> 上传声音: ${generationScail2UploadAudioEnabled() ? "开" : "关"}`,
       ].filter(Boolean);
       setSeedanceSubmitStatus(intro, "warn");
       assistantSetRunStatus(["Scail2 生成提交中", fileName(videoPath)], true);
@@ -24206,9 +24805,10 @@
               outputPath ? "Scail2 成片已完成。" : "Scail2 生成完成，但没有返回输出路径。",
               outputPath ? "左侧已显示结果对比，可以检查是否满意。" : "请看运行日志。",
             ], outputPath ? "good" : "warn");
+            const packageId = String(options.packageId || "").trim();
             if (outputPath) {
               const seg = timelineSegments[selectedTimelineIndex];
-              if (seg) {
+              if (seg && !packageId) {
                 const keepIndex = selectedTimelineIndex;
                 seg.generated_path = outputPath;
                 renderTimeline(timelineSegments);
@@ -24216,11 +24816,12 @@
               }
               renderSeedanceSingleMaskCompare(sourcePath, outputPath, "Scail2 生成结果", 0);
             }
-            const packageId = String(options.packageId || "").trim();
             if (packageId) {
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "result_done" : "failed",
                 resultPath: outputPath || "",
+                resultSourcePath: sourcePath,
+                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
                 resultTaskId: jobId,
                 sourcePath,
               });
@@ -24351,6 +24952,7 @@
         ...base,
         packageId: String(pack.id || base.packageId || "").trim(),
         outputRole: role,
+        apiChannel: normalizeSeedanceApiChannel(base.apiChannel || runtime.apiChannel || seedanceApiChannel),
         sourcePath: String(base.sourcePath || fallbackSource || "").trim(),
         outputLabel: String(base.outputLabel || (role === "mask" ? "白膜视频" : "结果视频")).trim(),
         autoGenerateResult: role === "mask" && (base.autoGenerateResult === true || runtime.pendingAutoResult === true),
@@ -24416,14 +25018,15 @@
       const isMaskOutput = outputRole === "mask";
       const roleLabel = seedancePackageTaskRoleLabel(outputRole);
       try {
-        const relay = loadSeedanceRelayConfig();
-        const response = await fetch("/api/seedance-a-status", {
+        const apiChannel = normalizeSeedanceApiChannel(context.apiChannel || seedanceApiChannel);
+        const requestConfig = seedanceApiRequestConfig(apiChannel);
+        const response = await fetch(seedanceStatusEndpoint(apiChannel), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             task_id: id,
-            relay_base_url: relay.base_url,
-            relay_api_key: relay.api_key,
+            ...requestConfig,
+            api_channel: apiChannel,
             project_dir: $("#projectDirInput")?.value.trim() || "",
             source_video_path: String(context.sourcePath || $("#videoPathInput")?.value.trim() || "").trim(),
             package_id: packageId,
@@ -24455,13 +25058,13 @@
           let splitWarning = "";
           if (packageId && outputPath) {
             try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result");
+              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", context.sourcePath);
             } catch (error) {
               splitWarning = error.message || String(error);
             }
           }
           const seg = timelineSegments[Number(context.timelineIndex)];
-          if (seg && outputPath && !isMaskOutput && !splitData) {
+          if (seg && outputPath && !isMaskOutput && !splitData && !packageId) {
             seg.generated_path = outputPath;
             seg.seedance_task_id = id;
             renderTimeline(timelineSegments);
@@ -24486,6 +25089,8 @@
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "mask_done" : "failed",
                 whiteMaskPath: outputPath || "",
+                maskSourcePath: compareSource,
+                maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
                 maskSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
                 maskSplitManifest: String(splitData?.manifest_path || "").trim(),
                 maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
@@ -24508,6 +25113,8 @@
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "result_done" : "failed",
                 resultPath: outputPath || "",
+                resultSourcePath: compareSource,
+                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
                 resultSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
                 resultSplitManifest: String(splitData?.manifest_path || "").trim(),
                 resultRuns: appendGenerationRun(generationRuntimeForPack(packageId).resultRuns, resultRun),
@@ -24563,18 +25170,6 @@
         selectTimelineSegment(0);
       }
       const seg = timelineSegments[selectedTimelineIndex] || {};
-      const decision = generationRouteForShot(seg);
-      if (decision.backend !== "seedance" && options.forceSeedance !== true) {
-        const lines = [
-          "x 当前镜头固定走 Scail2",
-          `> ${decision.reason}`,
-          "> 请点“单人 Scail2 生成”。",
-        ];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines.slice(1), "warn");
-        if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
-        return addLogs(lines);
-      }
       if (options.useDraftAsIs !== true) {
         syncSeedanceDraftImagesFromCurrentShot(seg);
         useCurrentShotAsSeedanceVideo();
@@ -24586,10 +25181,12 @@
         pullSeedanceMaterialSlots("videos");
         pullSeedanceMaterialSlots("audios");
       }
-      const relay = loadSeedanceRelayConfig();
       const projectDir = $("#projectDirInput")?.value.trim() || "";
       const videoPath = $("#videoPathInput")?.value.trim() || "";
       const draft = buildSeedancePayload();
+      const apiChannel = normalizeSeedanceApiChannel(options.apiChannel || draft.apiChannel || seedanceApiChannel);
+      const requestConfig = seedanceApiRequestConfig(apiChannel);
+      const apiChannelLabel = seedanceApiChannelLabel(apiChannel);
       if (isPackageTask) {
         const durationError = seedanceDurationRangeError(draft.payload?.duration);
         if (durationError) {
@@ -24660,8 +25257,8 @@
       }
       const body = {
         ...draft,
-        relay_base_url: relay.base_url,
-        relay_api_key: relay.api_key,
+        ...requestConfig,
+        api_channel: apiChannel,
         project_dir: projectDir,
         video_path: videoPath,
         source_video_path: String(options.compareSourcePath || shotVideoPath(seg) || videoPath).trim(),
@@ -24672,9 +25269,10 @@
       };
       const compareContext = {
         sourcePath: String(options.compareSourcePath || seedancePendingCompare?.sourcePath || body.source_video_path || draft.payload?.videos?.[0] || videoPath || "").trim(),
-        outputLabel: String(options.compareOutputLabel || seedancePendingCompare?.outputLabel || "通道2生成结果").trim(),
+        outputLabel: String(options.compareOutputLabel || seedancePendingCompare?.outputLabel || `${apiChannelLabel}生成结果`).trim(),
         packageId: String(options.packageId || seedancePendingCompare?.packageId || "").trim(),
         outputRole: String(options.outputRole || seedancePendingCompare?.outputRole || "result").trim(),
+        apiChannel,
         autoGenerateResult: options.autoGenerateResult === true,
         timelineIndex: selectedTimelineIndex,
       };
@@ -24697,7 +25295,7 @@
       setSeedanceSubmitStatus(submitIntro, "warn");
       addLogs(submitIntro);
       try {
-        const response = await fetch("/api/seedance-a-submit", {
+        const response = await fetch(seedanceSubmitEndpoint(apiChannel), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -24718,6 +25316,7 @@
           const taskPatch = {
             lastMessage: seedanceStatusVisibleText(submitLines),
             lastTone: Array.isArray(data.warnings) && data.warnings.length ? "warn" : "good",
+            apiChannel,
           };
           if (compareContext.outputRole === "mask") taskPatch.maskTaskId = submittedTaskId;
           else taskPatch.resultTaskId = submittedTaskId;
@@ -24728,6 +25327,7 @@
           return;
         }
         currentSeedanceTaskId = submittedTaskId;
+        currentSeedanceTaskApiChannel = apiChannel;
         if (seedancePollTimer) clearInterval(seedancePollTimer);
         seedancePollTimer = setInterval(pollSeedanceATask, 5000);
         pollSeedanceATask();
@@ -24749,15 +25349,16 @@
     async function pollSeedanceATask() {
       if (!currentSeedanceTaskId) return;
       try {
-        const relay = loadSeedanceRelayConfig();
         const compare = seedancePendingCompare || {};
-        const response = await fetch("/api/seedance-a-status", {
+        const apiChannel = normalizeSeedanceApiChannel(compare.apiChannel || currentSeedanceTaskApiChannel || seedanceApiChannel);
+        const requestConfig = seedanceApiRequestConfig(apiChannel);
+        const response = await fetch(seedanceStatusEndpoint(apiChannel), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             task_id: currentSeedanceTaskId,
-            relay_base_url: relay.base_url,
-            relay_api_key: relay.api_key,
+            ...requestConfig,
+            api_channel: apiChannel,
             project_dir: $("#projectDirInput")?.value.trim() || "",
             source_video_path: String(compare.sourcePath || $("#videoPathInput")?.value.trim() || "").trim(),
             package_id: String(compare.packageId || "").trim(),
@@ -24787,12 +25388,12 @@
           let splitWarning = "";
           if (packageId && outputPath) {
             try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result");
+              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", compare.sourcePath);
             } catch (error) {
               splitWarning = error.message || String(error);
             }
           }
-          if (seg && outputPath && !isMaskOutput && !splitData) {
+          if (seg && outputPath && !isMaskOutput && !splitData && !packageId) {
             seg.generated_path = outputPath;
             seg.seedance_task_id = currentSeedanceTaskId;
             renderTimeline(timelineSegments);
@@ -24820,6 +25421,8 @@
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "mask_done" : "failed",
                 whiteMaskPath: outputPath || "",
+                maskSourcePath: String(compare.sourcePath || shotVideoPath(seg) || "").trim(),
+                maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
                 maskSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
                 maskSplitManifest: String(splitData?.manifest_path || "").trim(),
                 maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
@@ -24841,6 +25444,8 @@
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "result_done" : "failed",
                 resultPath: outputPath || "",
+                resultSourcePath: String(compare.sourcePath || shotVideoPath(seg) || "").trim(),
+                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
                 resultSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
                 resultSplitManifest: String(splitData?.manifest_path || "").trim(),
                 resultRuns: appendGenerationRun(generationRuntimeForPack(packageId).resultRuns, resultRun),
@@ -24882,10 +25487,15 @@
     }
     function initSeedanceWorkbench() {
       loadSeedanceRelayConfig();
+      loadNukoChannel1Config();
+      loadSeedanceApiChannel();
       loadSeedanceDraft();
       seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio;
       syncSeedanceRelayControls();
       syncSeedanceControls();
+      $("#seedanceApiChannelSelect")?.addEventListener("change", (event) => {
+        setSeedanceApiChannel(event.target?.value || "channel2");
+      });
       ["seedanceModelSelect", "seedanceRatioSelect", "seedanceDurationSelect", "seedanceResolutionSelect", "seedancePromptInput", "seedanceTaskNameInput", "seedanceSeedInput", "seedanceIncludeBodyPoseInput", "seedancePoseBackendSelect", "seedancePoseRenderStyleSelect", "seedancePoseCapsuleStrengthSelect"].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("input", renderSeedancePayload);
@@ -24913,6 +25523,7 @@
         localStorage.setItem("sp_last_projectDirInput", projectDir);
         savePreDirectorConfig({ silent: true });
         saveSeedanceRelayConfig();
+        saveNukoChannel1Config({ silent: true });
         assistantSetStatus(["设置已保存。"]);
       });
       $("#cancelGlobalSettingsBtn")?.addEventListener("click", resetGlobalSettings);
@@ -24943,7 +25554,23 @@
           });
         }
       });
-      $("#batchGenerateBtn")?.addEventListener("click", submitSeedanceATask);
+      ["settingsNukoChannel1BaseUrlInput", "settingsNukoChannel1ApiKeyInput"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener("input", () => {
+            pullNukoChannel1Controls();
+            renderSeedancePayload();
+          });
+          el.addEventListener("change", () => {
+            pullNukoChannel1Controls();
+            renderSeedancePayload();
+          });
+        }
+      });
+      $("#batchGenerateBtn")?.addEventListener("click", () => {
+        setStoryGenerationRoute("seedance");
+        submitSeedanceATask({ forceSeedance: true });
+      });
     }
 
     function bindClick(selector, handler) {
@@ -25009,7 +25636,10 @@
       bindClick("#shotUndoCutBtn", () => undoCurrentShotCut());
       bindClick("#shotSaveCutsBtn", () => saveCurrentShotCuts());
       bindClick("#saveStoryboardBtn", () => saveStoryboardAndGoGenerate());
-      bindClick("#openTransferWorkbenchBtn", startMode2ServerTransfer);
+      bindClick("#openTransferWorkbenchBtn", () => {
+        setStoryGenerationRoute("scail2");
+        startMode2ServerTransfer();
+      });
       bindClick("#sourceVideoPreviewBox", () => chooseSourceVideo());
       bindClick("#pickSourceVideoBtn", () => chooseSourceVideo());
       $("#sourceVideoFileInput")?.addEventListener("change", (event) => {
