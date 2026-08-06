@@ -1,0 +1,2176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.replace("http://127.0.0.1:7871/foreign_lipsync_dashboard.html");
+    }
+  </script>
+  <title>SP 外语对口型工作台</title>
+  <style>
+    :root {
+      --bg: #030405;
+      --panel: #07090a;
+      --panel2: #0d1113;
+      --line: #1b2327;
+      --text: #eef3f5;
+      --muted: #87949a;
+      --soft: #cfd9dd;
+      --accent: #8fc7ff;
+      --good: #32c46e;
+      --warn: #d6a84c;
+      --bad: #ef6f6c;
+      --blue: #173a58;
+      --blue-line: #2d75b8;
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    }
+
+    button, input, textarea, select { font: inherit; }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: #050607;
+    }
+
+    .brand {
+      font-size: 16px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .mode-pill {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(214, 168, 76, .45);
+      background: rgba(214, 168, 76, .12);
+      color: #f3d39d;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .top-meta {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn {
+      height: 32px;
+      border: 1px solid var(--line);
+      background: #12171a;
+      color: var(--text);
+      padding: 0 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn.primary { border-color: var(--blue-line); background: var(--blue); }
+    .btn.good { border-color: #23975b; background: #155e39; }
+    .btn.warn { border-color: #9b7131; background: #60471e; }
+    .btn.bad { border-color: #91413f; background: #5e2525; }
+    .btn.icon { padding: 0 9px; }
+    .btn.small { height: 28px; padding: 0 10px; font-size: 12px; font-weight: 700; }
+
+    .shell {
+      min-height: 0;
+      display: flex;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    .workspace {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      align-content: start;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .step-card {
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #050607;
+      min-width: 0;
+    }
+
+    .step-card.wide { grid-column: 1 / -1; }
+
+    .voice-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .view-body {
+      width: 100%;
+      padding: 12px 16px 14px;
+    }
+
+    .step-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 10px;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      border: 1px solid #d6a84c;
+      background: #5f4318;
+      color: #fff2cc;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .step-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    details.advanced { margin-top: 10px; max-width: 1040px; }
+    details.advanced > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      user-select: none;
+    }
+    details.advanced > summary:hover { color: var(--soft); }
+    details.advanced[open] > summary { margin-bottom: 10px; }
+
+    .spk-voice-state {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .section-title {
+      margin: 0 0 18px;
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .section-sub {
+      margin: -8px 0 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 860px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      max-width: 1040px;
+    }
+
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.single { grid-template-columns: 1fr; }
+
+    .field {
+      min-width: 0;
+      display: grid;
+      gap: 7px;
+    }
+
+    .label {
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .input, select.input, textarea.input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      background: #090c0e;
+      color: var(--text);
+      border-radius: 7px;
+      padding: 0 11px;
+      outline: none;
+    }
+
+    .input, select.input { height: 38px; }
+    textarea.input {
+      min-height: 112px;
+      padding: 10px 11px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(143,199,255,.12);
+    }
+
+    .path-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .video-picker {
+      display: grid;
+      grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      max-width: 980px;
+    }
+
+    .video-box {
+      width: 100%;
+      max-width: 300px;
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--line);
+      background: #020303;
+      border-radius: 8px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .video-box:not(:has(video)) { cursor: pointer; }
+
+    .video-box video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .status-line {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      background: #070a0c;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--soft);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status-line.good { border-color: rgba(50,196,110,.42); color: #baf4d2; }
+    .status-line.warn { border-color: rgba(214,168,76,.46); color: #f3d39d; }
+    .status-line.bad { border-color: rgba(239,111,108,.45); color: #ffb6b4; }
+
+    #speakerVoiceStatus { cursor: pointer; }
+
+    .segmented {
+      height: 32px;
+      display: inline-grid;
+      grid-template-columns: repeat(2, minmax(78px, 1fr));
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #090d0f;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .segment-kind-tab {
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      padding: 0 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .segment-kind-tab:last-child { border-right: 0; }
+    .segment-kind-tab.active { background: var(--blue); color: var(--text); }
+
+    .script-table-wrap {
+      max-width: 1120px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: #060809;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #101518;
+      color: var(--soft);
+      z-index: 1;
+      font-weight: 900;
+    }
+
+    td .input { height: 32px; font-size: 12px; }
+    td textarea.input { min-height: 54px; font-size: 12px; }
+
+    .status-stack {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .provider-row {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .badge {
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      padding: 0 8px;
+    }
+
+    .badge.good { color: #baf4d2; border-color: rgba(50,196,110,.45); background: rgba(50,196,110,.08); }
+    .badge.warn { color: #f3d39d; border-color: rgba(214,168,76,.45); background: rgba(214,168,76,.08); }
+    .badge.bad { color: #ffb6b4; border-color: rgba(239,111,108,.45); background: rgba(239,111,108,.08); }
+
+    .log {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+      color: #c7d0d4;
+      font: 12px/1.55 Consolas, "Microsoft YaHei", monospace;
+      white-space: pre-wrap;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      max-width: 1120px;
+    }
+
+    .settings-block {
+      min-width: 0;
+      display: grid;
+      gap: 12px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .settings-block h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .secret-wrap {
+      position: relative;
+    }
+
+    .secret-wrap .input {
+      padding-right: 72px;
+    }
+
+    .secret-preview {
+      position: absolute;
+      right: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .hidden-file { display: none; }
+
+    .speaker-voice-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      max-width: 680px;
+    }
+
+    .speaker-voice-row {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr) auto auto auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      background: #070a0c;
+      border-radius: 7px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .speaker-voice-row .spk {
+      font-weight: 900;
+      color: var(--soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .speaker-voice-row .spk-voice-select {
+      grid-column: 1 / -1;
+      height: 32px;
+      font-size: 12px;
+    }
+
+    .speaker-voice-row .spk-voice-change {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .speaker-voice-row .spk-upload {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .speaker-voice-row .spk-preview {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .audio-preview {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+      max-width: 760px;
+    }
+
+    .audio-preview audio {
+      width: 100%;
+      height: 38px;
+    }
+
+    .job-progress {
+      grid-column: 1 / -1;
+      margin: 0 clamp(16px, 3vw, 44px);
+      padding: 6px 12px;
+      border: 1px solid var(--blue-line);
+      background: rgba(23, 58, 88, .35);
+      border-radius: 6px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .toast {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      max-width: 70vw;
+      background: #5e2525;
+      border: 1px solid #91413f;
+      color: #ffb6b4;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
+    }
+
+    .log-dot {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--bad);
+    }
+
+    #toggleLogBtn { position: relative; }
+
+    .drawer-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      z-index: 40;
+    }
+
+    .drawer {
+      position: fixed;
+      z-index: 50;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .drawer.right {
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(70vw, 1100px);
+      border-radius: 12px 0 0 12px;
+    }
+
+    .drawer.right.narrow { width: min(430px, 92vw); }
+
+    .drawer.bottom {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 70vh;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .drawer.full {
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-left: 0;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .drawer-head {
+      height: 48px;
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel2);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .drawer-body {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 14px clamp(16px, 3vw, 40px);
+    }
+
+    .dir-menu-wrap { position: relative; display: inline-block; }
+
+    .dir-menu {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 0;
+      z-index: 60;
+      min-width: 140px;
+      display: grid;
+      gap: 4px;
+      padding: 6px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    }
+
+    .dir-menu button {
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      text-align: left;
+      padding: 7px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .dir-menu button:hover { background: #1a2227; }
+
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 1fr; }
+      .voice-grid { grid-template-columns: 1fr; }
+      .grid, .grid.three, .settings-grid, .video-picker { grid-template-columns: 1fr; }
+      .video-box { max-width: 480px; }
+      .drawer.right { width: 100vw; border-radius: 0; }
+      .drawer.bottom { height: 82vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">SP 外语对口型工作台</div>
+      <div class="mode-pill">独立前处理</div>
+      <div class="top-meta" id="topMeta">未加载项目</div>
+      <div class="top-actions">
+        <button class="btn icon" type="button" id="openScriptDrawerBtn" title="校对字幕">📝</button>
+        <button class="btn icon" type="button" id="refreshBtn" title="刷新">🔄</button>
+        <button class="btn icon" type="button" id="toggleSettingsBtn" title="设置">⚙</button>
+        <button class="btn icon" type="button" id="toggleLogBtn" title="日志">📜<span class="log-dot" id="logDot" hidden></span></button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <main class="workspace">
+        <section class="step-card">
+          <div class="view-body">
+            <div class="step-head"><span class="step-num">1</span><h1 class="step-title">上传原片</h1></div>
+            <div class="video-picker">
+              <div class="video-box" id="videoPreviewBox" title="单击选择/更换视频，双击放大播放"><span>点击选择视频</span></div>
+              <div class="grid single">
+                <div class="field" hidden>
+                  <span class="label">源语言</span>
+                  <select class="input" id="sourceLanguageInput">
+                    <option value="auto">自动</option>
+                    <option value="zh">中文</option>
+                    <option value="en">英语</option>
+                    <option value="ja">日语</option>
+                    <option value="ko">韩语</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <span class="label">目标语言（选完点左侧上传）</span>
+                  <select class="input" id="targetLanguageInput">
+                    <option value="en">英语</option>
+                    <option value="ja">日语</option>
+                    <option value="ko">韩语</option>
+                    <option value="es">西语</option>
+                    <option value="fr">法语</option>
+                    <option value="de">德语</option>
+                  </select>
+                </div>
+                <input id="videoFileInput" type="file" accept="video/*,.mp4,.mov,.mkv,.webm,.avi" hidden />
+                <div class="status-line" id="inputStatus" hidden></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="step-card">
+          <div class="view-body">
+            <div class="step-head"><span class="step-num">2</span><h1 class="step-title">自动识别字幕</h1></div>
+            <div class="panel-actions">
+              <button class="btn good" type="button" id="runAsrBtn">▶ 自动识别</button>
+              <button class="btn small" type="button" id="runOcrBtn" title="按 ASR 时间段抽帧，用画面字幕校正原文">校正</button>
+              <button class="btn" type="button" id="importSourceSrtMainBtn" title="已有字幕文件？直接导入原文 SRT，跳过自动识别和校正">导入 SRT</button>
+            </div>
+            <div class="status-line" id="sourceSrtStatus" hidden style="margin-top:10px"></div>
+          </div>
+        </section>
+
+        <section class="step-card wide">
+          <div class="view-body">
+            <div class="step-head"><span class="step-num">4</span><h1 class="step-title">配音与成片</h1></div>
+            <div class="voice-grid">
+              <div>
+                <div class="status-line" id="speakerVoiceStatus" hidden title="点击展开/收起音色明细"></div>
+                <input id="voiceUploadInput" type="file" accept="audio/*,.mp3,.wav,.m4a" hidden />
+                <div class="speaker-voice-list" id="speakerVoiceList" hidden></div>
+                <div class="panel-actions" style="margin-top:10px">
+                  <button class="btn good" type="button" id="runAllBtn">🚀 生成成片</button>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#9aa7ad" title="成片只含配音轨；背景音乐单独导出保留，不混入成片">🎵 BGM 单独保留</span>
+                  <div class="dir-menu-wrap">
+                    <button class="btn" type="button" id="openDirsBtn">📁 目录</button>
+                    <div class="dir-menu" id="dirMenu" hidden>
+                      <button type="button" data-dir="audio">配音目录</button>
+                      <button type="button" data-dir="render">导出目录</button>
+                      <button type="button" data-dir="">项目目录</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="audio-preview" id="fullAudioPreview"></div>
+                <div class="status-line" id="bgmExportStatus" hidden></div>
+                <div class="audio-preview" id="bgmAudioPreview"></div>
+              </div>
+              <div class="video-preview" id="exportVideoPreview"></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="job-progress" id="projectStatus" hidden></div>
+      </main>
+    </div>
+  </div>
+
+  <div hidden>
+    <div class="status-line" id="asrStatus"></div>
+    <div class="status-line" id="ocrStatus"></div>
+    <div class="status-line" id="translateStatus"></div>
+    <div class="status-line" id="ttsStatus"></div>
+    <div class="status-line" id="comfyStatus"></div>
+  </div>
+
+  <div class="drawer-mask" id="drawerMask" hidden></div>
+
+  <section class="drawer full" id="scriptDrawer" hidden>
+    <div class="drawer-head"><span class="step-num">3</span><h2 class="step-title">校对字幕并翻译</h2><button class="btn" type="button" id="closeScriptDrawerBtn" style="margin-left:auto">✕</button></div>
+    <div class="drawer-body">
+      <div class="panel-actions" style="margin-bottom:12px">
+        <input class="hidden-file" id="srtFileInput" type="file" accept=".srt,text/plain" />
+        <input class="hidden-file" id="sourceSrtFileInput" type="file" accept=".srt,text/plain" />
+        <div class="segmented" id="scriptKindTabs">
+          <button class="segment-kind-tab active" type="button" data-script-kind="source">原文字幕</button>
+          <button class="segment-kind-tab" type="button" data-script-kind="translated">译文字幕</button>
+        </div>
+        <button class="btn" type="button" id="addSegmentBtn">添加行</button>
+        <button class="btn primary" type="button" id="runTranslateBtn">💾 保存并翻译</button>
+      </div>
+      <div class="status-line" id="translatedSrtStatus" hidden style="margin-bottom:12px"></div>
+      <div class="script-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px">序号</th>
+              <th style="width:92px">开始</th>
+              <th style="width:92px">结束</th>
+              <th style="width:90px">说话人</th>
+              <th style="width:118px">类型</th>
+              <th id="scriptTextColumn">原文文本</th>
+              <th style="width:58px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="segmentsBody"></tbody>
+        </table>
+      </div>
+      <details class="advanced">
+        <summary>高级：字幕文件导入导出 / 分步保存</summary>
+        <div class="panel-actions">
+          <button class="btn" type="button" id="importSrtBtn">导入 SRT（当前标签页）</button>
+          <button class="btn" type="button" id="exportSrtBtn">导出 SRT</button>
+          <button class="btn" type="button" id="saveSegmentsBtn">保存字幕段</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <aside class="drawer right narrow" id="logDrawer" hidden>
+    <div class="drawer-head">📜 日志<button class="btn" type="button" id="closeLogDrawerBtn" style="margin-left:auto">✕</button></div>
+    <div class="status-stack">
+      <div class="provider-row"><span>ASR</span><span class="badge" id="badgeAsr">-</span></div>
+      <div class="provider-row"><span>翻译</span><span class="badge" id="badgeTranslate">-</span></div>
+      <div class="provider-row"><span>TTS</span><span class="badge" id="badgeTts">-</span></div>
+      <div class="provider-row" hidden><span>口型</span><span class="badge" id="badgeLipsync">-</span></div>
+      <div class="provider-row"><span>后端</span><span class="badge" id="serverStatus">-</span></div>
+    </div>
+    <div class="log" id="logBox" style="flex:1">等待操作。</div>
+  </aside>
+
+  <section class="drawer right" id="settingsSection" hidden>
+    <div class="drawer-head"><span class="step-num">设</span><h2 class="step-title">设置</h2><button class="btn" type="button" id="closeSettingsBtn" style="margin-left:auto">✕</button></div>
+    <div class="drawer-body">
+      <p class="section-sub">API Key 只保存在本地设置文件，不写入项目目录。</p>
+      <div class="settings-grid">
+        <section class="settings-block">
+          <h3>MiniMax TTS</h3>
+          <div class="field"><span class="label">API URL</span><input class="input" id="minimaxApiUrlInput" /></div>
+          <div class="field"><span class="label">API Key <span class="hint" id="minimaxKeyPreview"></span></span><div class="secret-wrap"><input class="input" id="minimaxApiKeyInput" type="password" placeholder="留空保持原值" /></div></div>
+          <div class="grid">
+            <div class="field"><span class="label">模型</span><input class="input" id="minimaxModelInput" /></div>
+            <div class="field"><span class="label">音色 ID</span><input class="input" id="minimaxVoiceInput" list="minimaxVoiceOptions" /><datalist id="minimaxVoiceOptions"></datalist></div>
+            <div class="field"><span class="label">语速</span><input class="input" id="minimaxSpeedInput" type="number" min="0.5" max="2" step="0.1" /></div>
+            <div class="field"><span class="label">语言增强</span><input class="input" id="minimaxLanguageBoostInput" /></div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn" type="button" id="importLegacyMiniMaxBtn">导入旧 MiniMax 配置</button>
+          </div>
+          <div class="status-line" id="legacyImportStatus">可以从 C:\Users\Administrator\Desktop\20 导入旧 TTS 配置。</div>
+        </section>
+        <section class="settings-block" hidden>
+          <h3>口型方案</h3>
+          <div class="field"><span class="label">口型 Provider</span><select class="input" id="lipsyncProviderInput"><option value="">Comfy 服务器（Kling/本地节点）</option><option value="videoretalk">百炼 VideoRetalk（0.08元/秒，免费额度，慢/排队）</option><option value="pixverse_lipsync">百炼-爱诗 PixVerse 对口型（0.12元/秒，纯付费，快）</option></select></div>
+          <div class="status-line">PixVerse 需先在百炼控制台开通 PixVerse 模型；走纯付费额度，无免费额度但基本不排队，支持最长 300 秒视频。VideoRetalk 免费额度 1800 秒，但同一时刻只跑 1 个任务，长视频很慢。两者都只对口画面中最主要的人脸。</div>
+        </section>
+        <section class="settings-block" hidden>
+          <h3>Comfy 服务器</h3>
+          <div class="field"><span class="label">Base URL</span><input class="input" id="comfyBaseUrlInput" /></div>
+          <div class="grid">
+            <div class="field"><span class="label">口型 Profile</span><select class="input" id="comfyProfileInput"><option value="infinitetalk">infinitetalk（本地免费，推荐）</option><option value="kling_audio">kling_audio</option><option value="kling_text">kling_text</option><option value="wan_multitalk">wan_multitalk</option><option value="latent_sync">latent_sync</option><option value="musetalk">musetalk</option><option value="wav2lip">wav2lip</option></select></div>
+            <div class="field"><span class="label">超时秒数</span><input class="input" id="comfyTimeoutInput" type="number" min="30" step="30" /></div>
+          </div>
+        </section>
+        <section class="settings-block">
+          <h3>ASR 与翻译</h3>
+          <div class="grid">
+            <div class="field"><span class="label">ASR Provider</span><input class="input" id="asrProviderInput" /></div>
+            <div class="field"><span class="label">ASR 模型</span><input class="input" id="asrModelInput" /></div>
+            <div class="field"><span class="label">ASR Base URL</span><input class="input" id="asrBaseUrlInput" /></div>
+            <div class="field"><span class="label">ASR API Key <span class="hint" id="asrKeyPreview"></span></span><input class="input" id="asrApiKeyInput" type="text" placeholder="从 SP 导入或直接填写" /></div>
+            <div class="field"><span class="label">说话人分离</span><select class="input" id="asrDiarizationInput"><option value="1">开启（自动区分说话人）</option><option value="0">关闭</option></select></div>
+            <div class="field"><span class="label">说话人数（0=自动判断）</span><input class="input" id="asrSpeakerCountInput" type="number" min="0" max="100" step="1" /></div>
+            <div class="field"><span class="label">OCR Provider</span><input class="input" id="ocrProviderInput" /></div>
+            <div class="field"><span class="label">OCR 模型</span><input class="input" id="ocrModelInput" /></div>
+            <div class="field"><span class="label">OCR Base URL</span><input class="input" id="ocrBaseUrlInput" /></div>
+            <div class="field"><span class="label">OCR API Key <span class="hint" id="ocrKeyPreview"></span></span><input class="input" id="ocrApiKeyInput" type="text" placeholder="默认复用百炼 Key" /></div>
+            <div class="field"><span class="label">OCR 底部区域比例</span><input class="input" id="ocrCropInput" type="number" min="0.15" max="1" step="0.05" /></div>
+            <div class="field"><span class="label">OCR 每段抽帧</span><input class="input" id="ocrFramesInput" type="number" min="1" max="8" step="1" /></div>
+            <div class="field"><span class="label">翻译 Provider</span><input class="input" id="translateProviderInput" /></div>
+            <div class="field"><span class="label">翻译模型</span><input class="input" id="translateModelInput" /></div>
+            <div class="field"><span class="label">翻译 Base URL</span><input class="input" id="translateBaseUrlInput" /></div>
+            <div class="field"><span class="label">翻译 API Key <span class="hint" id="translateKeyPreview"></span></span><input class="input" id="translateApiKeyInput" type="text" placeholder="从 SP 导入或直接填写" /></div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn" type="button" id="importSpTranslateBtn">导入 SP ASR/翻译配置</button>
+          </div>
+          <div class="status-line" id="spTranslateImportStatus">可从 E:\sp 导入 ASR 千问模型与翻译共用的 Base URL 和 API Key；百炼接口默认使用 qwen-plus 翻译。</div>
+        </section>
+        <section class="settings-block">
+          <h3>路径</h3>
+          <div class="field"><span class="label">FFmpeg</span><input class="input" id="ffmpegPathInput" /></div>
+          <div class="field"><span class="label">项目目录</span><input class="input" id="projectRootInput" /></div>
+          <div class="field"><span class="label">导出目录</span><input class="input" id="exportRootInput" /></div>
+          <div class="field"><span class="label">SP 根目录</span><input class="input" id="spRootInput" /></div>
+        </section>
+      </div>
+      <div class="panel-actions" style="margin-top:18px">
+        <button class="btn primary" type="button" id="saveSettingsBtn">保存设置</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const PROJECT_STORAGE_KEY = "foreign_lipsync.current_project_id";
+
+    const state = {
+      settings: null,
+      project: null,
+      scriptKind: "source",
+      activeJobId: "",
+      pollTimer: null,
+      voiceLibrary: [],
+      jobChain: [],
+      scriptDirty: false,
+      voiceUploadSpeaker: "",
+      jobRunning: false,
+    };
+
+    function log(line) {
+      const box = $("#logBox");
+      const now = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      box.textContent += `\n[${now}] ${line}`;
+      box.scrollTop = box.scrollHeight;
+      const drawer = $("#logDrawer");
+      const dot = $("#logDot");
+      if (drawer && drawer.hidden && dot) dot.hidden = false;
+      notifyParent({ kind: "dub-log", message: String(line || "") });
+    }
+
+    let toastTimer = null;
+    function toast(message) {
+      const el = $("#toast");
+      if (!el) return;
+      el.textContent = message;
+      el.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.hidden = true; }, 4500);
+    }
+
+    function notifyParent(payload) {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ source: "foreign-lipsync", ...payload }, "*");
+        }
+      } catch (_error) {}
+    }
+
+    function handleError(e) {
+      const message = e && e.message ? e.message : String(e);
+      log(message);
+      toast(message);
+      notifyParent({ kind: "dub-error", message });
+    }
+
+    function setStatus(el, text, cls) {
+      if (typeof el === "string") el = $(el);
+      if (!el) return;
+      if (!text) {
+        el.hidden = true;
+        return;
+      }
+      el.hidden = false;
+      el.textContent = text;
+      el.className = "status-line" + (cls ? " " + cls : "");
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, options);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    const baseName = (p) => String(p || "").split(/[\\/]/).pop() || "";
+
+    function setMaskVisible() {
+      const anyOpen = !$("#settingsSection").hidden || !$("#logDrawer").hidden || !$("#scriptDrawer").hidden;
+      $("#drawerMask").hidden = !anyOpen;
+    }
+
+    function toggleSettings() {
+      const section = $("#settingsSection");
+      section.hidden = !section.hidden;
+      setMaskVisible();
+    }
+
+    function closeSettings() {
+      $("#settingsSection").hidden = true;
+      setMaskVisible();
+    }
+
+    function toggleLog(force) {
+      const drawer = $("#logDrawer");
+      const open = force !== undefined ? Boolean(force) : drawer.hidden;
+      drawer.hidden = !open;
+      if (open) {
+        $("#logDot").hidden = true;
+        const box = $("#logBox");
+        box.scrollTop = box.scrollHeight;
+      }
+      setMaskVisible();
+    }
+
+    function openScriptDrawer() {
+      $("#scriptDrawer").hidden = false;
+      renderScriptTable();
+      setMaskVisible();
+    }
+
+    function closeScriptDrawer() {
+      const drawer = $("#scriptDrawer");
+      if (drawer.hidden) return true;
+      if (state.scriptDirty && !confirm("字幕有未保存修改，仍要关闭吗？")) return false;
+      drawer.hidden = true;
+      setMaskVisible();
+      return true;
+    }
+
+    function closeOverlays() {
+      if (!$("#scriptDrawer").hidden) { closeScriptDrawer(); return; }
+      if (!$("#logDrawer").hidden) { toggleLog(false); return; }
+      closeSettings();
+    }
+
+    const JOB_STAGE_NAMES = {
+      dub_asr: "自动识别",
+      dub_ocr: "画面校正",
+      dub_translate: "翻译",
+      dub_voice_clone: "提取音色",
+      dub_tts: "生成配音",
+      dub_final_mix: "导出成片",
+    };
+
+    function renderJobProgress(job) {
+      const el = $("#projectStatus");
+      if (!el) return;
+      if (!job || job.status === "done" || job.status === "failed" || job.status === "cancelled") {
+        el.hidden = true;
+        return;
+      }
+      const stage = JOB_STAGE_NAMES[job.type] || job.type || "任务";
+      el.hidden = false;
+      el.textContent = `正在执行：${stage} ${job.progress || 0}%`;
+    }
+
+    function updateScriptCount() {
+      const btn = $("#openScriptDrawerBtn");
+      if (!btn) return;
+      const sourceCount = (state.project?.source_segments || []).length;
+      const translatedCount = (state.project?.segments || []).length;
+      const n = sourceCount || translatedCount;
+      btn.textContent = n ? `📝 ${n}` : "📝";
+      btn.title = n ? `校对字幕（${n} 段）` : "校对字幕";
+    }
+
+    function badge(el, status) {
+      const map = { configured: ["已配置", "good"], missing: ["未配置", "bad"], manual: ["手动", "warn"] };
+      const value = map[status] || [status || "-", status === "configured" ? "good" : "warn"];
+      el.textContent = value[0];
+      el.className = "badge " + value[1];
+    }
+
+    function renderProviderStatus(status) {
+      badge($("#badgeAsr"), status.asr);
+      badge($("#badgeTranslate"), status.translate);
+      badge($("#badgeTts"), status.tts);
+      badge($("#badgeLipsync"), status.lipsync);
+      renderProviderLine("#asrStatus", "ASR", status.asr);
+      if ($("#ocrStatus")) {
+        const configured = status.ocr === "configured";
+        $("#ocrStatus").textContent = configured ? "OCR：已配置" : "OCR：未配置";
+        $("#ocrStatus").className = "status-line " + (configured ? "good" : "warn");
+      }
+      renderProviderLine("#translateStatus", "翻译", status.translate);
+      renderProviderLine("#ttsStatus", "TTS", status.tts);
+      renderProviderLine("#comfyStatus", "口型服务器", status.lipsync);
+    }
+
+    function renderProviderLine(selector, label, value) {
+      const el = $(selector);
+      if (!el) return;
+      const configured = value === "configured";
+      el.textContent = `${label}：${configured ? "已配置" : "未配置"}`;
+      el.className = "status-line " + (configured ? "good" : "warn");
+    }
+
+    function renderSettings(payload) {
+      state.settings = payload.settings || payload;
+      const root = state.settings.foreign_dub || {};
+      const tts = root.tts_minimax || {};
+      const comfy = root.lipsync_comfy || {};
+      const asr = root.asr || {};
+      const ocr = root.ocr || {};
+      const translate = root.translate || {};
+      const paths = root.paths || {};
+      $("#minimaxApiUrlInput").value = tts.api_url || "";
+      $("#minimaxModelInput").value = tts.model || "";
+      $("#minimaxVoiceInput").value = tts.voice_id || "";
+      $("#minimaxSpeedInput").value = tts.speed || 1;
+      $("#minimaxLanguageBoostInput").value = tts.language_boost || "auto";
+      $("#minimaxKeyPreview").textContent = tts.api_key_set ? `已保存 ${tts.api_key_preview || ""}` : "未保存";
+      const voiceOptions = $("#minimaxVoiceOptions");
+      if (voiceOptions) {
+        voiceOptions.innerHTML = "";
+        (tts.voice_options || []).forEach((voice) => {
+          const option = document.createElement("option");
+          option.value = voice.voice_id || "";
+          option.label = `${voice.name || voice.voice_id || ""}${voice.language ? " / " + voice.language : ""}`;
+          voiceOptions.appendChild(option);
+        });
+      }
+      $("#comfyBaseUrlInput").value = comfy.base_url || "";
+      $("#comfyProfileInput").value = comfy.profile || "kling_audio";
+      $("#comfyTimeoutInput").value = comfy.timeout_seconds || 5400;
+      $("#lipsyncProviderInput").value = (root.lipsync_cloud || {}).provider || "";
+      $("#asrProviderInput").value = asr.provider || "dashscope_filetrans";
+      $("#asrModelInput").value = asr.model || "qwen3-asr-flash-filetrans";
+      $("#asrBaseUrlInput").value = asr.base_url || "";
+      $("#asrApiKeyInput").value = asr.api_key || "";
+      $("#asrKeyPreview").textContent = asr.api_key_set ? `已保存 ${asr.api_key_preview || ""}` : "未保存";
+      $("#asrDiarizationInput").value = asr.diarization_enabled === false ? "0" : "1";
+      $("#asrSpeakerCountInput").value = Number(asr.speaker_count || 0);
+      $("#ocrProviderInput").value = ocr.provider || "openai_compatible_vision";
+      $("#ocrModelInput").value = ocr.model || "qwen-vl-ocr-latest";
+      $("#ocrBaseUrlInput").value = ocr.base_url || "";
+      $("#ocrApiKeyInput").value = ocr.api_key || "";
+      $("#ocrCropInput").value = ocr.crop_bottom_ratio || 0.5;
+      $("#ocrFramesInput").value = ocr.frames_per_segment || 6;
+      $("#ocrKeyPreview").textContent = ocr.api_key_set ? `已保存 ${ocr.api_key_preview || ""}` : "未保存";
+      $("#translateProviderInput").value = translate.provider || "openai_compatible";
+      $("#translateModelInput").value = translate.model || "qwen-plus";
+      $("#translateBaseUrlInput").value = translate.base_url || "";
+      $("#translateApiKeyInput").value = translate.api_key || "";
+      $("#translateKeyPreview").textContent = translate.api_key_set ? `已保存 ${translate.api_key_preview || ""}` : "未保存";
+      $("#ffmpegPathInput").value = paths.ffmpeg || "ffmpeg";
+      $("#projectRootInput").value = paths.project_root || "";
+      $("#exportRootInput").value = paths.export_root || "";
+      $("#spRootInput").value = paths.sp_root || "E:/sp";
+      renderProviderStatus(payload.provider_status || {});
+    }
+
+    function collectSettings() {
+      const current = state.settings || {};
+      const root = structuredClone(current.foreign_dub || {});
+      root.tts_minimax = {
+        ...(root.tts_minimax || {}),
+        api_url: $("#minimaxApiUrlInput").value.trim(),
+        api_key: $("#minimaxApiKeyInput").value.trim() || "__KEEP__",
+        model: $("#minimaxModelInput").value.trim(),
+        voice_id: $("#minimaxVoiceInput").value.trim(),
+        speed: Number($("#minimaxSpeedInput").value || 1),
+        language_boost: $("#minimaxLanguageBoostInput").value.trim() || "auto",
+      };
+      root.lipsync_comfy = {
+        ...(root.lipsync_comfy || {}),
+        base_url: $("#comfyBaseUrlInput").value.trim(),
+        profile: $("#comfyProfileInput").value,
+        timeout_seconds: Number($("#comfyTimeoutInput").value || 5400),
+      };
+      root.lipsync_cloud = {
+        ...(root.lipsync_cloud || {}),
+        provider: $("#lipsyncProviderInput").value,
+      };
+      root.asr = {
+        ...(root.asr || {}),
+        provider: $("#asrProviderInput").value.trim() || "dashscope_filetrans",
+        model: $("#asrModelInput").value.trim() || "qwen3-asr-flash-filetrans",
+        base_url: $("#asrBaseUrlInput").value.trim(),
+        api_key: $("#asrApiKeyInput").value.trim() || "__KEEP__",
+        diarization_enabled: $("#asrDiarizationInput").value !== "0",
+        speaker_count: Number($("#asrSpeakerCountInput").value || 0),
+      };
+      root.ocr = {
+        ...(root.ocr || {}),
+        provider: $("#ocrProviderInput").value.trim() || "openai_compatible_vision",
+        model: $("#ocrModelInput").value.trim() || "qwen-vl-ocr-latest",
+        base_url: $("#ocrBaseUrlInput").value.trim(),
+        api_key: $("#ocrApiKeyInput").value.trim() || "__KEEP__",
+        crop_bottom_ratio: Number($("#ocrCropInput").value || 0.5),
+        frames_per_segment: Number($("#ocrFramesInput").value || 6),
+      };
+      root.translate = {
+        ...(root.translate || {}),
+        provider: $("#translateProviderInput").value.trim() || "openai_compatible",
+        model: $("#translateModelInput").value.trim() || "qwen-plus",
+        base_url: $("#translateBaseUrlInput").value.trim(),
+        api_key: $("#translateApiKeyInput").value.trim() || "__KEEP__",
+      };
+      root.paths = {
+        ...(root.paths || {}),
+        ffmpeg: $("#ffmpegPathInput").value.trim(),
+        project_root: $("#projectRootInput").value.trim(),
+        export_root: $("#exportRootInput").value.trim(),
+        sp_root: $("#spRootInput").value.trim(),
+      };
+      return { foreign_dub: root };
+    }
+
+    function renderProject() {
+      if (!state.project) {
+        $("#topMeta").textContent = "未加载项目";
+        renderJobProgress(null);
+        $("#videoPreviewBox").innerHTML = `<span>点击选择视频</span>`;
+        setStatus("#inputStatus", "", "");
+        setStatus("#sourceSrtStatus", "", "");
+        setStatus("#translatedSrtStatus", "", "");
+        if ($("#runAsrBtn")) {
+          $("#runAsrBtn").disabled = true;
+          $("#runAsrBtn").title = "请先上传视频";
+        }
+        if ($("#runTranslateBtn")) {
+          $("#runTranslateBtn").disabled = true;
+          $("#runTranslateBtn").title = "请先自动识别或导入原文 SRT";
+        }
+        if ($("#runOcrBtn")) {
+          $("#runOcrBtn").disabled = true;
+          $("#runOcrBtn").title = "请先自动识别，得到每句时间轴";
+        }
+        renderAudioPreview("");
+        renderScriptTable();
+        renderSpeakerVoices();
+        updateScriptCount();
+        return;
+      }
+      rememberProject(state.project);
+      $("#topMeta").textContent = `${state.project.project_id} / ${state.project.target_language || "-"} / ${state.project.status || "created"}`;
+      const hasVideo = Boolean(state.project.paths?.source_video);
+      if (hasVideo) {
+        const src = `/media?path=${encodeURIComponent(state.project.paths.source_video)}`;
+        $("#videoPreviewBox").innerHTML = `<video src="${src}" controls playsinline title="单击更换视频，双击放大播放"></video>`;
+        setStatus("#inputStatus", `已上传：${baseName(state.project.paths.source_video)}`, "good");
+      } else {
+        $("#videoPreviewBox").innerHTML = `<span>点击选择视频</span>`;
+        setStatus("#inputStatus", "当前项目还没有视频：点击左侧图片选择视频，选中后自动上传。", "warn");
+      }
+      const outputs = state.project.outputs || {};
+      renderAudioPreview(outputs.translated_full_audio || "");
+      renderBgmPreview(outputs.bgm_audio || "");
+      const exportTarget = outputs.final_video || outputs.lipsync_video || "";
+      renderVideoPreview(exportTarget);
+      const sourceCount = (state.project.source_segments || []).length;
+      const reviewText = sourceCount ? (isSourceReviewed() ? " / 原文已核对" : " / 待人工核对") : "";
+      if (sourceCount) {
+        setStatus("#sourceSrtStatus", `原文字幕 ${sourceCount} 段${reviewText}`, isSourceReviewed() ? "good" : "warn");
+      } else if (hasVideo) {
+        setStatus("#sourceSrtStatus", "已上传视频，下一步点自动识别。", "warn");
+      } else {
+        setStatus("#sourceSrtStatus", "", "");
+      }
+      const translatedCount = (state.project.segments || []).length;
+      if (outputs.translated_srt) {
+        setStatus("#translatedSrtStatus", `译文字幕已生成：${baseName(outputs.translated_srt)}`, "good");
+      } else if (translatedCount) {
+        setStatus("#translatedSrtStatus", `译文字幕 ${translatedCount} 段`, "good");
+      } else {
+        setStatus("#translatedSrtStatus", "", "");
+      }
+      updateActionButtons();
+      renderScriptTable();
+      renderSpeakerVoices();
+      updateScriptCount();
+    }
+
+    function updateActionButtons() {
+      const busy = Boolean(state.jobRunning);
+      const hasVideo = Boolean(state.project?.paths?.source_video);
+      const hasSourceSegments = Boolean((state.project?.source_segments || []).length);
+      if ($("#runAsrBtn")) {
+        $("#runAsrBtn").disabled = busy || !hasVideo;
+        $("#runAsrBtn").title = busy ? "有任务正在执行，完成后才能再次操作" : hasVideo ? "从当前视频自动识别原文字幕" : "当前项目没有视频，请先在第 1 步上传视频";
+      }
+      if ($("#runOcrBtn")) {
+        $("#runOcrBtn").disabled = busy || !hasVideo || !hasSourceSegments;
+        $("#runOcrBtn").title = busy
+          ? "有任务正在执行，完成后才能校正"
+          : hasVideo && hasSourceSegments
+            ? "按 ASR 时间段抽帧，用画面字幕校正原文"
+            : "先点自动识别并得到字幕后，才能校正";
+      }
+      if ($("#runAllBtn")) {
+        $("#runAllBtn").disabled = busy;
+        $("#runAllBtn").title = busy ? "有任务正在执行" : "提取音色 → 配音 → 导出成片，一键完成";
+      }
+    }
+
+    function renderSpeakerVoices() {
+      const statusEl = $("#speakerVoiceStatus");
+      const listEl = $("#speakerVoiceList");
+      if (!statusEl || !listEl) return;
+      const project = state.project;
+      const segments = project ? (project.source_segments || project.segments || []) : [];
+      const speakers = [];
+      segments.forEach((seg) => {
+        const name = (seg.speaker || "").trim() || "说话人1";
+        if (!speakers.includes(name)) speakers.push(name);
+      });
+      const voiceMap = (project && project.speaker_voices) || {};
+      const clonedCount = speakers.filter((name) => voiceMap[name]).length;
+      const hasVideo = Boolean(project && project.paths?.source_video);
+      if (!project) {
+        setStatus(statusEl, "", "");
+      } else if (!speakers.length) {
+        setStatus(statusEl, "音色：待识别字幕（点自动识别后可提取音色）", "warn");
+      } else if (clonedCount > 0) {
+        setStatus(statusEl, `音色 ✓ 已复刻 ${clonedCount}/${speakers.length} 人`, clonedCount >= speakers.length ? "good" : "warn");
+      } else {
+        setStatus(statusEl, `音色：未提取（识别到 ${speakers.length} 个说话人）`, "warn");
+      }
+      const library = state.voiceLibrary || [];
+      listEl.innerHTML = speakers.map((name) => {
+        const currentVoiceId = voiceMap[name] || "";
+        const options = [`<option value="">默认音色（设置里的音色 ID）</option>`];
+        let inLibrary = !currentVoiceId;
+        library.forEach((voice) => {
+          const vid = voice.voice_id || "";
+          const label = `${(voice.labels || []).join("/")} · ${(voice.projects || [""])[0].slice(0, 17)} · ${vid}${voice.sample_path ? "（可试听）" : ""}`;
+          options.push(`<option value="${escapeHtml(vid)}" ${vid === currentVoiceId ? "selected" : ""}>${escapeHtml(label)}</option>`);
+          if (vid === currentVoiceId) inLibrary = true;
+        });
+        if (currentVoiceId && !inLibrary) {
+          options.push(`<option value="${escapeHtml(currentVoiceId)}" selected>本项目复刻：${escapeHtml(currentVoiceId)}</option>`);
+        }
+        const matched = library.find((voice) => voice.voice_id === currentVoiceId);
+        const sample = matched && matched.sample_path ? matched.sample_path : "";
+        const previewBtn = sample
+          ? `<button class="btn spk-preview" type="button" data-sample="${escapeHtml(sample)}">试听</button>`
+          : `<button class="btn spk-preview" type="button" disabled title="该音色没有可试听的原声采样">试听</button>`;
+        return `<div class="speaker-voice-row"><span class="spk">${escapeHtml(name)}</span><span class="spk-voice-state">${currentVoiceId ? "复刻音色" : "默认音色"}</span><button class="btn spk-voice-change" type="button">改选</button><button class="btn spk-upload" type="button" data-speaker="${escapeHtml(name)}" title="从本地文件夹选择准备好的音色音频，上传后自动复刻">📂</button>${previewBtn}<select class="input spk-voice-select" data-speaker="${escapeHtml(name)}" hidden>${options.join("")}</select></div>`;
+      }).join("");
+      $$(".spk-voice-change").forEach((changeBtn) => {
+        changeBtn.addEventListener("click", () => {
+          const select = changeBtn.parentElement.querySelector(".spk-voice-select");
+          select.hidden = !select.hidden;
+        });
+      });
+      $$(".spk-upload").forEach((uploadBtn) => {
+        uploadBtn.addEventListener("click", () => {
+          state.voiceUploadSpeaker = uploadBtn.dataset.speaker || "";
+          $("#voiceUploadInput").click();
+        });
+      });
+      $$(".spk-voice-select").forEach((select) => {
+        select.addEventListener("change", () => assignSpeakerVoice(select.dataset.speaker, select.value).catch(handleError));
+      });
+      $$(".spk-preview").forEach((previewBtnEl) => {
+        previewBtnEl.addEventListener("click", () => playVoiceSample(previewBtnEl.dataset.sample, previewBtnEl));
+      });
+    }
+
+    async function uploadVoiceFile(file) {
+      if (!state.project?.project_id) throw new Error("请先上传视频");
+      const speaker = state.voiceUploadSpeaker || "";
+      if (!speaker) throw new Error("缺少说话人，请从说话人行的 📂 按钮进入");
+      log(`${speaker}：正在上传音频并复刻音色…`);
+      const form = new FormData();
+      form.append("project_id", state.project.project_id);
+      form.append("speaker", speaker);
+      form.append("file", file);
+      const data = await api("/api/dub/clone-voice-file", { method: "POST", body: form });
+      state.project = data.project;
+      log(`${speaker}：音色复刻完成 → ${data.voice_id}`);
+      await loadVoiceLibrary();
+    }
+
+    async function assignSpeakerVoice(speaker, voiceId) {
+      if (!state.project) return;
+      const voices = { ...(state.project.speaker_voices || {}) };
+      if (voiceId) {
+        voices[speaker] = voiceId;
+      } else {
+        delete voices[speaker];
+      }
+      state.project.speaker_voices = voices;
+      const saved = await api("/api/dub/save-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.project),
+      });
+      state.project = saved;
+      setStatus("#speakerVoiceStatus", voiceId ? `已保存：${speaker} → ${voiceId}` : `已保存：${speaker} → 默认音色`, "good");
+      log(`音色分配已保存：${speaker} → ${voiceId || "默认音色"}`);
+      renderSpeakerVoices();
+    }
+
+    let voicePreviewAudio = null;
+    let voicePreviewBtn = null;
+    function playVoiceSample(samplePath, btn) {
+      if (!samplePath) return;
+      if (voicePreviewAudio && voicePreviewBtn === btn && !voicePreviewAudio.paused) {
+        voicePreviewAudio.pause();
+        return;
+      }
+      if (voicePreviewAudio) {
+        voicePreviewAudio.pause();
+        if (voicePreviewBtn) voicePreviewBtn.textContent = "试听";
+      }
+      voicePreviewAudio = new Audio(`/media?path=${encodeURIComponent(samplePath)}`);
+      voicePreviewBtn = btn;
+      btn.textContent = "停止";
+      voicePreviewAudio.addEventListener("ended", () => { btn.textContent = "试听"; });
+      voicePreviewAudio.addEventListener("pause", () => { btn.textContent = "试听"; });
+      voicePreviewAudio.play().catch((e) => {
+        btn.textContent = "试听";
+        log(`试听失败: ${e.message}`);
+      });
+    }
+
+    async function loadVoiceLibrary() {
+      try {
+        const data = await api("/api/dub/voice-library");
+        state.voiceLibrary = data.voices || [];
+      } catch (e) {
+        state.voiceLibrary = [];
+      }
+      renderSpeakerVoices();
+    }
+
+    function currentScriptSegments() {
+      if (!state.project) return [];
+      return state.scriptKind === "source"
+        ? (state.project.source_segments || [])
+        : (state.project.segments || []);
+    }
+
+    function currentScriptLanguage() {
+      return state.scriptKind === "source"
+        ? ($("#sourceLanguageInput").value || "auto")
+        : ($("#targetLanguageInput").value || "en");
+    }
+
+    function scriptKindLabel() {
+      return state.scriptKind === "source" ? "原文字幕" : "译文字幕";
+    }
+
+    function isSourceReviewed() {
+      return Boolean(state.project?.source_reviewed);
+    }
+
+    function updateTranslationActionState() {
+      const btn = $("#runTranslateBtn");
+      if (!btn) return;
+      const hasSourceSegments = Boolean((state.project?.source_segments || []).length);
+      const onSourceTab = state.scriptKind === "source";
+      btn.disabled = !(state.project && hasSourceSegments && onSourceTab);
+      btn.title = !state.project
+        ? "请先上传视频"
+        : !hasSourceSegments
+          ? "先在第 2 步自动识别，或导入原文 SRT"
+          : onSourceTab
+            ? "先保存当前原文字幕，再翻译成目标语言"
+            : "请切到原文字幕页再翻译";
+    }
+
+    function renderScriptTable() {
+      $$(".segment-kind-tab").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.scriptKind === state.scriptKind);
+      });
+      if ($("#scriptTextColumn")) {
+        $("#scriptTextColumn").textContent = state.scriptKind === "source" ? "原文文本" : "译文文本";
+      }
+      renderSegments(currentScriptSegments());
+      updateTranslationActionState();
+    }
+
+    function renderSegments(segments) {
+      const body = $("#segmentsBody");
+      body.innerHTML = "";
+      segments.forEach((seg) => addSegmentRow(seg));
+    }
+
+    function addSegmentRow(seg = {}) {
+      const body = $("#segmentsBody");
+      const idx = body.children.length + 1;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input class="input seg-id" type="number" min="1" step="1" value="${escapeHtml(displaySegmentId(seg, idx))}"></td>
+        <td><input class="input seg-start" type="text" inputmode="decimal" value="${Number(seg.start || 0)}"></td>
+        <td><input class="input seg-end" type="text" inputmode="decimal" value="${Number(seg.end || Math.max(1, idx * 3))}"></td>
+        <td><input class="input seg-speaker" value="${escapeHtml(displaySpeaker(seg.speaker, idx))}"></td>
+        <td>
+          <select class="input seg-role">
+            <option value="dialogue">台词</option>
+            <option value="narration">旁白</option>
+            <option value="ignore">忽略</option>
+          </select>
+        </td>
+        <td><textarea class="input seg-text">${escapeHtml(seg.text || seg.translated_text || "")}</textarea></td>
+        <td><button class="btn bad seg-remove" type="button">删除</button></td>
+      `;
+      tr.querySelector(".seg-role").value = seg.role || seg.segment_type || "dialogue";
+      tr.querySelector(".seg-remove").addEventListener("click", () => { tr.remove(); state.scriptDirty = true; });
+      body.appendChild(tr);
+    }
+
+    function collectSegments() {
+      return $$("#segmentsBody tr").map((tr) => ({
+        segment_id: normalizeSegmentId(tr.querySelector(".seg-id").value),
+        start: Number(tr.querySelector(".seg-start").value || 0),
+        end: Number(tr.querySelector(".seg-end").value || 0),
+        speaker: normalizeSpeaker(tr.querySelector(".seg-speaker").value),
+        role: tr.querySelector(".seg-role")?.value || "dialogue",
+        text: tr.querySelector(".seg-text").value.trim(),
+        language: currentScriptLanguage(),
+      })).filter((seg) => seg.segment_id && seg.text);
+    }
+
+    function sourceSegmentsChanged(before = [], after = []) {
+      const normalize = (segments) => (segments || []).map((seg, index) => ({
+        segment_id: normalizeSegmentId(seg.segment_id || seg.id || String(index + 1)),
+        start: Number(seg.start || 0),
+        end: Number(seg.end || 0),
+        speaker: normalizeSpeaker(seg.speaker || "说话人1"),
+        role: seg.role || seg.segment_type || "dialogue",
+        text: String(seg.text || seg.source_text || "").trim(),
+      }));
+      return JSON.stringify(normalize(before)) !== JSON.stringify(normalize(after));
+    }
+
+    function clearDownstreamOutputs(project) {
+      project.segments = [];
+      const outputs = project.outputs || {};
+      [
+        "translated_srt",
+        "tts_manifest",
+        "translated_full_audio",
+        "lipsync_driver_audio",
+        "raw_lipsync_video",
+        "lipsync_video",
+        "lipsync_prompt_id",
+      ].forEach((key) => delete outputs[key]);
+      project.outputs = outputs;
+    }
+
+    function displaySegmentId(seg, index) {
+      const raw = String(seg.segment_id || seg.id || "").trim();
+      const match = raw.match(/^(?:seg_|segment_)?0*(\d+)$/i);
+      if (match) return String(Number(match[1]) || index);
+      if (/^\d+$/.test(raw)) return String(Number(raw) || index);
+      return String(index);
+    }
+
+    function normalizeSegmentId(value) {
+      const text = String(value || "").trim();
+      const match = text.match(/^(?:seg_|segment_)?0*(\d+)$/i);
+      if (match) return String(Number(match[1]) || 1);
+      return text || "1";
+    }
+
+    function displaySpeaker(value, index = 1) {
+      const raw = String(value || "").trim();
+      const lower = raw.toLowerCase();
+      let match = lower.match(/^channel_(\d+)$/);
+      if (match) return `说话人${Number(match[1]) + 1}`;
+      match = lower.match(/^speaker_(\d+)$/);
+      if (match) return `说话人${Number(match[1]) || 1}`;
+      if (["narration", "narrator", "voiceover", "voice_over"].includes(lower)) return "旁白";
+      return raw || `说话人${index || 1}`;
+    }
+
+    function normalizeSpeaker(value) {
+      return displaySpeaker(value || "说话人1");
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    }
+
+    function mediaUrl(path) {
+      return `/media?path=${encodeURIComponent(path || "")}`;
+    }
+
+    function renderAudioPreview(path) {
+      const box = $("#fullAudioPreview");
+      if (!box) return;
+      const audioPath = String(path || "").trim();
+      if (!audioPath) {
+        box.innerHTML = "";
+        return;
+      }
+      const src = mediaUrl(audioPath);
+      box.innerHTML = `
+        <audio src="${src}" controls preload="metadata"></audio>
+      `;
+    }
+
+    function renderBgmPreview(path) {
+      const box = $("#bgmAudioPreview");
+      const status = $("#bgmExportStatus");
+      if (!box) return;
+      const bgmPath = String(path || "").trim();
+      if (!bgmPath) {
+        box.innerHTML = "";
+        if (status) status.hidden = true;
+        return;
+      }
+      const src = mediaUrl(bgmPath);
+      box.innerHTML = `
+        <div style="margin-top:8px;font-size:12px;color:#9aa7ad">🎵 背景音乐（单独保留，未混入成片）</div>
+        <audio src="${src}" controls preload="metadata"></audio>
+      `;
+      if (status) status.hidden = false;
+    }
+
+    function renderVideoPreview(path) {
+      const box = $("#exportVideoPreview");
+      if (!box) return;
+      const videoPath = String(path || "").trim();
+      if (!videoPath || !/\.(mp4|mov|webm|mkv)$/i.test(videoPath)) {
+        box.innerHTML = "";
+        return;
+      }
+      const src = mediaUrl(videoPath);
+      box.innerHTML = `
+        <video src="${src}" controls preload="metadata" style="width:100%;max-height:44vh;background:#000;border-radius:8px"></video>
+      `;
+    }
+
+    function rememberProject(project) {
+      try {
+        if (project?.project_id) localStorage.setItem(PROJECT_STORAGE_KEY, project.project_id);
+      } catch (_error) {}
+    }
+
+    async function loadProject(projectId) {
+      if (!projectId) return false;
+      state.project = await api(`/api/dub/projects/${projectId}`);
+      state.scriptKind = (state.project.source_segments || []).length || !(state.project.segments || []).length ? "source" : "translated";
+      renderProject();
+      return true;
+    }
+
+    async function loadRememberedOrRecentProject() {
+      let remembered = "";
+      try {
+        remembered = localStorage.getItem(PROJECT_STORAGE_KEY) || "";
+      } catch (_error) {}
+      if (remembered) {
+        try {
+          await loadProject(remembered);
+          return;
+        } catch (error) {
+          log(`载入上次项目失败: ${error.message}`);
+        }
+      }
+      const data = await api("/api/dub/projects");
+      const projects = data.projects || [];
+      const candidate = projects.find((item) => item.has_source_video) || projects[0];
+      if (candidate?.project_id) {
+        await loadProject(candidate.project_id);
+        log(`已载入最近项目: ${candidate.project_id}`);
+      }
+    }
+
+    async function loadInitial() {
+      const status = await api("/api/dub/server-status");
+      $("#serverStatus").textContent = `后端 ${status.pid}`;
+      renderProviderStatus(status.provider_status || {});
+      const settings = await api("/api/dub/settings");
+      renderSettings(settings);
+      loadVoiceLibrary();
+      if (state.project?.project_id) {
+        await refreshProject();
+      } else {
+        await loadRememberedOrRecentProject();
+      }
+      log("后端已连接。");
+    }
+
+    async function saveSettings() {
+      const data = await api("/api/dub/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: collectSettings() }),
+      });
+      $("#minimaxApiKeyInput").value = "";
+      renderSettings(data);
+      log("设置已保存。");
+    }
+
+    async function importLegacyMiniMax() {
+      const data = await api("/api/dub/settings/import-minimax-legacy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      renderSettings(data);
+      $("#legacyImportStatus").textContent = `已导入旧配置，音色 ${data.voice_count || 0} 个，API Key ${data.api_key_imported ? "已保存" : "未找到"}。`;
+      $("#legacyImportStatus").className = "status-line good";
+      log("旧 MiniMax 配置已导入。");
+    }
+
+    async function importSpTranslate() {
+      const data = await api("/api/dub/settings/import-sp-translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sp_root: $("#spRootInput").value.trim() || "E:/sp" }),
+      });
+      renderSettings(data);
+      $("#spTranslateImportStatus").textContent = `已导入 SP 配置：ASR qwen3-asr-flash-filetrans，翻译 ${data.model || "qwen-plus"} / ${data.base_url || ""}`;
+      $("#spTranslateImportStatus").className = "status-line good";
+      $("#asrStatus").textContent = "ASR 模型已配置";
+      $("#asrStatus").className = "status-line good";
+      $("#translateStatus").textContent = "翻译模型已配置";
+      $("#translateStatus").className = "status-line good";
+      log("SP ASR/翻译配置已导入。");
+    }
+
+    async function uploadVideo() {
+      const file = $("#videoFileInput").files[0];
+      if (!file) throw new Error("请选择视频文件");
+      const form = new FormData();
+      form.append("file", file);
+      const data = await api("/api/dub/upload-video", { method: "POST", body: form });
+      state.project = data.project;
+      state.scriptKind = "source";
+      renderProject();
+      log(`视频已上传，新项目已创建: ${state.project.project_id}`);
+    }
+
+    async function saveSegments() {
+      if (!state.project) throw new Error("请先创建项目");
+      state.project.source_language = $("#sourceLanguageInput").value;
+      state.project.target_language = $("#targetLanguageInput").value;
+      const nextSegments = collectSegments();
+      if (state.scriptKind === "source") {
+        const changed = sourceSegmentsChanged(state.project.source_segments || [], nextSegments);
+        if (changed || !state.project.source_reviewed) {
+          clearDownstreamOutputs(state.project);
+        }
+        state.project.source_segments = nextSegments;
+        const rolesById = Object.fromEntries(nextSegments.map((seg, index) => [normalizeSegmentId(seg.segment_id || String(index + 1)), seg.role || "dialogue"]));
+        state.project.segments = (state.project.segments || []).map((seg) => ({
+          ...seg,
+          role: rolesById[normalizeSegmentId(seg.segment_id)] || seg.role || "dialogue",
+        }));
+        state.project.source_reviewed = true;
+        state.project.source_revision_reason = changed ? "manual_review_changed" : "manual_review_confirmed";
+        state.project.status = "source_reviewed";
+      } else {
+        state.project.segments = nextSegments;
+        state.project.status = "script_ready";
+      }
+      const saved = await api("/api/dub/save-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state.project),
+      });
+      state.project = saved;
+      renderProject();
+      state.scriptDirty = false;
+      log(`${scriptKindLabel()}已保存: ${nextSegments.length} 段`);
+    }
+
+    async function refreshProject() {
+      if (!state.project?.project_id) return;
+      state.project = await api(`/api/dub/projects/${state.project.project_id}`);
+      renderProject();
+    }
+
+    async function importSrtFile(file) {
+      if (!file) return;
+      const content = await file.text();
+      const kind = state.scriptKind;
+      const data = await api("/api/dub/import-srt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: state.project?.project_id || "",
+          content,
+          language: currentScriptLanguage(),
+          kind,
+        }),
+      });
+      state.project = data.project;
+      renderProject();
+      log(`${scriptKindLabel()} SRT 已导入: ${data.count} 段`);
+    }
+
+    async function importSourceSrtFile(file) {
+      if (!file) return;
+      const content = await file.text();
+      const data = await api("/api/dub/import-srt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: state.project?.project_id || "",
+          content,
+          language: $("#sourceLanguageInput").value || "auto",
+          kind: "source",
+        }),
+      });
+      state.project = data.project;
+      state.scriptKind = "source";
+      renderProject();
+      log(`原文 SRT 已导入: ${data.count} 段`);
+    }
+
+    async function runAsr() {
+      if (!state.project?.project_id) throw new Error("请先创建项目");
+      if (!state.project.paths?.source_video) throw new Error("请先上传视频，再自动识别。");
+      const data = await api("/api/dub/asr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: state.project.project_id,
+          source_language: $("#sourceLanguageInput").value || "auto",
+        }),
+      });
+      state.activeJobId = data.job_id;
+      setStatus("#sourceSrtStatus", "ASR 自动识别任务已提交，正在从视频提取原文字幕。", "warn");
+      log(`ASR 任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function runOcr() {
+      if (!state.project?.project_id) throw new Error("请先创建项目");
+      if (!state.project.paths?.source_video) throw new Error("请先上传视频");
+      if (!(state.project.source_segments || []).length) throw new Error("先点自动识别，得到每句时间轴，再做画面字幕校正。");
+      const data = await api("/api/dub/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: state.project.project_id,
+          crop_bottom_ratio: Number($("#ocrCropInput").value || 0.5),
+          frames_per_segment: Number($("#ocrFramesInput").value || 6),
+        }),
+      });
+      state.activeJobId = data.job_id;
+      setStatus("#sourceSrtStatus", "画面字幕 OCR 校正任务已提交，正在按 ASR 时间段前后扩展抽帧；字幕时间仍保留 ASR 时间。", "warn");
+      log(`OCR 校正任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function runTranslate() {
+      if (!state.project?.project_id) throw new Error("请先创建项目");
+      if (!(state.project.source_segments || []).length) throw new Error("先点自动识别，或导入原文 SRT。");
+      if (!isSourceReviewed()) throw new Error("先在第 3 步确认原文并保存，再自动翻译。");
+      const data = await api("/api/dub/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_id: state.project.project_id,
+          source_language: $("#sourceLanguageInput").value || "auto",
+          target_language: $("#targetLanguageInput").value || "en",
+        }),
+      });
+      state.activeJobId = data.job_id;
+      setStatus("#translatedSrtStatus", "翻译任务已提交，正在把原文字幕翻译成目标语言。", "warn");
+      log(`翻译任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function saveAndRunTranslate() {
+      if (state.scriptKind !== "source") {
+        state.scriptKind = "source";
+        renderScriptTable();
+        throw new Error("已切到原文字幕，请确认原文后再点保存并翻译。");
+      }
+      await saveSegments();
+      await runTranslate();
+    }
+
+    async function exportSrt() {
+      await saveSegments();
+      const kind = state.scriptKind;
+      const data = await api("/api/dub/export-srt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: state.project.project_id, kind }),
+      });
+      state.project = data.project;
+      renderProject();
+      log(`${scriptKindLabel()} SRT 已导出: ${data.path}`);
+    }
+
+    async function testProvider(provider) {
+      const payload = { provider };
+      if (provider === "comfy") payload.base_url = $("#comfyBaseUrlInput").value.trim();
+      if (provider === "asr") {
+        payload.settings = {
+          provider: $("#asrProviderInput").value.trim() || "dashscope_filetrans",
+          base_url: $("#asrBaseUrlInput").value.trim(),
+          api_key: $("#asrApiKeyInput").value.trim() || "__KEEP__",
+          model: $("#asrModelInput").value.trim() || "qwen3-asr-flash-filetrans",
+          diarization_enabled: $("#asrDiarizationInput").value !== "0",
+          speaker_count: Number($("#asrSpeakerCountInput").value || 0),
+        };
+      }
+      if (provider === "ocr") {
+        payload.settings = {
+          provider: $("#ocrProviderInput").value.trim() || "openai_compatible_vision",
+          base_url: $("#ocrBaseUrlInput").value.trim(),
+          api_key: $("#ocrApiKeyInput").value.trim() || "__KEEP__",
+          model: $("#ocrModelInput").value.trim() || "qwen-vl-ocr-latest",
+          crop_bottom_ratio: Number($("#ocrCropInput").value || 0.5),
+          frames_per_segment: Number($("#ocrFramesInput").value || 6),
+        };
+      }
+      if (provider === "translate") {
+        payload.settings = {
+          provider: $("#translateProviderInput").value.trim() || "openai_compatible",
+          base_url: $("#translateBaseUrlInput").value.trim(),
+          api_key: $("#translateApiKeyInput").value.trim() || "__KEEP__",
+          model: $("#translateModelInput").value.trim() || "qwen-plus",
+        };
+      }
+      const data = await api("/api/dub/settings/test-provider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (provider === "comfy") {
+        $("#comfyStatus").textContent = data.ok ? `${data.gpu || "Comfy"} / profiles 已读取` : data.error;
+        $("#comfyStatus").className = "status-line " + (data.ok ? "good" : "bad");
+      } else if (provider === "minimax") {
+        $("#ttsStatus").textContent = data.message || (data.ok ? "MiniMax 已配置" : "MiniMax 未配置");
+        $("#ttsStatus").className = "status-line " + (data.ok ? "good" : "bad");
+      } else if (provider === "asr") {
+        $("#asrStatus").textContent = data.message || (data.ok ? "ASR 模型已配置" : "ASR 模型未配置");
+        $("#asrStatus").className = "status-line " + (data.ok ? "good" : "bad");
+      } else if (provider === "ocr") {
+        $("#ocrStatus").textContent = data.message || data.error || (data.ok ? "OCR 模型已配置" : "OCR 模型未配置");
+        $("#ocrStatus").className = "status-line " + (data.ok ? "good" : "bad");
+      } else if (provider === "translate") {
+        $("#translateStatus").textContent = data.message || data.error || (data.ok ? "翻译模型已配置" : "翻译模型未配置");
+        $("#translateStatus").className = "status-line " + (data.ok ? "good" : "bad");
+      } else {
+        log(JSON.stringify(data));
+      }
+      log(`${provider} 检测: ${data.ok ? "通过" : "失败"}`);
+    }
+
+    async function runCloneVoices() {
+      if (!state.project?.project_id) throw new Error("请先创建项目");
+      if (!state.project.paths?.source_video) throw new Error("请先上传视频");
+      if (!(state.project.source_segments || state.project.segments || []).length) throw new Error("先在第 2 步自动识别原文字幕，得到每个说话人的时间轴。");
+      const data = await api("/api/dub/clone-voices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: state.project.project_id }),
+      });
+      state.activeJobId = data.job_id;
+      setStatus("#speakerVoiceStatus", "音色提取任务已提交：正在按说话人截取原声并复刻音色。", "warn");
+      log(`音色提取任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function runTts() {
+      await saveSegments();
+      const data = await api("/api/dub/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: state.project.project_id }),
+      });
+      state.activeJobId = data.job_id;
+      log(`TTS 任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function runAll() {
+      if (!state.project?.project_id) throw new Error("请先上传视频");
+      if (!state.project.paths?.source_video) throw new Error("请先上传视频");
+      if (!(state.project.source_segments || state.project.segments || []).length) {
+        throw new Error("请先在第 2 步自动识别原文字幕");
+      }
+      if (!(state.project.segments || []).length) {
+        throw new Error("请先在第 3 步保存并翻译字幕");
+      }
+      state.jobChain = [runTts, runFinalMix];
+      log("一键生成开始：提取音色 → 配音 → 导出成片（成片不含背景音乐，BGM 单独保留）");
+      await runCloneVoices();
+    }
+
+    async function runFinalMix() {
+      if (!state.project?.project_id) throw new Error("请先创建项目");
+      const data = await api("/api/dub/final-mix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: state.project.project_id }),
+      });
+      state.activeJobId = data.job_id;
+      log(`成片合成任务已提交: ${data.job_id}`);
+      pollJob();
+    }
+
+    async function pollJob() {
+      if (!state.activeJobId) return;
+      state.jobRunning = true;
+      updateActionButtons();
+      clearTimeout(state.pollTimer);
+      try {
+        const job = await api(`/api/dub/jobs/${state.activeJobId}`);
+        $("#logBox").textContent = (job.logs || []).join("\n") || $("#logBox").textContent;
+        renderJobProgress(job);
+        if (job.result?.translated_full_audio) {
+          renderAudioPreview(job.result.translated_full_audio);
+        }
+        if (job.result?.source_srt) {
+          state.scriptKind = "source";
+          const count = job.result.count ? ` / ${job.result.count} 段` : "";
+          const changed = job.result.changed_count !== undefined ? ` / OCR 改写 ${job.result.changed_count} 段` : "";
+          setStatus("#sourceSrtStatus", `原文字幕已生成${count}${changed} / 请打开字幕校对核对`, "warn");
+        }
+        if (job.result?.translated_srt) {
+          state.scriptKind = "translated";
+          setStatus("#translatedSrtStatus", `译文字幕已生成：${baseName(job.result.translated_srt)}`, "good");
+        }
+        if (job.result?.speaker_voices) {
+          const names = Object.keys(job.result.speaker_voices || {});
+          const skipped = (job.result.skipped || []).length;
+          const errors = (job.result.errors || []).length;
+          setStatus("#speakerVoiceStatus", `音色提取完成：${names.length} 个说话人有复刻音色${skipped ? `，${skipped} 个原声不足跳过` : ""}${errors ? `，${errors} 个失败` : ""}。`, errors ? "warn" : "good");
+        }
+        if (job.result?.output_video_path) {
+          renderVideoPreview(job.result.output_video_path);
+          log(`> 成片已生成: ${baseName(job.result.output_video_path)}`);
+          setStatus("#inputStatus", `成片已生成：${baseName(job.result.output_video_path)}`, "good");
+          notifyParent({ kind: "dub-final-video", message: baseName(job.result.output_video_path), videoPath: job.result.output_video_path });
+        }
+        if (job.result?.bgm_audio) {
+          renderBgmPreview(job.result.bgm_audio);
+          setStatus("#bgmExportStatus", `背景音乐已单独保留，未混入成片`, "good");
+        }
+        if (job.status === "done" || job.status === "failed" || job.status === "cancelled") {
+          log(`任务结束: ${job.status}`);
+          state.jobRunning = false;
+          const next = job.status === "done" ? state.jobChain.shift() : null;
+          if (job.status !== "done") state.jobChain = [];
+          if (next) state.jobRunning = true;
+          await refreshProject();
+          await loadVoiceLibrary();
+          if (next) next().catch(handleError);
+          return;
+        }
+      } catch (error) {
+        log(error.message);
+      }
+      state.pollTimer = setTimeout(pollJob, 1800);
+    }
+
+    function bindEvents() {
+      $$(".segment-kind-tab").forEach((btn) => btn.addEventListener("click", () => {
+        state.scriptKind = btn.dataset.scriptKind || "source";
+        state.scriptDirty = false;
+        renderScriptTable();
+      }));
+      $("#refreshBtn").addEventListener("click", loadInitial);
+      $("#toggleSettingsBtn").addEventListener("click", toggleSettings);
+      $("#closeSettingsBtn").addEventListener("click", closeSettings);
+      $("#toggleLogBtn").addEventListener("click", () => toggleLog());
+      $("#closeLogDrawerBtn").addEventListener("click", () => toggleLog(false));
+      $("#openScriptDrawerBtn").addEventListener("click", openScriptDrawer);
+      $("#closeScriptDrawerBtn").addEventListener("click", closeScriptDrawer);
+      $("#drawerMask").addEventListener("click", closeOverlays);
+      $("#speakerVoiceStatus").addEventListener("click", () => {
+        const list = $("#speakerVoiceList");
+        list.hidden = !list.hidden;
+      });
+      $("#segmentsBody").addEventListener("input", () => { state.scriptDirty = true; });
+      $("#saveSettingsBtn").addEventListener("click", saveSettings);
+      $("#importLegacyMiniMaxBtn").addEventListener("click", () => importLegacyMiniMax().catch((e) => {
+        $("#legacyImportStatus").textContent = e.message;
+        $("#legacyImportStatus").className = "status-line bad";
+        handleError(e);
+      }));
+      $("#importSpTranslateBtn").addEventListener("click", () => importSpTranslate().catch((e) => {
+        $("#spTranslateImportStatus").textContent = e.message;
+        $("#spTranslateImportStatus").className = "status-line bad";
+        handleError(e);
+      }));
+      let videoBoxClickTimer = null;
+      $("#videoPreviewBox").addEventListener("click", (event) => {
+        if (videoBoxClickTimer) return;
+        const video = event.target.tagName === "VIDEO" ? event.target : null;
+        if (video && video.clientHeight - event.offsetY < 45) return; // 底部控制条区域不拦截
+        videoBoxClickTimer = setTimeout(() => {
+          videoBoxClickTimer = null;
+          $("#videoFileInput").click();
+        }, 260);
+      });
+      $("#videoPreviewBox").addEventListener("dblclick", (event) => {
+        if (videoBoxClickTimer) {
+          clearTimeout(videoBoxClickTimer);
+          videoBoxClickTimer = null;
+        }
+        const video = $("#videoPreviewBox").querySelector("video");
+        if (!video) return;
+        event.preventDefault();
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          video.requestFullscreen?.();
+        }
+      });
+      $("#videoFileInput").addEventListener("change", (event) => {
+        if (event.target.files[0]) uploadVideo().catch(handleError);
+        event.target.value = "";
+      });
+      $("#openDirsBtn").addEventListener("click", (event) => {
+        event.stopPropagation();
+        $("#dirMenu").hidden = !$("#dirMenu").hidden;
+      });
+      $$("#dirMenu [data-dir]").forEach((item) => item.addEventListener("click", () => {
+        const base = state.project?.paths?.project_dir || "";
+        const suffix = item.dataset.dir;
+        $("#dirMenu").hidden = true;
+        openPath(base ? (suffix ? `${base}\\${suffix}` : base) : "").catch(handleError);
+      }));
+      document.addEventListener("click", (event) => {
+        const menu = $("#dirMenu");
+        if (menu && !menu.hidden && !event.target.closest(".dir-menu-wrap")) menu.hidden = true;
+      });
+      $("#addSegmentBtn").addEventListener("click", () => { addSegmentRow(); state.scriptDirty = true; });
+      $("#importSrtBtn").addEventListener("click", () => $("#srtFileInput").click());
+      $("#srtFileInput").addEventListener("change", (event) => {
+        importSrtFile(event.target.files[0]).catch(handleError);
+        event.target.value = "";
+      });
+      $("#importSourceSrtMainBtn").addEventListener("click", () => $("#sourceSrtFileInput").click());
+      $("#sourceSrtFileInput").addEventListener("change", (event) => {
+        importSourceSrtFile(event.target.files[0]).catch(handleError);
+        event.target.value = "";
+      });
+      $("#runAsrBtn").addEventListener("click", () => runAsr().catch(handleError));
+      $("#runOcrBtn").addEventListener("click", () => runOcr().catch(handleError));
+      $("#runTranslateBtn").addEventListener("click", () => saveAndRunTranslate().catch(handleError));
+      $("#exportSrtBtn").addEventListener("click", () => exportSrt().catch(handleError));
+      $("#saveSegmentsBtn").addEventListener("click", () => saveSegments().catch(handleError));
+      $("#runAllBtn").addEventListener("click", () => runAll().catch(handleError));
+      $("#voiceUploadInput").addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        event.target.value = "";
+        if (file) uploadVoiceFile(file).catch(handleError);
+      });
+    }
+
+    async function openPath(path) {
+      if (!path) return log("路径为空。");
+      await api("/api/dub/open-path", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      log(`已打开目录：${path}（若未弹出窗口，请看任务栏的资源管理器图标）`);
+    }
+
+    bindEvents();
+    loadInitial().catch(handleError);
+  </script>
+</body>
+</html>

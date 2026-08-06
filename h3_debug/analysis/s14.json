@@ -1,0 +1,12 @@
+{
+ "person_count": "ok",
+ "color": "bad",
+ "mirror": "na",
+ "composition": "ok",
+ "material": "ok",
+ "no_text": "ok",
+ "verdict": "issues",
+ "notes": "人偶配色与名册不符，深灰蓝应为墨绿，暖陶土应为深灰蓝，哑光墨绿应为暖陶土",
+ "_seg": "seg_014",
+ "_duration": 4.8
+}

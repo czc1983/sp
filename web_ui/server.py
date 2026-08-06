@@ -22,6 +22,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
+import sys as _sys
+from pathlib import Path as _Path
+_web_ui_dir = str(_Path(__file__).resolve().parent)
+if _web_ui_dir not in _sys.path:
+    _sys.path.insert(0, _web_ui_dir)
+import dub_bridge
+
 from spvideo.asset_store import (
     add_annotation,
     add_original_asset,
@@ -73,36 +80,48 @@ SAM3_REMOTE_MAX_SPARSE_RATIO = 0.10
 SCAIL2_COLOR_NAMES = ("蓝色", "红色", "绿色", "紫色", "青色", "黄色")
 WAN22_MASK_COLOR_KEYS = ("blue", "red", "green", "magenta", "cyan", "yellow")
 DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000"
-DEFAULT_SEEDANCE_A_UPLOAD_BASE_URL = "https://ai.szyqsc.cn"
+DEFAULT_SEEDANCE_A_UPLOAD_BASE_URL = "https://img.lindong.vip"
 DEFAULT_NUKO_CHANNEL1_BASE_URL = "https://www.nukoai.com/api/ext/v1"
 DEFAULT_NUKO_CHANNEL1_API_KEY = "sk_aa827CgwCAxqNQzTq47S5UVrUvZxjRMf4HPLksMp"
-GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v1"
+GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v4_desub_stroke"
 NUKO_CHANNEL1_KNOWN_MODELS = {
     "SD 2.0 720P_官转": {
         "durations": list(range(4, 16)),
         "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
         "video_ref": True,
     },
-    "SD2.0 480P": {
+    "SD 2.0 480P": {
         "durations": list(range(4, 16)),
         "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
         "video_ref": True,
     },
-    "SD2.0 720P": {
+    "SD 2.0 720P": {
         "durations": list(range(4, 16)),
         "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
         "video_ref": True,
     },
-    "SD2.0 Fast 480P": {
+    "SD 2.0 Fast 480P": {
         "durations": list(range(4, 16)),
         "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
         "video_ref": True,
     },
-    "SD2.0 Fast 720P": {
+    "SD 2.0 Fast 720P": {
         "durations": list(range(4, 16)),
         "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
         "video_ref": True,
     },
+    "Hailuo H3": {
+        "durations": list(range(4, 16)),
+        "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
+        "video_ref": True,
+    },
+}
+# 历史错误写法（SD 与 2.0 之间漏了空格），提交前统一纠正为精准模型名
+NUKO_CHANNEL1_MODEL_ALIASES = {
+    "SD2.0 480P": "SD 2.0 480P",
+    "SD2.0 720P": "SD 2.0 720P",
+    "SD2.0 Fast 480P": "SD 2.0 Fast 480P",
+    "SD2.0 Fast 720P": "SD 2.0 Fast 720P",
 }
 DEFAULT_WAN22_API_KEY = ""
 DEFAULT_WAN22_MULTI_ROLE_LIMIT = 0
@@ -568,6 +587,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/dub/") or parsed.path in dub_bridge.DUB_PAGE_PATHS:
+            try:
+                if dub_bridge.handle_dub_get(self, parsed):
+                    return
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc), "traceback": traceback.format_exc()}, status=500)
+                return
         if parsed.path == "/":
             self._send_file(INDEX)
             return
@@ -600,6 +626,22 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 "mode2_project_root": str(STORYBOARD_MODE2_PROJECT_ROOT),
                 "mode2_job_root": str(STORYBOARD_MODE2_JOB_ROOT),
             })
+            return
+        if parsed.path == "/api/mode2/h3-reverse-prompt":
+            try:
+                from spvideo.h3_reverse_prompt import read_cached_prompt
+
+                query = parse_qs(parsed.query)
+                clip_path = str(query.get("clip_path", [""])[0] or "").strip()
+                prompt_format = str(query.get("prompt_format", [""])[0] or "").strip() or None
+                clip = Path(clip_path).resolve() if clip_path else None
+                if clip is None or not clip.exists():
+                    raise ValueError("clip_not_found")
+                prompt = read_cached_prompt(clip, prompt_format)
+                self._send_json({"status": "ready" if prompt else "missing", "prompt": prompt or "",
+                                 "prompt_format": prompt_format or "sp_v4"})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
             return
         if parsed.path.startswith("/api/jobs/"):
             job_id = parsed.path.rsplit("/", 1)[-1]
@@ -699,6 +741,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         logging.debug("[web] POST %r", parsed.path)
+        if parsed.path.startswith("/api/dub/"):
+            try:
+                if dub_bridge.handle_dub_post(self, parsed):
+                    return
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc), "traceback": traceback.format_exc()}, status=500)
+                return
         if parsed.path.startswith("/api/jobs/") and parsed.path.endswith("/cancel"):
             job_id = parsed.path.rsplit("/", 2)[-2]
             with JOBS_LOCK:
@@ -825,6 +874,24 @@ class SplitterHandler(BaseHTTPRequestHandler):
             try:
                 payload = self._read_json()
                 result = _query_nuko_channel1_task(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/whitematte-shot-submit":
+            try:
+                payload = self._read_json()
+                result = _whitematte_shot_submit(payload)
+                self._send_json(result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/whitematte-shot-status":
+            try:
+                payload = self._read_json()
+                result = _whitematte_shot_status(payload)
                 self._send_json(result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
@@ -1432,6 +1499,185 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/mode2/desub-source":
+            try:
+                self._send_json(_desub_mode2_source_video(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/mode2/h3-reverse-prompt":
+            try:
+                payload = self._read_json()
+                clip_path = str(payload.get("clip_path") or "").strip()
+                clip = Path(clip_path).resolve() if clip_path else None
+                if clip is None or not clip.exists():
+                    raise ValueError("clip_not_found")
+                roster_text = str(payload.get("roster_text") or "").strip() or None
+                prompt_format = str(payload.get("prompt_format") or "").strip() or "sp_v4"
+                job_id = uuid.uuid4().hex[:8]
+                job = {
+                    "id": job_id,
+                    "type": "mode2_h3_reverse_prompt",
+                    "status": "running",
+                    "created_at": time.time(),
+                    "clip_path": str(clip),
+                    "prompt_format": prompt_format,
+                    "logs": [f"> H3 反推提示词[{prompt_format}]: {clip.name}"],
+                    "result": None,
+                    "error": None,
+                }
+                with JOBS_LOCK:
+                    JOBS[job_id] = job
+                _write_storyboard_job_snapshot(job)
+                thread = threading.Thread(
+                    target=_run_h3_reverse_prompt_job,
+                    args=(job_id, str(clip), roster_text, prompt_format),
+                    daemon=True,
+                )
+                thread.start()
+                self._send_json({"job_id": job_id})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+        if parsed.path == "/api/mode2/h3-white-mask":
+            try:
+                payload = self._read_json()
+                clip_path = str(payload.get("clip_path") or "").strip()
+                clip = Path(clip_path).resolve() if clip_path else None
+                if clip is None or not clip.exists():
+                    raise ValueError("clip_not_found")
+                # 中文路径安全：解析后断言存在，日志用 ASCII 转义
+                escaped_clip = json.dumps(str(clip))
+                project_dir = str(payload.get("project_dir") or "").strip()
+                if project_dir:
+                    try:
+                        project_dir = str(_resolve_storyboard_mode2_project_dir(project_dir))
+                    except Exception:
+                        project_dir = ""
+                base_dir = Path(project_dir) if project_dir else ROOT.parent
+                job_id = uuid.uuid4().hex[:8]
+                out_dir = base_dir / "04_AI输出成片" / "h3_jobs" / job_id
+                out_dir.mkdir(parents=True, exist_ok=True)
+                prompt = str(payload.get("prompt") or "").strip() or None
+                width = int(payload.get("width") or 480)
+                height = int(payload.get("height") or 864)
+                length_raw = payload.get("length")
+                length = int(length_raw) if length_raw not in (None, "", "auto", 0, "0") else None
+                steps = int(payload.get("steps") or 20)
+                seed = payload.get("seed")
+                seed = int(seed) if seed not in (None, "") else None
+                audio_path = str(payload.get("audio_path") or "").strip()
+                if audio_path:
+                    audio_file = Path(audio_path).resolve()
+                    if not audio_file.exists():
+                        raise ValueError("audio_not_found")
+                    audio_path = str(audio_file)
+                else:
+                    audio_path = None
+                job = {
+                    "id": job_id,
+                    "type": "mode2_h3_white_mask",
+                    "status": "running",
+                    "created_at": time.time(),
+                    "project_dir": project_dir,
+                    "clip_path": str(clip),
+                    "logs": [
+                        f"> MiniMax H3 白膜生成: {clip.name}",
+                        f"> clip: {escaped_clip}",
+                        f"> size: {width}x{height} length={length if length else 'auto按时长对齐'} steps={steps}",
+                    ],
+                    "result": None,
+                    "error": None,
+                }
+                with JOBS_LOCK:
+                    JOBS[job_id] = job
+                _write_storyboard_job_snapshot(job)
+                thread = threading.Thread(
+                    target=_run_h3_white_mask_job,
+                    args=(job_id, str(clip), prompt, width, height, length, steps, seed, str(out_dir), audio_path),
+                    daemon=True,
+                )
+                thread.start()
+                self._send_json({"job_id": job_id})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/mode2/h3-charswap":
+            try:
+                payload = self._read_json()
+                mask_video_path = str(payload.get("mask_video_path") or "").strip()
+                mask_video = Path(mask_video_path).resolve() if mask_video_path else None
+                if mask_video is None or not mask_video.exists():
+                    raise ValueError("mask_video_not_found")
+                char_image_paths = [str(p).strip() for p in (payload.get("char_image_paths") or []) if str(p).strip()]
+                if not 1 <= len(char_image_paths) <= 3:
+                    raise ValueError("char_image_paths_count_invalid")
+                char_images = []
+                for image_path in char_image_paths:
+                    image = Path(image_path).resolve()
+                    if not image.exists():
+                        raise ValueError(f"char_image_not_found: {image.name}")
+                    char_images.append(str(image))
+                # 中文路径安全：解析后断言存在，日志用 ASCII 转义
+                escaped_mask = json.dumps(str(mask_video))
+                project_dir = str(payload.get("project_dir") or "").strip()
+                if project_dir:
+                    try:
+                        project_dir = str(_resolve_storyboard_mode2_project_dir(project_dir))
+                    except Exception:
+                        project_dir = ""
+                base_dir = Path(project_dir) if project_dir else ROOT.parent
+                job_id = uuid.uuid4().hex[:8]
+                out_dir = base_dir / "04_AI输出成片" / "h3_jobs" / job_id
+                out_dir.mkdir(parents=True, exist_ok=True)
+                prompt = str(payload.get("prompt") or "").strip() or None
+                width = int(payload.get("width") or 480)
+                height = int(payload.get("height") or 864)
+                length_raw = payload.get("length")
+                length = int(length_raw) if length_raw not in (None, "", "auto", 0, "0") else None
+                steps = int(payload.get("steps") or 20)
+                seed = payload.get("seed")
+                seed = int(seed) if seed not in (None, "") else None
+                audio_path = str(payload.get("audio_path") or "").strip()
+                if audio_path:
+                    audio_file = Path(audio_path).resolve()
+                    if not audio_file.exists():
+                        raise ValueError("audio_not_found")
+                    audio_path = str(audio_file)
+                else:
+                    audio_path = None
+                job = {
+                    "id": job_id,
+                    "type": "mode2_h3_charswap",
+                    "status": "running",
+                    "created_at": time.time(),
+                    "project_dir": project_dir,
+                    "mask_video_path": str(mask_video),
+                    "char_image_paths": char_images,
+                    "logs": [
+                        f"> MiniMax H3 白膜换人: {mask_video.name} + {len(char_images)} 张人物参考图",
+                        f"> mask video: {escaped_mask}",
+                        f"> size: {width}x{height} length={length if length else 'auto按时长对齐'} steps={steps}",
+                    ],
+                    "result": None,
+                    "error": None,
+                }
+                with JOBS_LOCK:
+                    JOBS[job_id] = job
+                _write_storyboard_job_snapshot(job)
+                thread = threading.Thread(
+                    target=_run_h3_charswap_job,
+                    args=(job_id, str(mask_video), char_images, prompt, width, height, length, steps, seed, str(out_dir), audio_path),
+                    daemon=True,
+                )
+                thread.start()
+                self._send_json({"job_id": job_id})
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/generation-package/restore":
             try:
                 self._send_json(_restore_generation_package_state(self._read_json()))
@@ -1456,6 +1702,20 @@ class SplitterHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/generation-package/delete-mask-clip":
             try:
                 self._send_json(_delete_generation_package_mask_clip(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/generation-package/delete-mask-clips":
+            try:
+                self._send_json(_delete_generation_package_mask_clips(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
+        if parsed.path == "/api/generation-package/clear-mask":
+            try:
+                self._send_json(_clear_generation_package_mask(self._read_json()))
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
             return
@@ -10611,6 +10871,184 @@ def _run_scail2_white_mask_job(
         finish("failed", error=error_message)
 
 
+def _run_h3_reverse_prompt_job(
+    job_id: str,
+    clip_path: str,
+    roster_text: str | None,
+    prompt_format: str = "sp_v4",
+) -> None:
+    """后台反推单个片段的 H3 白膜提示词（结果进 .h3_reverse_cache，可重复读取）。"""
+    def add_log(message: str) -> None:
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job.setdefault("logs", []).append(message)
+
+    def finish(status: str, *, result: dict[str, Any] | None = None, error: str | None = None) -> None:
+        snapshot = None
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job["status"] = status
+                job["result"] = result
+                job["error"] = error
+                if error:
+                    job.setdefault("logs", []).append(f"> failed: {error}")
+                snapshot = dict(job)
+        if snapshot is not None:
+            _write_storyboard_job_snapshot(snapshot)
+
+    try:
+        from spvideo.h3_reverse_prompt import reverse_prompt_for_clip
+
+        output = reverse_prompt_for_clip(clip_path, roster_text=roster_text,
+                                        prompt_format=prompt_format, log=add_log)
+        finish("done", result={
+            "clip_path": clip_path,
+            "prompt": output["prompt"],
+            "cost": output.get("cost"),
+            "cached": output.get("cached", False),
+            "prompt_format": output.get("prompt_format", prompt_format),
+        })
+    except Exception as exc:  # noqa: BLE001
+        finish("failed", error=f"{type(exc).__name__}: {exc}")
+
+
+def _run_h3_white_mask_job(
+    job_id: str,
+    clip_path: str,
+    prompt: str | None,
+    width: int,
+    height: int,
+    length: int | None,
+    steps: int,
+    seed: int | None,
+    out_dir: str,
+    audio_path: str | None = None,
+) -> None:
+    def add_log(message: str) -> None:
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job.setdefault("logs", []).append(message)
+
+    def finish(status: str, *, result: dict[str, Any] | None = None, error: str | None = None) -> None:
+        snapshot = None
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job["status"] = status
+                job["result"] = result
+                job["error"] = error
+                if error:
+                    job.setdefault("logs", []).append(f"> failed: {error}")
+                snapshot = dict(job)
+        if snapshot is not None:
+            _write_storyboard_job_snapshot(snapshot)
+
+    try:
+        from spvideo.minimax_h3_client import MiniMaxH3Client
+
+        client = MiniMaxH3Client()
+        add_log(f"> H3 ComfyUI: {client.base_url}")
+        output = client.run_white_mask(
+            clip_path,
+            prompt=prompt,
+            width=width,
+            height=height,
+            length=length,
+            steps=steps,
+            seed=seed,
+            out_dir=Path(out_dir),
+            out_name="whitemask.mp4",
+            audio_path=audio_path,
+            log=add_log,
+        )
+        result = {
+            "workflow_mode": "minimax_h3_white_mask",
+            "clip_path": clip_path,
+            "output_path": str(output),
+            "whitemask_path": str(output),
+        }
+        add_log(f"> H3 白膜完成: {output}")
+        finish("done", result=result)
+    except Exception as exc:  # noqa: BLE001
+        error_message = str(exc) or type(exc).__name__
+        trace_tail = traceback.format_exc().strip().splitlines()[-8:]
+        for line in trace_tail:
+            add_log("> traceback: " + line)
+        finish("failed", error=error_message)
+
+
+def _run_h3_charswap_job(
+    job_id: str,
+    mask_video_path: str,
+    char_image_paths: list[str],
+    prompt: str | None,
+    width: int,
+    height: int,
+    length: int | None,
+    steps: int,
+    seed: int | None,
+    out_dir: str,
+    audio_path: str | None = None,
+) -> None:
+    def add_log(message: str) -> None:
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job.setdefault("logs", []).append(message)
+
+    def finish(status: str, *, result: dict[str, Any] | None = None, error: str | None = None) -> None:
+        snapshot = None
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job["status"] = status
+                job["result"] = result
+                job["error"] = error
+                if error:
+                    job.setdefault("logs", []).append(f"> failed: {error}")
+                snapshot = dict(job)
+        if snapshot is not None:
+            _write_storyboard_job_snapshot(snapshot)
+
+    try:
+        from spvideo.minimax_h3_client import MiniMaxH3Client
+
+        client = MiniMaxH3Client()
+        add_log(f"> H3 ComfyUI: {client.base_url}")
+        output = client.run_charswap(
+            mask_video_path,
+            char_image_paths,
+            prompt=prompt,
+            width=width,
+            height=height,
+            length=length,
+            steps=steps,
+            seed=seed,
+            out_dir=Path(out_dir),
+            out_name="charswap.mp4",
+            audio_path=audio_path,
+            log=add_log,
+        )
+        result = {
+            "workflow_mode": "minimax_h3_charswap",
+            "mask_video_path": mask_video_path,
+            "char_image_paths": char_image_paths,
+            "output_path": str(output),
+            "charswap_path": str(output),
+        }
+        add_log(f"> H3 换人完成: {output}")
+        finish("done", result=result)
+    except Exception as exc:  # noqa: BLE001
+        error_message = str(exc) or type(exc).__name__
+        trace_tail = traceback.format_exc().strip().splitlines()[-8:]
+        for line in trace_tail:
+            add_log("> traceback: " + line)
+        finish("failed", error=error_message)
+
+
 def _run_scail2_capsule_control_job(
     job_id: str,
     video_path: str,
@@ -13766,6 +14204,7 @@ def _nuko_channel1_normalize_video_durations(
 def _submit_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
     request = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
     model = str(request.get("model") or "").strip()
+    model = NUKO_CHANNEL1_MODEL_ALIASES.get(model, model)
     prompt = str(request.get("prompt") or "").strip()
     if not model:
         raise ValueError("通道1 model 必填")
@@ -14189,6 +14628,18 @@ def _query_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
         "fail_reason": fail_reason,
         "raw": data,
     }
+
+
+def _whitematte_shot_submit(payload: dict[str, Any]) -> dict[str, Any]:
+    """白膜人偶重生：慢放凑时长 + 内容/风格锚点 + 人偶提示词 → 通道1。"""
+    from whitematte_recipe import submit_shot_retake
+    return submit_shot_retake(payload, submit_fn=_submit_nuko_channel1_task)
+
+
+def _whitematte_shot_status(payload: dict[str, Any]) -> dict[str, Any]:
+    """轮询通道1结果，成功后自动抽帧还原原节奏。"""
+    from whitematte_recipe import poll_shot_retake
+    return poll_shot_retake(payload, query_fn=_query_nuko_channel1_task)
 
 
 def _single_role_transfer_backend() -> str:
@@ -15911,7 +16362,7 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
         return {
             "sourcePath": state_path,
             "packageSourcePath": state_path,
-            "packageSourceVersion": str(state.get("packageSourceVersion") or "").strip(),
+            "packageSourceVersion": str(state.get("packageSourceVersion") or GENERATION_PACKAGE_SOURCE_VERSION).strip(),
             "packageSegments": state_segments,
             "packageDuration": _mode2_float(state.get("packageDuration"), _generation_package_timeline_duration(segments)),
         }
@@ -15929,7 +16380,7 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
         return {
             "sourcePath": output_path,
             "packageSourcePath": output_path,
-            "packageSourceVersion": str(data.get("packageSourceVersion") or data.get("package_source_version") or "").strip(),
+            "packageSourceVersion": str(data.get("packageSourceVersion") or data.get("package_source_version") or GENERATION_PACKAGE_SOURCE_VERSION).strip(),
             "packageSegments": data.get("segments") or segments,
             "packageDuration": _mode2_float(data.get("duration"), _generation_package_timeline_duration(segments)),
         }
@@ -16015,24 +16466,25 @@ def _generation_package_segments(payload: dict[str, Any]) -> list[dict[str, Any]
             raise ValueError(f"package_shot_video_not_found: {path_text}")
         shot_id = str(item.get("shot_id") or item.get("id") or f"S{index + 1:03d}").strip() or f"S{index + 1:03d}"
         duration = _mode2_float(item.get("duration"), 0.0)
-        if duration <= 0:
-            try:
-                from spvideo.ffmpeg_tools import probe_video
+        try:
+            from spvideo.ffmpeg_tools import probe_video
 
-                duration = max(0.01, float(probe_video(path).duration or 0.0))
-            except Exception:  # noqa: BLE001
+            meta = probe_video(path)
+            if duration <= 0:
+                duration = max(0.01, float(meta.duration or 0.0))
+            # 纯音频片段会让整包 concat 的 -map 0:v:0 直接失败，提前报出镜头号
+            if int(getattr(meta, "width", 0) or 0) <= 0:
+                raise ValueError(f"package_shot_clip_has_no_video_stream: {shot_id}")
+        except ValueError:
+            raise
+        except Exception:  # noqa: BLE001
+            if duration <= 0:
                 duration = 0.01
         segments.append({
             "shot_id": shot_id,
             "video_path": str(path),
             "duration": round(max(0.01, duration), 3),
         })
-    long_segments = [
-        segment for segment in segments
-        if _mode2_float(segment.get("duration"), 0.0) >= MODE2_MIN_SHOT_CUT_SECONDS
-    ]
-    if long_segments:
-        segments = long_segments
     if not segments:
         raise ValueError("generation_package_requires_shot_videos")
     start = 0.0
@@ -16042,6 +16494,211 @@ def _generation_package_segments(payload: dict[str, Any]) -> list[dict[str, Any]
         segment["end"] = round(end, 3)
         start = end
     return segments
+
+
+def _detect_subtitle_band(video_path: Path, width: int, height: int, duration: float, ffmpeg: str) -> tuple[int, int, int, int] | None:
+    """抽样帧检测烧录字幕的真实位置，返回 delogo 用的 (x, y, w, h)；无字幕返回 None。
+
+    短剧字幕特征：笔画密集、局部对比强、位置固定、集中在画面下方。
+    逐行统计"明暗跳变密集度"（与字色无关，白/黄/粉/黑字通吃），
+    多帧一致的行才是字幕行。
+    """
+    import subprocess
+
+    from spvideo.ffmpeg_tools import subprocess_no_window_kwargs
+
+    if duration <= 0:
+        return None
+    small_w = 256
+    small_h = max(16, round(height * small_w / width))
+    # 短剧字幕跟台词走，很多片段大半时间没有字幕：抽样要密（约 24 帧起），
+    # 否则少数带字幕的帧会被"多帧一致"投票淹没
+    fps = min(8.0, max(1.0, 24.0 / duration))
+    command = [
+        ffmpeg, "-loglevel", "error",
+        "-i", str(video_path),
+        "-vf", f"fps={fps:.4f},scale={small_w}:{small_h},format=gray",
+        "-f", "rawvideo", "-",
+    ]
+    try:
+        proc = subprocess.run(
+            command, capture_output=True, timeout=120,
+            **subprocess_no_window_kwargs(),
+        )
+    except Exception:  # noqa: BLE001
+        return None
+    data = proc.stdout or b""
+    frame_size = small_w * small_h
+    frame_count = len(data) // frame_size
+    if frame_count <= 0:
+        return None
+    scan_top = int(small_h * 0.55)
+    row_votes = [0] * small_h
+    # 认笔画不认颜色：文字行的局部对比强、明暗跳变密集，
+    # 且笔画成对出现（一跳变附近 6px 内必有另一跳变），可滤掉孤立的画面噪点
+    edge_min = 64
+    hits_needed = max(8, int(small_w * 0.04))
+    for f in range(frame_count):
+        frame = data[f * frame_size:(f + 1) * frame_size]
+        for y in range(scan_top, small_h):
+            row = frame[y * small_w:(y + 1) * small_w]
+            edges = [abs(row[x + 1] - row[x - 1]) >= edge_min for x in range(1, small_w - 1)]
+            hits = 0
+            for i in range(len(edges) - 6):
+                if edges[i] and any(edges[i + 1:i + 7]):
+                    hits += 1
+            if hits >= hits_needed:
+                row_votes[y] += 1
+    # 字幕是"少数帧出现"的目标：只要有约 1/8 的抽样帧在同一行投出密集笔画就认，
+    # 由笔画成对过滤和带宽上限挡住误报；半数门槛会把对白型字幕漏掉
+    votes_needed = max(2, round(frame_count / 8))
+    band_rows = [y for y in range(scan_top, small_h) if row_votes[y] >= votes_needed]
+    if not band_rows:
+        return None
+    pad = 3
+    y0 = max(scan_top, min(band_rows) - pad)
+    y1 = min(small_h - 1, max(band_rows) + pad)
+    band_h = y1 - y0 + 1
+    # 过宽说明是误判（比如大片白衣服），宁可不动
+    if band_h < 2 or band_h > small_h * 0.22:
+        return None
+    scale = height / small_h
+    y = int(y0 * scale)
+    h = max(8, int(band_h * scale))
+    x = int(width * 0.02)
+    w = int(width * 0.96)
+    if y + h > height:
+        h = height - y
+    return (x, y, w, h)
+
+
+def _mask_subtitle_band_for_generation(video_path: Path) -> Path:
+    """对生成输入视频的烧录字幕做 delogo 抹除：靠提示词压不住，必须在输入端处理。
+
+    先逐镜头检测字幕真实位置：有字幕只抹检测到的窄条，没字幕原样返回不降画质。
+    失败时静默退回原视频，不阻断生成流程。
+    """
+    import subprocess
+
+    from spvideo.ffmpeg_tools import ffmpeg_path, probe_video, subprocess_no_window_kwargs
+
+    try:
+        meta = probe_video(Path(video_path))
+        width = int(getattr(meta, "width", 0) or 0)
+        height = int(getattr(meta, "height", 0) or 0)
+        duration = float(getattr(meta, "duration", 0.0) or 0.0)
+        if width <= 0 or height <= 0:
+            return video_path
+        # delogo 需要全功能 ffmpeg（项目内置的 remotion 版没有滤镜），找不到再退回默认
+        full_ffmpeg = ROOT.parent / "assets" / "ffmpeg-full" / "ffmpeg.exe"
+        ffmpeg = str(full_ffmpeg) if full_ffmpeg.is_file() else ffmpeg_path()
+        band = _detect_subtitle_band(Path(video_path), width, height, duration, ffmpeg)
+        if band is None:
+            return video_path
+        x, y, w, h = band
+        masked_path = video_path.with_name(video_path.stem + "_desub.mp4")
+        command = [
+            ffmpeg, "-y", "-loglevel", "error",
+            "-i", str(video_path),
+            "-vf", f"delogo=x={x}:y={y}:w={w}:h={h}",
+            "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "copy",
+            str(masked_path),
+        ]
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=600,
+            **subprocess_no_window_kwargs(),
+        )
+        if result.returncode != 0 or not masked_path.exists() or masked_path.stat().st_size <= 0:
+            return video_path
+        return masked_path
+    except Exception:  # noqa: BLE001
+        return video_path
+
+
+def _desub_mode2_source_video(payload: dict[str, Any]) -> dict[str, Any]:
+    """编排页「去字幕」：对项目原视频做 delogo 抹除，并把项目切到干净版。
+
+    之后分镜小卡会从干净源重切，卡包 prepare / 白膜 / 结果生成全链路自动吃干净画面；
+    prepare 阶段的二次检测找不到字幕条会自然跳过，不会重复抹。
+    """
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    store_path = _storyboard_mode2_asset_store_path(root)
+    if not store_path.exists():
+        raise ValueError(f"mode2 storyboard asset store not found: {store_path}")
+    data = json.loads(store_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(data, dict):
+        raise ValueError("mode2 storyboard asset store is invalid")
+    video_path = str(data.get("video_path") or (data.get("meta") or {}).get("source_path") or "").strip()
+    if not video_path:
+        raise ValueError("mode2_source_video_missing")
+    source = Path(video_path)
+    if not source.is_file():
+        raise ValueError(f"mode2_source_video_not_found: {video_path}")
+    if source.stem.endswith("_desub"):
+        return {
+            "success": True,
+            "project_dir": str(root),
+            "already_clean": True,
+            "video_path": str(source),
+            "message": "原视频已经是去字幕版，无需重复处理",
+        }
+    cleaned = _mask_subtitle_band_for_generation(source)
+    if cleaned == source:
+        return {
+            "success": True,
+            "project_dir": str(root),
+            "already_clean": False,
+            "subtitle_detected": False,
+            "video_path": str(source),
+            "message": "未检测到烧录字幕，原视频保持不变",
+        }
+    cleaned_text = str(cleaned)
+    data["video_path"] = cleaned_text
+    if isinstance(data.get("meta"), dict) and str(data["meta"].get("source_path") or "").strip():
+        data["meta"]["source_path"] = cleaned_text
+    if isinstance(data.get("understanding"), dict) and str(data["understanding"].get("source_path") or "").strip():
+        data["understanding"]["source_path"] = cleaned_text
+    # 清掉带字幕的旧分镜小卡：文件删除 + 字段清空，随后从干净源重切
+    cleared = 0
+    clips_dir = _mode2_shot_preview_clip_dir(root)
+    if clips_dir.is_dir():
+        for old_clip in clips_dir.glob("*.mp4"):
+            try:
+                old_clip.unlink()
+                cleared += 1
+            except Exception:  # noqa: BLE001
+                pass
+    for shot in [item for item in (data.get("shots") or []) if isinstance(item, dict)]:
+        for key in ("preview_clip_path", "clip_output_path"):
+            if str(shot.get(key) or "").strip():
+                shot[key] = ""
+        has_generated_output = any(str(shot.get(key) or "").strip() for key in MODE2_TIMELINE_GENERATED_KEYS)
+        if not has_generated_output and str(shot.get("output_path") or "").strip():
+            shot["output_path"] = ""
+    _refresh_mode2_structured_fields(root, data)
+    _write_storyboard_mode2_store(root, data)
+    recut = sum(
+        1
+        for item in (data.get("shots") or [])
+        if isinstance(item, dict) and str(item.get("preview_clip_path") or "").strip()
+    )
+    return {
+        "success": True,
+        "project_dir": str(root),
+        "already_clean": False,
+        "subtitle_detected": True,
+        "video_path": cleaned_text,
+        "cleared_clips": cleared,
+        "recut_clips": recut,
+        "message": f"已去字幕并切换原视频，重切 {recut} 张分镜小卡",
+    }
 
 
 def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]:
@@ -16061,10 +16718,13 @@ def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]
         expected_duration=timeline_duration,
         duration_tolerance=max(0.35, timeline_duration * 0.08),
     )
+    source_path = output_path
+    if payload.get("mask_subtitles", True):
+        source_path = _mask_subtitle_band_for_generation(output_path)
     result = {
         "package_id": package_id,
-        "output_path": str(output_path),
-        "source_path": str(output_path),
+        "output_path": str(source_path),
+        "source_path": str(source_path),
         "packageSourceVersion": GENERATION_PACKAGE_SOURCE_VERSION,
         "package_source_version": GENERATION_PACKAGE_SOURCE_VERSION,
         "segments": segments,
@@ -16073,8 +16733,8 @@ def _prepare_generation_package_video(payload: dict[str, Any]) -> dict[str, Any]
     }
     (output_path.with_suffix(".json")).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     _write_generation_package_state(root, package_id, {
-        "sourcePath": str(output_path),
-        "packageSourcePath": str(output_path),
+        "sourcePath": str(source_path),
+        "packageSourcePath": str(source_path),
         "packageSourceVersion": GENERATION_PACKAGE_SOURCE_VERSION,
         "packageSegments": segments,
         "packageDuration": result["duration"],
@@ -16107,7 +16767,7 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
         "errorMessage",
         "packageSourceVersion",
     ):
-        if key in state:
+        if key in state and state.get(key) not in (None, ""):
             restored[key] = state.get(key)
     state_status = str(state.get("status") or "").strip()
     mask_task_id = str(restored.get("maskTaskId") or restored.get("maskJobId") or "").strip()
@@ -16185,6 +16845,192 @@ def _generation_package_run_from_saved_item(item: Any, output_role: str) -> dict
     }
 
 
+def _dedupe_white_mask_shelf_clips(
+    root: Path,
+    package_id: str,
+    runs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """同一个 (包, 镜头号) 只允许一张白膜卡：保留最新一次的结果。
+
+    白膜每跑一次（重跑/全流程/增量/同一结果被多条链路重复拆分）都会在
+    mask/ 下新写一套切片和清单，旧卡从不会被替换，架子上同编号卡越积越多。
+    这里在列出架子时强制去重：同编号只留最新文件，其余 mp4 物理删除，
+    清单和包状态记录一并清理。
+    """
+    entries: list[dict[str, Any]] = []
+    order = 0
+    for run in runs:
+        created = _mode2_float(run.get("created_at"), 0.0)
+        clips = run.get("clips") if isinstance(run.get("clips"), list) else []
+        for clip in clips:
+            if not isinstance(clip, dict):
+                continue
+            shot_id = str(clip.get("shot_id") or clip.get("id") or "").strip()
+            path_text = str(clip.get("path") or clip.get("video_path") or "").strip()
+            if not shot_id or not path_text:
+                continue
+            stamp = created
+            path = Path(path_text)
+            exists = path.is_file()
+            if stamp <= 0 and exists:
+                try:
+                    stamp = path.stat().st_mtime
+                except Exception:  # noqa: BLE001
+                    stamp = 0.0
+            entries.append({
+                "shot_id": shot_id,
+                "path": path_text,
+                "stamp": stamp,
+                "order": order,
+                "exists": exists,
+            })
+            order += 1
+    if not entries:
+        return runs
+    by_shot: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        by_shot.setdefault(entry["shot_id"], []).append(entry)
+    keep_paths: set[str] = set()
+    superseded: list[Path] = []
+    seen_drop: set[str] = set()
+    for shot_entries in by_shot.values():
+        ranked = sorted(shot_entries, key=lambda item: (item["stamp"], item["order"]), reverse=True)
+        keeper = next((item for item in ranked if item["exists"]), ranked[0])
+        keep_paths.add(keeper["path"].lower())
+        for item in ranked:
+            lowered = item["path"].lower()
+            if lowered == keeper["path"].lower() or lowered in seen_drop:
+                continue
+            seen_drop.add(lowered)
+            if item["exists"]:
+                superseded.append(Path(item["path"]))
+    if superseded:
+        try:
+            _delete_mask_clips_for_package(root, package_id, superseded)
+        except Exception:  # noqa: BLE001
+            logging.warning(
+                "white mask shelf dedupe cleanup failed for %s/%s",
+                root.name,
+                package_id,
+                exc_info=True,
+            )
+    cleaned_runs: list[dict[str, Any]] = []
+    for run in runs:
+        clips = [
+            clip
+            for clip in (run.get("clips") if isinstance(run.get("clips"), list) else [])
+            if isinstance(clip, dict)
+            and str(clip.get("path") or clip.get("video_path") or "").strip().lower() not in seen_drop
+        ]
+        if not clips:
+            continue
+        next_run = dict(run)
+        next_run["clips"] = clips
+        cleaned_runs.append(next_run)
+    return cleaned_runs
+
+
+def _dedupe_white_mask_items_across_projects(items: list[dict[str, Any]]) -> None:
+    """跨项目去重：同一原视频指纹下的同一个 (包, 镜头号) 只保留最新一张白膜卡。
+
+    同一个原视频可能被分析成多个项目目录，每个目录都有自己的 P001/mask，
+    单项目内的 _dedupe_white_mask_shelf_clips 管不到跨项目的重复；而前端
+    白膜架按视频指纹合并展示，用户看到的就是重复卡。这里按
+    (视频指纹, 包, 镜头号) 收口：保留最新文件，其余 mp4 物理删除，
+    清单和包状态记录由 _delete_mask_clips_for_package 一并清理。
+    没有指纹的条目按自身 project_dir 分组，避免误伤其他视频的卡。
+    """
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        fingerprint = str(item.get("video_fingerprint") or "").strip() or f"dir:{str(item.get('project_dir') or '').strip().lower()}"
+        package_id = str(item.get("package_id") or "").strip()
+        project_dir = str(item.get("project_dir") or "").strip()
+        created = _mode2_float(item.get("created_at"), 0.0)
+        clips = item.get("clips") if isinstance(item.get("clips"), list) else []
+        for clip in clips:
+            if not isinstance(clip, dict):
+                continue
+            shot_id = str(clip.get("shot_id") or clip.get("id") or "").strip()
+            path_text = str(clip.get("path") or clip.get("video_path") or "").strip()
+            if not shot_id or not path_text:
+                continue
+            groups.setdefault((fingerprint, package_id, shot_id), []).append({
+                "path": path_text,
+                "project_dir": project_dir,
+                "package_id": package_id,
+                "stamp": created,
+            })
+    dropped: set[str] = set()
+    for entries in groups.values():
+        unique: dict[str, dict[str, Any]] = {}
+        for entry in entries:
+            unique.setdefault(entry["path"].lower(), entry)
+        if len(unique) <= 1:
+            continue
+
+        def _rank_key(entry: dict[str, Any]) -> tuple[float, float]:
+            stamp = entry["stamp"]
+            mtime = 0.0
+            try:
+                if Path(entry["path"]).is_file():
+                    mtime = Path(entry["path"]).stat().st_mtime
+            except Exception:  # noqa: BLE001
+                mtime = 0.0
+            return (stamp if stamp > 0 else mtime, mtime)
+
+        ranked = sorted(unique.values(), key=_rank_key, reverse=True)
+        keeper = next((entry for entry in ranked if Path(entry["path"]).is_file()), ranked[0])
+        keeper_key = keeper["path"].lower()
+        by_root: dict[str, list[Path]] = {}
+        for entry in ranked:
+            lowered = entry["path"].lower()
+            if lowered == keeper_key or lowered in dropped:
+                continue
+            dropped.add(lowered)
+            path = Path(entry["path"])
+            if path.is_file():
+                by_root.setdefault(entry["project_dir"], []).append(path)
+        for root_text, paths in by_root.items():
+            if not root_text:
+                continue
+            package_id = next(
+                (entry["package_id"] for entry in ranked if entry["project_dir"] == root_text),
+                "",
+            )
+            try:
+                _delete_mask_clips_for_package(Path(root_text), package_id, paths)
+            except Exception:  # noqa: BLE001
+                logging.warning(
+                    "white mask cross-project dedupe cleanup failed for %s/%s",
+                    root_text,
+                    package_id,
+                    exc_info=True,
+                )
+    if not dropped:
+        return
+    kept_items: list[dict[str, Any]] = []
+    for item in items:
+        clips = [
+            clip
+            for clip in (item.get("clips") if isinstance(item.get("clips"), list) else [])
+            if isinstance(clip, dict)
+            and str(clip.get("path") or clip.get("video_path") or "").strip().lower() not in dropped
+        ]
+        if not clips:
+            continue
+        item["clips"] = clips
+        item["shot_count"] = len(clips)
+        item["shot_ids"] = [
+            str(clip.get("shot_id") or clip.get("id") or "").strip()
+            for clip in clips
+            if str(clip.get("shot_id") or clip.get("id") or "").strip()
+        ]
+        kept_items.append(item)
+    items[:] = kept_items
+
+
 def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, Any]:
     include_history = bool(payload.get("include_history"))
     primary_root: Path | None = None
@@ -16197,12 +17043,14 @@ def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, A
         except Exception:  # noqa: BLE001
             primary_root = None
     projects_root = Path(__file__).resolve().parent.parent / ".storyboard_mode2_projects"
-    if include_history or not roots:
-        for candidate in projects_root.iterdir() if projects_root.exists() else []:
-            if not candidate.is_dir():
-                continue
-            if (candidate / "04_AI输出成片" / "generation_packages").exists():
-                roots.append(candidate)
+    # 始终扫描全部项目：白膜卡按“原视频指纹”归属，而不是按项目目录归属。
+    # 同一个原视频无论分析多少次、生成多少个项目目录，卡片都应能共用；
+    # 前端会按指纹过滤掉其他视频产生的卡。
+    for candidate in projects_root.iterdir() if projects_root.exists() else []:
+        if not candidate.is_dir():
+            continue
+        if (candidate / "04_AI输出成片" / "generation_packages").exists():
+            roots.append(candidate)
     deduped_roots: list[Path] = []
     seen_roots: set[str] = set()
     for root in roots:
@@ -16216,6 +17064,8 @@ def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, A
         deduped_roots.append(root)
     items: list[dict[str, Any]] = []
     for root in deduped_roots:
+        root_video_path = _storyboard_mode2_project_video_path(root)
+        root_video_fingerprint = _storyboard_mode2_video_fingerprint(root_video_path)
         packages_root = root / "04_AI输出成片" / "generation_packages"
         package_dirs: set[Path] = set()
         if packages_root.exists() and packages_root.is_dir():
@@ -16254,7 +17104,8 @@ def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, A
                 )
                 if run:
                     runs.append(run)
-            for run in _dedupe_generation_package_runs(runs):
+            deduped_runs = _dedupe_white_mask_shelf_clips(root, package_id, _dedupe_generation_package_runs(runs))
+            for run in deduped_runs:
                 clips = run.get("clips") if isinstance(run.get("clips"), list) else []
                 shot_ids = [
                     str(clip.get("shot_id") or clip.get("id") or "").strip()
@@ -16266,6 +17117,8 @@ def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, A
                     "role": "mask",
                     "project_dir": str(root),
                     "project_id": root.name,
+                    "video_path": root_video_path,
+                    "video_fingerprint": root_video_fingerprint,
                     "package_id": package_id,
                     "package_label": package_id,
                     "shot_ids": shot_ids,
@@ -16278,14 +17131,19 @@ def _list_generation_package_white_masks(payload: dict[str, Any]) -> dict[str, A
                     "source_duration": _mode2_float(run.get("source_duration"), 0.0),
                     "duration_scale": _mode2_float(run.get("duration_scale"), 1.0),
                 })
+    # 跨项目收口：同一视频指纹下同 (包, 镜头号) 只留最新一张，其余物理删除。
+    _dedupe_white_mask_items_across_projects(items)
     items = sorted(
         _dedupe_generation_package_runs(items),
         key=lambda item: _mode2_float(item.get("created_at"), 0.0),
         reverse=True,
     )
+    primary_video_path = _storyboard_mode2_project_video_path(primary_root) if primary_root else ""
     return {
         "success": True,
         "project_dir": str(primary_root or ""),
+        "video_path": primary_video_path,
+        "video_fingerprint": _storyboard_mode2_video_fingerprint(primary_video_path),
         "count": len(items),
         "items": items,
     }
@@ -16335,52 +17193,85 @@ def _generation_package_clean_state_runs(root: Path, package_id: str, output_rol
     return _dedupe_generation_package_runs(cleaned)
 
 
-def _delete_generation_package_mask_clip(payload: dict[str, Any]) -> dict[str, Any]:
-    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
-    package_id = str(payload.get("package_id") or payload.get("id") or "P000").strip() or "P000"
-    clip_path = _generation_package_resolve_role_path(root, package_id, "mask", payload.get("clip_path") or payload.get("path"), suffix=".mp4")
-    manifest_text = str(payload.get("manifest_path") or "").strip()
-    manifest_path = (
-        _generation_package_resolve_role_path(root, package_id, "mask", manifest_text, suffix=".json")
-        if manifest_text
-        else None
-    )
-    if manifest_path is None:
-        role_dir = _generation_package_work_dir(root, package_id) / "mask"
-        for candidate in _generation_package_json_files(role_dir, "mask_*.json"):
-            data = _read_generation_package_manifest(candidate)
-            clips = data.get("clips") if isinstance(data.get("clips"), list) else []
-            if any(_same_resolved_file_path((clip or {}).get("path") or (clip or {}).get("video_path"), clip_path) for clip in clips if isinstance(clip, dict)):
-                manifest_path = candidate.resolve()
-                break
+def _generation_package_locate_mask_clip(value: Any, package_hint: str = "") -> tuple[Path, str, Path] | None:
+    """Locate the owning (root, package_id, resolved_path) of a mask clip.
+
+    Shelf entries can reference clips from a sibling project (same source
+    video, different project dir), so the project_dir sent by the page is not
+    always the project that physically owns the file. Walking the path itself
+    is authoritative: <root>/04_AI输出成片/generation_packages/<pkg>/mask/<file>.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        resolved = Path(text).resolve()
+    except Exception:  # noqa: BLE001
+        return None
+    parts = resolved.parts
+    for index, part in enumerate(parts):
+        if part != "generation_packages" or index < 1 or index + 3 >= len(parts):
+            continue
+        if parts[index - 1] != "04_AI输出成片":
+            continue
+        package_id = parts[index + 1]
+        if parts[index + 2] != "mask":
+            continue
+        if package_hint and package_id != package_hint:
+            continue
+        if resolved.suffix.lower() != ".mp4":
+            continue
+        root = Path(*parts[: index - 1])
+        return root, package_id, resolved
+    return None
+
+
+def _delete_mask_clips_for_package(root: Path, package_id: str, clip_paths: list[Path]) -> dict[str, Any]:
+    targets = {str(path).lower() for path in clip_paths}
+
+    def is_target(value: Any) -> bool:
+        text = str(value or "").strip()
+        if not text:
+            return False
+        try:
+            return str(Path(text).resolve()).lower() in targets
+        except Exception:  # noqa: BLE001
+            return False
 
     deleted_paths: list[str] = []
-    if clip_path.exists() and clip_path.is_file():
-        clip_path.unlink()
-        deleted_paths.append(str(clip_path))
+    for path in clip_paths:
+        try:
+            if path.exists() and path.is_file():
+                path.unlink()
+                deleted_paths.append(str(path))
+        except Exception:  # noqa: BLE001
+            continue
 
-    manifest_updated = False
-    manifest_deleted = False
+    manifests_updated = 0
+    manifests_deleted = 0
     remaining_clips: list[dict[str, Any]] = []
-    if manifest_path and manifest_path.exists():
+    role_dir = _generation_package_work_dir(root, package_id) / "mask"
+    for manifest_path in _generation_package_json_files(role_dir, "mask_*.json"):
         data = _read_generation_package_manifest(manifest_path)
         clips = data.get("clips") if isinstance(data.get("clips"), list) else []
-        remaining_clips = [
+        remaining = [
             clip for clip in clips
             if isinstance(clip, dict)
-            and not _same_resolved_file_path(clip.get("path") or clip.get("video_path"), clip_path)
+            and not is_target(clip.get("path") or clip.get("video_path"))
         ]
-        if len(remaining_clips) != len(clips):
-            manifest_updated = True
-            if remaining_clips:
-                data["clips"] = remaining_clips
-                data["shot_count"] = len(remaining_clips)
-                data["updated_at"] = time.time()
-                manifest_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-            else:
-                manifest_path.unlink()
-                deleted_paths.append(str(manifest_path))
-                manifest_deleted = True
+        if len(remaining) == len(clips):
+            continue
+        manifests_updated += 1
+        remaining_clips = remaining
+        if remaining:
+            data["clips"] = remaining
+            data["shot_count"] = len(remaining)
+            data["updated_at"] = time.time()
+            manifest_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        else:
+            manifest_path.unlink()
+            deleted_paths.append(str(manifest_path))
+            manifests_deleted += 1
 
     state = _read_generation_package_state(root, package_id)
     mask_runs = _generation_package_clean_state_runs(root, package_id, "mask", state.get("maskRuns"))
@@ -16396,15 +17287,171 @@ def _delete_generation_package_mask_clip(payload: dict[str, Any]) -> dict[str, A
     return {
         "success": True,
         "package_id": package_id,
-        "clip_path": str(clip_path),
-        "manifest_path": str(manifest_path) if manifest_path else "",
-        "files_deleted": bool(deleted_paths),
+        "project_dir": str(root),
+        "files_deleted": len(deleted_paths),
         "deleted_paths": deleted_paths,
-        "manifest_updated": manifest_updated,
-        "manifest_deleted": manifest_deleted,
+        "manifests_updated": manifests_updated,
+        "manifests_deleted": manifests_deleted,
         "remaining_clips": len(remaining_clips),
         "statePath": str(_generation_package_state_path(root, package_id)),
         "state": next_state,
+    }
+
+
+def _delete_generation_package_mask_clip(payload: dict[str, Any]) -> dict[str, Any]:
+    clip_text = str(payload.get("clip_path") or payload.get("path") or "").strip()
+    package_hint = str(payload.get("package_id") or payload.get("id") or "").strip()
+    root: Path | None = None
+    package_id = package_hint or "P000"
+    clip_path: Path | None = None
+    try:
+        candidate_root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+        candidate_clip = _generation_package_resolve_role_path(candidate_root, package_id, "mask", clip_text, suffix=".mp4")
+        root, clip_path = candidate_root, candidate_clip
+    except Exception:  # noqa: BLE001
+        located = _generation_package_locate_mask_clip(clip_text, package_hint)
+        if located:
+            root, package_id, clip_path = located
+    if root is None or clip_path is None:
+        raise ValueError("generation_package_path_outside_project")
+    result = _delete_mask_clips_for_package(root, package_id, [clip_path])
+    result["clip_path"] = str(clip_path)
+    result["manifest_updated"] = bool(result.get("manifests_updated"))
+    result["manifest_deleted"] = bool(result.get("manifests_deleted"))
+    return result
+
+
+def _delete_generation_package_mask_clips(payload: dict[str, Any]) -> dict[str, Any]:
+    """Batch version of _delete_generation_package_mask_clip.
+
+    One request deletes many mask clips: files are unlinked, every manifest is
+    rewritten at most once per package, and package state is rewritten once per
+    package. Clips may span sibling projects (same source video); each clip is
+    routed to the project that physically owns it.
+    """
+    package_hint = str(payload.get("package_id") or payload.get("id") or "").strip()
+    payload_root: Path | None = None
+    try:
+        payload_root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    except Exception:  # noqa: BLE001
+        payload_root = None
+    raw_paths = payload.get("clip_paths") if isinstance(payload.get("clip_paths"), list) else []
+    groups: dict[tuple[str, str], dict[str, Any]] = {}
+    skipped: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_paths:
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        owner: tuple[Path, str, Path] | None = None
+        if payload_root is not None and package_hint:
+            try:
+                resolved = _generation_package_resolve_role_path(payload_root, package_hint, "mask", text, suffix=".mp4")
+                owner = (payload_root, package_hint, resolved)
+            except Exception:  # noqa: BLE001
+                owner = None
+        if owner is None:
+            owner = _generation_package_locate_mask_clip(text, package_hint)
+        if owner is None:
+            skipped.append(text)
+            continue
+        root, package_id, resolved = owner
+        key = (str(root), package_id)
+        dedupe_key = str(resolved).lower()
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        groups.setdefault(key, {"root": root, "package_id": package_id, "paths": []})["paths"].append(resolved)
+    if not groups:
+        raise ValueError("generation_package_clip_paths_required")
+    results = [
+        _delete_mask_clips_for_package(group["root"], group["package_id"], group["paths"])
+        for group in groups.values()
+    ]
+    return {
+        "success": True,
+        "requested": len(seen),
+        "files_deleted": sum(int(item.get("files_deleted") or 0) for item in results),
+        "manifests_updated": sum(int(item.get("manifests_updated") or 0) for item in results),
+        "manifests_deleted": sum(int(item.get("manifests_deleted") or 0) for item in results),
+        "packages": [
+            {
+                "project_dir": item.get("project_dir"),
+                "package_id": item.get("package_id"),
+                "files_deleted": item.get("files_deleted"),
+                "state": item.get("state"),
+            }
+            for item in results
+        ],
+        "skipped": skipped,
+    }
+
+
+def _clear_generation_package_mask(payload: dict[str, Any]) -> dict[str, Any]:
+    """清空一个包的全部白膜产物：删除 mask 目录下所有片段/清单并重置状态。
+
+    白膜卡按原视频指纹共享，同一个包号可能存在于同视频的兄弟项目里，
+    一并清空，避免清空后恢复逻辑又把旧卡拉回来。
+    """
+    root = _resolve_storyboard_mode2_project_dir(payload.get("project_dir") or "")
+    package_id = str(payload.get("package_id") or payload.get("id") or "").strip()
+    if not package_id:
+        raise ValueError("generation_package_id_required")
+    fingerprint = _storyboard_mode2_video_fingerprint(_storyboard_mode2_project_video_path(root))
+    roots: list[Path] = [root]
+    projects_root = STORYBOARD_MODE2_PROJECT_ROOT
+    for candidate in projects_root.iterdir() if projects_root.exists() else []:
+        try:
+            if not candidate.is_dir() or candidate.resolve() == root.resolve():
+                continue
+        except Exception:  # noqa: BLE001
+            continue
+        if not (candidate / "04_AI输出成片" / "generation_packages" / package_id).exists():
+            continue
+        if fingerprint:
+            sibling_fp = _storyboard_mode2_video_fingerprint(_storyboard_mode2_project_video_path(candidate))
+            if sibling_fp != fingerprint:
+                continue
+        roots.append(candidate)
+    cleared: list[dict[str, Any]] = []
+    for item_root in roots:
+        mask_dir = _generation_package_work_dir(item_root, package_id) / "mask"
+        deleted_files = 0
+        if mask_dir.exists() and mask_dir.is_dir():
+            for path in mask_dir.iterdir():
+                if not path.is_file():
+                    continue
+                try:
+                    path.unlink()
+                    deleted_files += 1
+                except Exception:  # noqa: BLE001
+                    continue
+            try:
+                mask_dir.rmdir()
+            except OSError:
+                pass
+        state = _read_generation_package_state(item_root, package_id)
+        status = "result_done" if _generation_package_file_exists(state.get("resultPath")) else "idle"
+        next_state = _write_generation_package_state(item_root, package_id, {
+            "status": status,
+            "whiteMaskPath": "",
+            "maskSourcePath": "",
+            "maskPackageIdentityId": "",
+            "maskSegments": [],
+            "maskSplitManifest": "",
+            "maskRuns": [],
+        })
+        cleared.append({
+            "project_dir": str(item_root),
+            "package_id": package_id,
+            "files_deleted": deleted_files,
+            "state": next_state,
+        })
+    return {
+        "success": True,
+        "package_id": package_id,
+        "files_deleted": sum(int(item.get("files_deleted") or 0) for item in cleared),
+        "cleared": cleared,
     }
 
 
@@ -16434,6 +17481,55 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         output_duration = original_total
     scale = output_duration / original_total if original_total > 0 else 1.0
 
+    # 幂等保护：同一个输出视频（如同一 SUCCESS 任务被轮询/页面刷新反复触发拆分）
+    # 已拆分过且片段文件齐全时，直接返回已有 run，不再切新文件、不追加新 run。
+    try:
+        existing_state = _read_generation_package_state(root, package_id)
+        runs_key = "maskRuns" if output_role == "mask" else "resultRuns"
+        existing_runs = existing_state.get(runs_key)
+        if isinstance(existing_runs, list):
+            for existing_run in existing_runs:
+                if not isinstance(existing_run, dict):
+                    continue
+                run_source = str(existing_run.get("split_source_path") or "").strip()
+                if not run_source:
+                    # 旧数据没有 split_source_path 字段：非合并 run 的 source_path 即输出视频路径
+                    run_source = str(existing_run.get("source_path") or "").strip()
+                if run_source != str(source):
+                    continue
+                run_clips = existing_run.get("clips")
+                if not isinstance(run_clips, list) or not run_clips:
+                    continue
+                if not all(
+                    isinstance(clip, dict)
+                    and str(clip.get("path") or "").strip()
+                    and Path(str(clip.get("path"))).is_file()
+                    for clip in run_clips
+                ):
+                    continue
+                replay_result = {
+                    "package_id": package_id,
+                    "run_id": str(existing_run.get("id") or ""),
+                    "source_path": str(source),
+                    "input_source_path": input_source_path,
+                    "source_video_path": input_source_path,
+                    "package_identity_id": package_identity_id,
+                    "output_role": output_role,
+                    "clips": run_clips,
+                    "segments": segments,
+                    "source_duration": existing_run.get("source_duration") or round(output_duration, 3),
+                    "timeline_duration": existing_run.get("timeline_duration") or round(original_total, 3),
+                    "duration_scale": existing_run.get("duration_scale") or round(scale, 6),
+                    "shot_count": len(run_clips),
+                    "created_at": existing_run.get("created_at") or time.time(),
+                    "manifest_path": str(existing_run.get("manifest_path") or ""),
+                    "run": existing_run,
+                    "idempotent_replay": True,
+                }
+                return replay_result
+    except Exception:  # noqa: BLE001 - 幂等检查失败不应阻断正常拆分
+        pass
+
     for index, segment in enumerate(segments, start=1):
         shot_slug = _mode2_safe_asset_slug(segment["shot_id"], fallback=f"S{index:03d}")
         clip_path = output_dir / f"{output_role}_{index:02d}_{shot_slug}_{token}.mp4"
@@ -16452,6 +17548,48 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
             "index": index - 1,
         }
         clips.append(clip)
+    merge_order = [str(item).strip() for item in (payload.get("merge_order_shot_ids") or []) if str(item or "").strip()]
+    merge_missing = {str(item).strip() for item in (payload.get("merge_missing_shot_ids") or []) if str(item or "").strip()}
+    merged_clips: list[dict[str, Any]] = []
+    full_mask_path = ""
+    if output_role == "mask" and merge_order:
+        # 增量白膜：只接受缺失镜头的新段，与结果包里保留的旧卡按整包镜头顺序合并
+        payload_kept = payload.get("merge_kept_clips")
+        if isinstance(payload_kept, list):
+            kept = payload_kept
+        else:
+            merge_state = _read_generation_package_state(root, package_id)
+            kept = merge_state.get("maskSegments") if isinstance(merge_state.get("maskSegments"), list) else []
+        by_shot: dict[str, dict[str, Any]] = {}
+        for clip in kept:
+            if not isinstance(clip, dict):
+                continue
+            sid = str(clip.get("shot_id") or "").strip()
+            clip_path_text = str(clip.get("path") or "").strip()
+            if sid and clip_path_text and Path(clip_path_text).is_file():
+                by_shot[sid] = clip
+        for clip in clips:
+            sid = str(clip.get("shot_id") or "").strip()
+            if merge_missing and sid not in merge_missing:
+                continue
+            by_shot[sid] = clip
+        merged_clips = [by_shot[sid] for sid in merge_order if sid in by_shot]
+        if merged_clips:
+            merged_duration = sum(float(clip.get("duration") or 0.0) for clip in merged_clips)
+            candidate = _generation_package_work_dir(root, package_id) / f"maskfull_{_mode2_safe_asset_slug(package_id, fallback='package')}_{token}.mp4"
+            try:
+                concat_videos(
+                    [str(clip["path"]) for clip in merged_clips],
+                    candidate,
+                    force_reencode=True,
+                    expected_duration=merged_duration,
+                    duration_tolerance=max(0.35, merged_duration * 0.08),
+                )
+                full_mask_path = str(candidate)
+            except Exception:  # noqa: BLE001
+                full_mask_path = ""
+
+    state_clips = merged_clips or clips
     result = {
         "package_id": package_id,
         "run_id": token,
@@ -16460,26 +17598,31 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         "source_video_path": input_source_path,
         "package_identity_id": package_identity_id,
         "output_role": output_role,
-        "clips": clips,
+        "clips": state_clips,
         "segments": segments,
         "source_duration": round(output_duration, 3),
         "timeline_duration": round(original_total, 3),
         "duration_scale": round(scale, 6),
-        "shot_count": len(clips),
+        "shot_count": len(state_clips),
         "created_at": time.time(),
     }
+    if merged_clips:
+        result["merged"] = True
+        result["submitted_clips"] = clips
+        result["white_mask_path"] = full_mask_path
     manifest_path = output_dir / f"{output_role}_{_mode2_safe_asset_slug(package_id, fallback='package')}_{token}.json"
     manifest_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     result["manifest_path"] = str(manifest_path)
     run = {
         "id": token,
         "role": output_role,
-        "source_path": str(source),
+        "source_path": full_mask_path or str(source),
+        "split_source_path": str(source),
         "input_source_path": input_source_path,
         "package_identity_id": package_identity_id,
         "manifest_path": str(manifest_path),
-        "clips": clips,
-        "shot_count": len(clips),
+        "clips": state_clips,
+        "shot_count": len(state_clips),
         "created_at": result["created_at"],
         "timeline_duration": result["timeline_duration"],
         "source_duration": result["source_duration"],
@@ -16491,10 +17634,10 @@ def _split_generation_package_output(payload: dict[str, Any]) -> dict[str, Any]:
         mask_runs = _dedupe_generation_package_runs([run, *(current_state.get("maskRuns") if isinstance(current_state.get("maskRuns"), list) else [])])
         _write_generation_package_state(root, package_id, {
             "status": "mask_done",
-            "whiteMaskPath": str(source),
+            "whiteMaskPath": full_mask_path or str(source),
             "maskSourcePath": input_source_path,
             "maskPackageIdentityId": package_identity_id,
-            "maskSegments": clips,
+            "maskSegments": state_clips,
             "maskSplitManifest": str(manifest_path),
             "maskRuns": mask_runs,
         })
@@ -17548,6 +18691,80 @@ def _storyboard_mode2_video_hash(video_path: str) -> str:
 
 def _storyboard_mode2_project_dir(video_path: str) -> Path:
     return STORYBOARD_MODE2_PROJECT_ROOT / _storyboard_mode2_video_hash(video_path)
+
+
+STORYBOARD_MODE2_VIDEO_FINGERPRINT_CACHE = STORYBOARD_MODE2_PROJECT_ROOT / "_video_fingerprints.json"
+
+
+def _storyboard_mode2_video_fingerprint(video_path: str) -> str:
+    """Content-based fingerprint of a source video.
+
+    The same video keeps the same fingerprint no matter where it is stored or
+    how many times it is analyzed, so white-mask cards can be shared across
+    projects that were generated from the same source video.
+    """
+    path_text = str(video_path or "").strip()
+    if not path_text:
+        return ""
+    path = Path(path_text)
+    try:
+        if not path.is_file():
+            return ""
+        stat = path.stat()
+    except Exception:  # noqa: BLE001
+        return ""
+    cache_key = f"{path.resolve()}|{stat.st_size}|{stat.st_mtime_ns}"
+    cache: dict[str, Any] = {}
+    try:
+        if STORYBOARD_MODE2_VIDEO_FINGERPRINT_CACHE.exists():
+            raw_cache = json.loads(STORYBOARD_MODE2_VIDEO_FINGERPRINT_CACHE.read_text(encoding="utf-8"))
+            if isinstance(raw_cache, dict):
+                cache = raw_cache
+    except Exception:  # noqa: BLE001
+        cache = {}
+    cached = str(cache.get(cache_key) or "").strip()
+    if cached:
+        return cached
+    size = int(stat.st_size)
+    chunk = 4 * 1024 * 1024
+    digest = hashlib.md5()
+    digest.update(str(size).encode("ascii"))
+    try:
+        with path.open("rb") as handle:
+            offsets = [0]
+            if size > chunk * 2:
+                offsets.append(max(0, size // 2 - chunk // 2))
+            if size > chunk:
+                offsets.append(max(0, size - chunk))
+            for offset in offsets:
+                handle.seek(offset)
+                digest.update(handle.read(chunk))
+    except Exception:  # noqa: BLE001
+        return ""
+    fingerprint = f"md5s:{digest.hexdigest()}:{size}"
+    cache[cache_key] = fingerprint
+    try:
+        STORYBOARD_MODE2_VIDEO_FINGERPRINT_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        STORYBOARD_MODE2_VIDEO_FINGERPRINT_CACHE.write_text(
+            json.dumps(cache, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    return fingerprint
+
+
+def _storyboard_mode2_project_video_path(root: Path) -> str:
+    try:
+        store = _storyboard_mode2_asset_store_path(root)
+        if not store.exists():
+            return ""
+        data = json.loads(store.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return ""
+        return str(data.get("video_path") or (data.get("meta") or {}).get("source_path") or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def _storyboard_mode2_understanding_path(project_dir: str | Path) -> Path:

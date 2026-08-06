@@ -37,3 +37,13 @@ Chinese and other non-ASCII Windows paths are fragile when passed through PowerS
 - Use `scripts/safe_path.py` before uploading or processing user files whose paths may contain non-ASCII characters.
 - Read large project JSON in Python with `encoding="utf-8"` instead of PowerShell `ConvertFrom-Json` when encoding risk exists.
 - Before calling ComfyUI, ffmpeg, or SCAIL2 with a user file, assert the resolved `Path(...).exists()` and log the ASCII-escaped JSON path.
+
+
+## 翻译（外语对口型）模块
+
+从 `E:\fy\foreign_lipsync` 合并进来的独立功能，与 Mode 1 / Mode 2 无关，不要让它依赖分镜/编排链路。
+
+- 业务代码在顶层包 `dubvideo/`（ASR、OCR、翻译、MiniMax TTS、音色复刻、Comfy 对口型、混音）。
+- 路由桥接在 `web_ui/dub_bridge.py`，由 `web_ui/server.py` 挂载：页面 `GET /foreign_lipsync`，接口 `/api/dub/...`，媒体复用现有 `GET /media?path=`。
+- 页面 `web_ui/foreign_lipsync_dashboard.html` 通过 iframe 嵌入 `story_generate_dashboard.html` 的「翻译」导航页（`data-module="dub"`）。
+- 运行数据在 `.dub_config/`（设置、密钥）、`.dub_projects/`、`.dub_uploads/`、`.dub_jobs/`、`.dub_exports/`，均按内容指纹无关的项目制存储；旧数据仍在 `E:\fy\foreign_lipsync`，不在 git 里。

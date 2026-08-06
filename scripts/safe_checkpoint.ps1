@@ -20,6 +20,7 @@ function Invoke-Git($Arguments) {
 
 $Repo = (git rev-parse --show-toplevel).Trim()
 Set-Location $Repo
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $Stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $SafeName = ($Name -replace '[^A-Za-z0-9_.-]', '-').Trim('-')
@@ -39,7 +40,7 @@ $PatchFile = Join-Path $PatchDir "$Stamp-$SafeName.patch"
 git diff --binary | Out-File -FilePath $PatchFile -Encoding utf8
 Write-Host "Patch backup: $PatchFile" -ForegroundColor Green
 
-$UntrackedList = @(git ls-files --others --exclude-standard)
+$UntrackedList = @(git -c core.quotepath=false ls-files --others --exclude-standard)
 if ($UntrackedList.Count -gt 0) {
     $UntrackedDir = Join-Path $PatchDir "$Stamp-$SafeName-untracked"
     New-Item -ItemType Directory -Force -Path $UntrackedDir | Out-Null

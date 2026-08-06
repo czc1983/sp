@@ -1,0 +1,20 @@
+
+============================================================
+【成本报表】
+  A        kimi-k2.5                              6.4s  in=   7924 out=   218 total=   8142
+  B-0.15   kimi-k2.5                              9.0s  in=   1723 out=   351 total=   2074
+  B-1.05   kimi-k2.5                              7.4s  in=   1723 out=   279 total=   2002
+  B-1.95   kimi-k2.5                              7.2s  in=   1723 out=   262 total=   1985
+  B-2.85   kimi-k2.5                             10.5s  in=   1723 out=   393 total=   2116
+  B-3.75   kimi-k2.5                             10.0s  in=   1723 out=   351 total=   2074
+  B-4.65   kimi-k2.5                              7.7s  in=   1723 out=   287 total=   2010
+  B2-0.15  kimi-k2.5                             10.4s  in=   3167 out=   408 total=   3575
+  B2-1.05  kimi-k2.5                              8.3s  in=   4301 out=   325 total=   4626
+  B2-1.95  kimi-k2.5                             11.0s  in=   4284 out=   365 total=   4649
+  B2-2.85  kimi-k2.5                             11.5s  in=   4416 out=   425 total=   4841
+  B2-3.75  kimi-k2.5                             12.1s  in=   4373 out=   463 total=   4836
+  B2-4.65  kimi-k2.5                              8.6s  in=   3103 out=   333 total=   3436
+  C        kimi-k2.5                              4.3s  in=   7601 out=   119 total=   7720
+  D        kimi-k2.5                             14.1s  in=   3414 out=   593 total=   4007
+  E        qwen3-vl-30b-a3b-instruct             11.7s  in=   6520 out=   673 total=   7193
+  合计: 16 次调用, 输入 59441 tokens, 输出 5845 tokens, 墙钟 150s（含缓存跳过）

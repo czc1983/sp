@@ -1,0 +1,12 @@
+{
+ "person_count": "ok",
+ "color": "bad",
+ "mirror": "ok",
+ "composition": "ok",
+ "material": "ok",
+ "no_text": "ok",
+ "verdict": "issues",
+ "notes": "人偶配色错误：白色衬衫男应为哑光墨绿，实为哑光深灰蓝；白衣女应为暖陶土，实为浅灰；深色男应为深灰蓝，实为哑光墨绿。",
+ "_seg": "seg_016",
+ "_duration": 4.8
+}

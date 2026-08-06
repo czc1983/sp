@@ -198,6 +198,19 @@
       display: flex;
     }
 
+    .dub-module-view.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dub-frame {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      background: #030405;
+    }
+
     .panel {
       min-height: 0;
       border: 1px solid var(--line);
@@ -5713,6 +5726,24 @@
       box-shadow: 0 0 0 2px rgba(34,197,94,.75), inset 0 0 0 1px rgba(52,211,153,.25);
     }
 
+    @property --gen-run-angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    .generation-package-card.is-running {
+      border-color: transparent;
+      background:
+        linear-gradient(#101112, #101112) padding-box,
+        conic-gradient(from var(--gen-run-angle, 0deg), #134e5e 0deg, #38bdf8 120deg, #f5a623 200deg, #134e5e 360deg) border-box;
+      animation: genRunFlow 2.2s linear infinite;
+    }
+
+    @keyframes genRunFlow {
+      to { --gen-run-angle: 360deg; }
+    }
+
     .generation-package-card strong {
       font-size: 14px;
       color: #fff;
@@ -8329,6 +8360,7 @@
     }
 
     .compose-shot-card {
+      position: relative;
       min-width: 0;
       min-height: 0;
       aspect-ratio: 2 / 3;
@@ -8410,6 +8442,37 @@
       color: #aaa;
       font-size: 10px;
       font-weight: 700;
+    }
+
+    .compose-mask-card .compose-shot-id b.is-duplicate {
+      color: #ff5a5a;
+      text-shadow: 0 0 6px rgba(255, 90, 90, .45);
+    }
+
+    .compose-mask-card.is-stale {
+      position: relative;
+      border-color: rgba(240, 162, 60, .7);
+      border-style: dashed;
+    }
+
+    .compose-mask-card.is-stale .compose-shot-id b {
+      color: #f0a23c;
+    }
+
+    .compose-mask-stale-badge {
+      position: absolute;
+      left: 10px;
+      bottom: 34px;
+      z-index: 4;
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1;
+      color: #1a1206;
+      background: #f0a23c;
+      border-radius: 4px;
+      padding: 2px 5px;
+      pointer-events: none;
     }
 
     .compose-pack.mask-pack {
@@ -8655,6 +8718,18 @@
       opacity: 1;
     }
 
+    .compose-mask-keep-btn {
+      top: 30px;
+      font-size: 11px;
+      color: #ffd9a0;
+      border-color: rgba(240, 162, 60, .75);
+    }
+
+    .compose-mask-keep-btn:hover {
+      border-color: #f0a23c;
+      background: rgba(240, 162, 60, .28);
+    }
+
     .compose-mask-preview-popover {
       position: fixed;
       z-index: 1200;
@@ -8870,6 +8945,33 @@
       word-break: break-word;
     }
 
+    .compose-pack-shot-list.stale {
+      color: #f0a23c;
+      font-weight: 700;
+    }
+
+    .compose-mask-pack-clear {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      z-index: 5;
+      border: 1px solid rgba(255, 120, 120, .85);
+      border-radius: 6px;
+      background: rgba(122, 26, 26, .88);
+      color: #ffdede;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      cursor: pointer;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, .5);
+    }
+
+    .compose-mask-pack-clear:hover {
+      background: rgba(190, 42, 42, .95);
+      color: #fff;
+      border-color: #ff9a9a;
+    }
+
     .compose-pack-stack-wrap,
     .compose-detail-hand {
       position: relative;
@@ -9041,6 +9143,33 @@
       font-size: 10px;
       line-height: 17px;
       text-align: center;
+    }
+
+    .compose-state-badge {
+      position: absolute;
+      top: 2px;
+      z-index: 3;
+      font-style: normal;
+      font-size: 10px;
+      line-height: 14px;
+      padding: 0 4px;
+      border-radius: 4px;
+      pointer-events: none;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    .compose-state-badge.mask {
+      left: 3px;
+      color: #ffd166;
+      background: rgba(60, 46, 8, .85);
+      border: 1px solid #8a7433;
+    }
+
+    .compose-state-badge.result {
+      right: 3px;
+      color: #8fe69a;
+      background: rgba(16, 60, 24, .85);
+      border: 1px solid #3f7a4a;
     }
 
     .compose-pack-empty {
@@ -9604,11 +9733,17 @@
 
     <nav class="module-nav">
       <div class="module-track">
-        <button class="module-step active" type="button" data-module="story">
+        <button class="module-step" type="button" data-module="dub">
           <span class="module-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M15 10l4.6-2.7a1 1 0 0 1 1.4.9v7.6a1 1 0 0 1-1.4.9L15 14"></path><rect x="3" y="6" width="12" height="12" rx="2"></rect></svg>
           </span>
           <span class="module-title">原片</span>
+        </button>
+        <button class="module-step active" type="button" data-module="story">
+          <span class="module-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5L21 21"></path><path d="M7.5 12.8l1.8-2 1.7 1.7 2.6-3.2"></path></svg>
+          </span>
+          <span class="module-title">分析</span>
         </button>
         <button class="module-step" type="button" data-module="assets">
           <span class="module-icon" aria-hidden="true">
@@ -9644,6 +9779,9 @@
     </nav>
 
     <main class="content">
+      <section class="panel module-view dub-module-view" data-module-view="dub">
+        <iframe class="dub-frame" src="/foreign_lipsync" title="翻译 · 外语对口型工作台"></iframe>
+      </section>
       <section class="panel module-view active story-input-panel" data-module-view="story">
         <div class="panel-head story-panel-head">
           <span id="storyPanelTitle">原视频</span>
@@ -9865,8 +10003,9 @@
         <div class="panel-head">
           <span>编排</span>
           <div class="compose-toolbar">
+            <button class="btn" id="composeDesubBtn" type="button" title="检测并抹除原视频烧录字幕，分镜小卡自动重切干净版">去字幕</button>
             <button class="btn" id="composeAutoPackBtn" type="button">智能合包</button>
-            <button class="btn" id="composeClearBtn" type="button">清空</button>
+            <button class="btn" id="composeClearMaskBtn" type="button" title="物理删除所选白膜包的全部白膜卡，可重新生成">清空白膜</button>
             <button class="btn primary" id="composeConfirmBtn" type="button">确认计划</button>
           </div>
         </div>
@@ -9965,6 +10104,7 @@
                 <div class="generation-route-switch" id="generationRouteSwitch" role="group" aria-label="生成路线">
                   <button type="button" data-generation-route="scail2" title="按单人 Scail2 生成">单人</button>
                   <button type="button" data-generation-route="seedance" title="按多人接口生成">多人</button>
+                  <button type="button" data-generation-route="minimax_h3" title="按 MiniMax H3（远程4090）逐片段生成，单段约 15-25 分钟">H3</button>
                 </div>
               </div>
               <div class="generation-pipeline-body">
@@ -9976,6 +10116,21 @@
                   <button class="btn secondary" id="rerunWhiteMaskBtn" type="button" hidden>重跑白膜</button>
                   <button class="btn" id="rerunResultBtn" type="button" hidden>重跑结果</button>
                   <button class="btn" id="generateScail2PackageBtn" type="button" hidden>Scail2 生成</button>
+                </div>
+                <div class="generation-doll-retake" id="dollRetakePanel" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <select id="dollRetakeShotSelect" title="选择要人偶化的镜头" style="flex:1;min-width:0;"></select>
+                    <select id="dollRetakeColorSelect" title="人偶颜色">
+                      <option value="white">白色人偶</option>
+                      <option value="red">红色人偶</option>
+                      <option value="blue">蓝色人偶</option>
+                      <option value="black">黑色人偶</option>
+                      <option value="custom">自定义…</option>
+                    </select>
+                    <input id="dollRetakeCustomColor" type="text" placeholder="如：深蓝色" style="width:90px;" hidden />
+                    <button class="btn secondary" id="dollRetakeBtn" type="button">人偶重生</button>
+                  </div>
+                  <div id="dollRetakeStatus" style="font-size:12px;opacity:.8;word-break:break-all;"></div>
                 </div>
                 <label class="generation-audio-toggle" id="scail2UploadAudioRow" title="关闭后，上传给 Scail2 的输入视频会去掉声音；生成完成后仍会补回原视频音轨。">
                   <input id="scail2UploadAudioToggle" type="checkbox" />
@@ -10230,7 +10385,7 @@
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
     const STORY_GENERATION_ROUTE_KEY = "sp_story_generation_route";
     const STORY_GENERATION_RUNTIME_KEY_PREFIX = "sp_mode2_generation_runtime:";
-    const GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v1";
+    const GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v4_desub_stroke";
     const STORY_WHITE_MASK_SHELF_KEY_PREFIX = "sp_mode2_white_mask_shelf:";
     const DEFAULT_PRE_DIRECTOR_BASE_URL = "https://ws-b8anhpvi1n7lp628.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
     const DEFAULT_PRE_DIRECTOR_API_KEY = "sk-ws-H.EHEYHRH.MmIP.MEUCIFR5bqIfGINteyGg4h74owHUSlJWFLhI-DPn7xNTk9fwAiEApZm4OqN_Z4Y5w3nj92Y6ayQaS-a7slo3yYHVBNwP8fw";
@@ -10252,10 +10407,11 @@
     ];
     const NUKO_CHANNEL1_MODELS = [
       "SD 2.0 720P_官转",
-      "SD2.0 480P",
-      "SD2.0 720P",
-      "SD2.0 Fast 480P",
-      "SD2.0 Fast 720P",
+      "SD 2.0 480P",
+      "SD 2.0 720P",
+      "SD 2.0 Fast 480P",
+      "SD 2.0 Fast 720P",
+      "Hailuo H3",
     ];
     const SEEDANCE_A_RATIOS = ["9:16", "16:9"];
     const NUKO_CHANNEL1_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
@@ -10331,6 +10487,12 @@
         label: "单人 Scail2",
         button: "单人",
         note: "手动选择单人 Scail2 生成。",
+      },
+      {
+        value: "minimax_h3",
+        label: "MiniMax H3（远程4090）",
+        button: "H3",
+        note: "逐片段提交到远程 4090 的 MiniMax H3 生成，单段约 15-25 分钟。",
       },
     ];
     const STORY_RATIO_OPTIONS = ["9:16", "16:9"];
@@ -10442,6 +10604,12 @@
     let composeSelectedMaskShelfId = "";
     let whiteMaskShelfProjectRestoreKey = "";
     let whiteMaskShelfProjectRestorePromise = null;
+    let whiteMaskShelfCanonicalProjectDir = "";
+    let whiteMaskShelfCanonicalVideoFingerprint = "";
+    let whiteMaskShelfAllowedProjectIds = new Set();
+    // 服务端白膜列表的覆盖范围：`项目::包` → 服务端已知的条目 key 集合。
+    // 用于清掉浏览器缓存里指向已物理删除文件的陈旧条目（服务端数据为权威）。
+    let whiteMaskShelfServerCoverage = new Map();
     let generationWorkbench = {
       selectedPackId: "",
       packageRuntime: {},
@@ -10841,6 +11009,35 @@
       assistantAddChatMessage("assistant", message);
     }
 
+    // 原片/配音工作台（foreign-lipsync iframe）日志与报错桥接进 SP 助手
+    function bridgeForeignLipsyncMessages() {
+      window.addEventListener("message", (event) => {
+        const data = event && event.data;
+        if (!data || typeof data !== "object" || data.source !== "foreign-lipsync") return;
+        const kind = String(data.kind || "");
+        const message = String(data.message || "").trim();
+        if (kind === "dub-final-video") {
+          const videoPath = String(data.videoPath || "").trim();
+          if (videoPath) {
+            const input = $("#videoPathInput");
+            if (input) input.value = videoPath;
+            try {
+              localStorage.setItem("sp_last_videoPathInput", videoPath);
+            } catch (_error) {}
+            refreshSourceVideoPreview();
+            assistantSetStatus(["✓ 原片工作台已生成新成片，已同步为当前原视频", "> " + message, "> 分析页面将基于这个新成片进行分析"], "good");
+          }
+          return;
+        }
+        if (!message) return;
+        if (kind === "dub-error") {
+          assistantSetStatus(["x 原片工作台", "> " + message], "bad");
+        } else {
+          assistantSetStatus(["> 原片工作台: " + message], "info");
+        }
+      });
+    }
+
     function assistantSetRunStatus(lines, running = true) {
       const box = $("#assistantRunStatus");
       const text = $("#assistantRunStatusText");
@@ -11034,6 +11231,7 @@
     function initAssistantRoutePanel() {
       initAssistantResize();
       renderAssistantRouteCard();
+      bridgeForeignLipsyncMessages();
       $("#assistantGuideVideoBtn")?.addEventListener("click", assistantGuideVideo);
       $("#assistantChatForm")?.addEventListener("submit", submitAssistantChat);
       $("#assistantChatInput")?.addEventListener("keydown", (event) => {
@@ -11094,14 +11292,16 @@
 
     function seedanceSubmitErrorLines(error) {
       const message = String(error?.message || error || "").trim();
+      const modelLabel = generationCurrentModelLabel();
+      const modelSuffix = modelLabel ? `（${modelLabel}）` : "";
       if (/invalid token|auth failed|401|403/i.test(message)) {
         return [
-          "x Seedance 鉴权失败：密钥无效或已过期。",
+          `x Seedance 鉴权失败${modelSuffix}：密钥无效或已过期。`,
           "> 请到左下角设置里更新通道2 API Key。",
           message ? `> 原始错误：${message}` : "",
         ].filter(Boolean);
       }
-      return ["x Seedance 请求失败", message ? `> ${message}` : ""];
+      return [`x Seedance 请求失败${modelSuffix}`, message ? `> ${message}` : ""];
     }
 
     function zhDisplayText(value, fallback = "") {
@@ -17910,6 +18110,25 @@
       return String(clip?.shot_id || clip?.shotId || "").trim() || `S${String(index + 1).padStart(3, "0")}`;
     }
 
+    function composeMaskTimelineDurationMap() {
+      const map = new Map();
+      timelineSegments.forEach((seg, index) => {
+        map.set(composeShotKey(seg, index), composeShotDuration(seg));
+      });
+      return map;
+    }
+
+    function composeMaskClipIsStale(clip = {}, index = 0, timelineDurations = null) {
+      if (!timelineDurations || !timelineDurations.size) return false;
+      const shotId = composeMaskClipShotId(clip, index);
+      const currentDuration = Number(timelineDurations.get(shotId));
+      if (!Number.isFinite(currentDuration) || currentDuration <= 0) return true;
+      const fallback = Number(clip?.original_end) - Number(clip?.original_start);
+      const clipDuration = Number(clip?.original_duration ?? fallback);
+      if (!Number.isFinite(clipDuration) || clipDuration <= 0) return false;
+      return Math.abs(currentDuration - clipDuration) > 0.08;
+    }
+
     function composeSortedMaskClips(clips = []) {
       return (Array.isArray(clips) ? clips : [])
         .map((clip, index) => ({ clip, index, shotId: composeMaskClipShotId(clip, index) }))
@@ -18320,6 +18539,49 @@
       ], "good");
     }
 
+    async function desubMode2SourceVideo() {
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!projectDir) {
+        assistantSetStatus(["> 先在顶部加载项目，再去字幕。"], "warn");
+        return;
+      }
+      const ok = await appConfirm({
+        title: "对原视频去字幕",
+        lines: [
+          "检测原视频的烧录字幕并用 delogo 抹除，项目随后切换到干净版原视频。",
+          "分镜小卡会自动重切成干净画面，之后读卡包 / 白膜 / 结果生成都用干净版。",
+          "已经生成好的白膜卡、结果卡不受影响；想让它们也变干净，需要重新生成。",
+        ],
+        confirmText: "开始去字幕",
+        cancelText: "取消",
+      });
+      if (!ok) return;
+      assistantSetRunStatus(["去字幕中：检测字幕条并抹除…"], true);
+      assistantSetStatus(["> 去字幕中：检测字幕条并抹除，原视频较大时可能要等一两分钟。"], "info");
+      try {
+        const response = await fetch("/api/mode2/desub-source", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project_dir: projectDir }),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || "去字幕失败");
+        const lines = [`> ${data.message || "去字幕完成"}`];
+        if (data.subtitle_detected) {
+          lines.push(`> 干净版原视频：${data.video_path || ""}`);
+          if (Number(data.recut_clips || 0) > 0) lines.push(`> 已重切 ${data.recut_clips} 张分镜小卡`);
+        }
+        assistantSetStatus(lines, data.subtitle_detected ? "good" : "info");
+        addLogs(lines);
+        if (data.subtitle_detected) await loadProject();
+      } catch (error) {
+        assistantSetStatus(["x 去字幕失败", "> " + (error.message || error)], "bad");
+        addLogs(["x 去字幕失败", "> " + (error.message || error)]);
+      } finally {
+        assistantSetRunStatus([], false);
+      }
+    }
+
     function composeCreateSmartPlan() {
       if (!timelineSegments.length) return false;
       const packs = [];
@@ -18482,9 +18744,55 @@
       `;
     }
 
+    // 镜头生成进度：白 = 该镜头已有白膜卡；果 = 已有结果卡（以白膜/结果架上的卡为准）
+    function generationPackShotStateMap(packId) {
+      const runtime = generationRuntimeForPack(packId);
+      const collect = (runs, segments) => {
+        const ids = new Set();
+        const addClips = (clips) => (Array.isArray(clips) ? clips : []).forEach((clip) => {
+          const id = String(clip?.shot_id || "").trim();
+          if (id && String(clip?.path || "").trim()) ids.add(id);
+        });
+        (Array.isArray(runs) ? runs : []).forEach((run) => addClips(run?.clips));
+        addClips(segments);
+        return ids;
+      };
+      return {
+        mask: collect(runtime.maskRuns, runtime.maskSegments),
+        result: collect(runtime.resultRuns, runtime.resultSegments),
+      };
+    }
+
+    // 全项目口径的镜头生成进度：镜头池/卡包架展示用，合并所有卡包的运行时状态。
+    function composeGlobalShotStateMap() {
+      const packs = Array.isArray(composeConfirmedPlan?.packs) && composeConfirmedPlan.packs.length
+        ? composeConfirmedPlan.packs
+        : (Array.isArray(composePlan?.packs) ? composePlan.packs : []);
+      const mask = new Set();
+      const result = new Set();
+      packs.forEach((pack) => {
+        const state = generationPackShotStateMap(pack?.id);
+        state.mask.forEach((id) => mask.add(id));
+        state.result.forEach((id) => result.add(id));
+      });
+      return { mask, result };
+    }
+
+    function composeShotStateBadgesHtml(id, shotState) {
+      if (!shotState) return "";
+      const maskBadge = shotState.mask.has(id)
+        ? `<i class="compose-state-badge mask" title="已生成白膜卡">白</i>`
+        : "";
+      const resultBadge = shotState.result.has(id)
+        ? `<i class="compose-state-badge result" title="已生成结果卡">果</i>`
+        : "";
+      return `${resultBadge}${maskBadge}`;
+    }
+
     function composeMiniCardsHtml(shotIds = [], packId = "", options = {}) {
       const ids = composeSortedShotIds(shotIds);
       if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
+      const shotState = generationPackShotStateMap(packId);
       const count = ids.length;
       const step = options.large ? 86 : (options.strip ? 50 : 42);
       const offset = Number(options.offset || 0);
@@ -18498,8 +18806,16 @@
         const rot = count <= 1 ? 0 : (index - center) * (spread / Math.max(1, center + 1));
         const delta = Math.round((index - center) * step);
         const x = (options.center || options.strip) ? `calc(50% + ${delta}px)` : `${start + index * step}px`;
+        const maskBadge = shotState.mask.has(id)
+          ? `<i class="compose-state-badge mask" title="已生成白膜卡">白</i>`
+          : "";
+        const resultBadge = shotState.result.has(id)
+          ? `<i class="compose-state-badge result" title="已生成结果卡">果</i>`
+          : "";
         return `
           <div class="compose-mini" draggable="true" data-compose-mini="${escapeHtml(id)}" data-pack="${escapeHtml(packId)}" title="放回 ${escapeHtml(id)}" style="--x:${x}; --z:${10 + index}; --rot:${rot.toFixed(1)}deg">
+            ${resultBadge}
+            ${maskBadge}
             ${composeThumbHtml(item.seg)}
             <span>${escapeHtml(id)}</span>
           </div>
@@ -18511,6 +18827,7 @@
     function composePackStackHtml(pack = {}) {
       const ids = composeSortedShotIds(pack.shotIds);
       if (!ids.length) return `<div class="compose-pack-empty">拖入镜头</div>`;
+      const shotState = composeGlobalShotStateMap();
       const previewIds = ids.slice(0, 4);
       const count = previewIds.length;
       const cards = previewIds.map((id, index) => {
@@ -18522,6 +18839,7 @@
         const rot = (index - center) * 5;
         return `
           <div class="compose-pack-stack-card" style="--stack-x:${x}px; --stack-y:${y}; --stack-z:${10 + index}; --stack-rot:${rot.toFixed(1)}deg">
+            ${composeShotStateBadgesHtml(id, shotState)}
             ${composeThumbHtml(item.seg)}
             <span>${escapeHtml(id)}</span>
           </div>
@@ -18543,6 +18861,29 @@
         .filter(Boolean);
     }
 
+    // 条目的覆盖键候选：project_id 和归一化 project_dir 都各算一个，
+    // 缓存旧条目可能只存了其中一种，两边任一命中即视为同一 (项目, 包)。
+    function whiteMaskShelfCoverageKeysOf(item = {}) {
+      const packageId = String(item?.package_id || "").trim();
+      const keys = [];
+      const projectId = String(item?.project_id || "").trim().toLowerCase();
+      const projectDirKey = normalizeLocalPathKey(item?.project_dir || "");
+      if (projectId) keys.push(`${projectId}::${packageId}`);
+      if (projectDirKey) keys.push(`${projectDirKey}::${packageId}`);
+      keys.push(`::${packageId}`);
+      return keys;
+    }
+
+    function whiteMaskShelfItemPassesServerCoverage(item = {}) {
+      if (composeIsManualWhiteMaskItem(item)) return true;
+      if (!whiteMaskShelfServerCoverage || !whiteMaskShelfServerCoverage.size) return true;
+      const keys = whiteMaskShelfCoverageKeysOf(item);
+      const covered = keys.some((key) => whiteMaskShelfServerCoverage.has(key));
+      if (!covered) return true; // 该包未被服务端覆盖，不过滤
+      const itemKey = String(item?.manifest_path || item?.source_path || item?.id || "").trim();
+      return keys.some((key) => whiteMaskShelfServerCoverage.get(key)?.has(itemKey));
+    }
+
     function composeWhiteMaskShelfItems() {
       const activePacks = Array.isArray(composeConfirmedPlan?.packs) && composeConfirmedPlan.packs.length
         ? composeConfirmedPlan.packs
@@ -18553,7 +18894,7 @@
       return saveWhiteMaskShelf([
         ...loadWhiteMaskShelf(),
         ...runnablePacks.flatMap((pack) => composeMaskRunsForPack(pack)),
-      ]);
+      ].filter(whiteMaskShelfItemPassesServerCoverage).filter(whiteMaskShelfItemMatchesCurrentProject));
     }
 
     function composeMaskShelfKey(item = {}) {
@@ -18567,6 +18908,36 @@
 
     function composeIsManualWhiteMaskItem(item = {}) {
       return Boolean(item?.manual) || composeMaskShelfKey(item).startsWith("manual-white-mask-hand:");
+    }
+
+    function whiteMaskShelfItemMatchesCurrentProject(item = {}) {
+      if (composeIsManualWhiteMaskItem(item)) return true;
+      const norm = (value) => String(value || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
+      const base = (value) => norm(value).split("/").pop() || "";
+      // 最高优先：卡片文件的真实归属项目（从路径解析）必须在同视频白名单里。
+      // 盖错项目章的旧缓存、从别的项目恢复进 runtime 的运行记录都过不了这关。
+      if (whiteMaskShelfAllowedProjectIds.size) {
+        const firstPath = (Array.isArray(item?.clips) ? item.clips : [])
+          .map((clip) => String(clip?.path || clip?.video_path || "").trim())
+          .find(Boolean) || String(item?.source_path || "").trim();
+        const match = norm(firstPath).match(/\.storyboard_mode2_projects\/([^/]+)\//);
+        if (match && match[1]) return whiteMaskShelfAllowedProjectIds.has(match[1]);
+      }
+      // 其次按原视频内容指纹归属：同一视频无论分析多少次、换路径重新导入，
+      // 指纹都相同，卡片可共用；换了视频指纹不同，卡片不再出现。
+      const canonicalFp = String(whiteMaskShelfCanonicalVideoFingerprint || "").trim();
+      const itemFp = String(item?.video_fingerprint || "").trim();
+      if (canonicalFp && itemFp) return itemFp === canonicalFp;
+      // 没有可判定信息时退回项目目录匹配。
+      const currentDir = norm($("#projectDirInput")?.value.trim() || "");
+      const canonicalDir = norm(whiteMaskShelfCanonicalProjectDir);
+      if (!currentDir && !canonicalDir) return !whiteMaskShelfAllowedProjectIds.size;
+      const currentIds = new Set([base(currentDir), base(canonicalDir)].filter(Boolean));
+      const itemDir = norm(item?.project_dir || "");
+      if (itemDir && (itemDir === currentDir || itemDir === canonicalDir)) return true;
+      const itemId = String(item?.project_id || "").trim().toLowerCase() || base(itemDir);
+      if (itemId) return currentIds.has(itemId);
+      return !whiteMaskShelfAllowedProjectIds.size;
     }
 
     function composeSelectedWhiteMaskShelfItem(items = composeWhiteMaskShelfItems()) {
@@ -18614,11 +18985,21 @@
     function composeWhiteMaskClipCards(items = []) {
       const rows = Array.isArray(items) ? items : [];
       const hiddenPaths = composeHidePackedCards ? composeManualWhiteMaskClipPathSet(rows) : new Set();
+      // 同一个包同一编号只显示最新一张（items 按时间倒序，先出现的即最新），
+      // 服务端已物理清理重复文件，这里是同一文件被多条 run 引用时的兜底
+      const seenPackShots = new Set();
       return rows.flatMap((item, packageIndex) => {
         if (composeIsManualWhiteMaskItem(item)) return [];
+        const packKey = String(item.package_id || "").trim();
         const clips = composeSortedMaskClips(item.clips);
         return clips
           .filter((clip) => !hiddenPaths.has(normalizeLocalPathKey(clip?.path || clip?.video_path)))
+          .filter((clip, clipIndex) => {
+            const key = `${packKey}|${composeMaskClipShotId(clip, clipIndex)}`;
+            if (seenPackShots.has(key)) return false;
+            seenPackShots.add(key);
+            return true;
+          })
           .map((clip, clipIndex) => ({
             item,
             clip,
@@ -18675,6 +19056,18 @@
           title="放回白膜池"
           aria-label="放回白膜池">↩</button>
       ` : "");
+      const keepButton = options.keepable ? `
+        <button class="compose-mask-action-btn compose-mask-keep-btn" type="button"
+          data-keep-white-mask-clip
+          data-project-dir="${escapeHtml(options.projectDir || "")}"
+          data-package-id="${escapeHtml(options.packageId || "")}"
+          data-mask-id="${escapeHtml(options.maskId || "")}"
+          data-manifest-path="${escapeHtml(options.manifestPath || "")}"
+          data-clip-path="${escapeHtml(source)}"
+          data-shot-id="${escapeHtml(options.shotId || "")}"
+          title="保留这张，物理删除其他同编号白膜卡"
+          aria-label="保留这张并删除其他重复卡">留</button>
+      ` : "";
       return `
         <div class="compose-thumb compose-mask-video-thumb${inert ? " is-inert" : ""}"${previewAttrs} title="${escapeHtml(label || source)}">
           <div class="compose-mask-thumb-static has-image">
@@ -18684,27 +19077,37 @@
           </div>
           <span class="compose-mask-play" aria-hidden="true"></span>
           ${actionButton}
+          ${keepButton}
           ${deleteButton}
         </div>
       `;
     }
 
-    function composeMaskCardHtml(entry = {}) {
+    function composeMaskCardHtml(entry = {}, shotCounts = null, timelineDurations = null, packShotCounts = null) {
       const clip = entry.clip || {};
       const item = entry.item || {};
       const path = String(clip?.path || "").trim();
       if (!path) return "";
-      const shotId = String(clip?.shot_id || "").trim() || `S${String((entry.clipIndex || 0) + 1).padStart(3, "0")}`;
+      const shotId = composeMaskClipShotId(clip, entry.clipIndex || 0);
+      const stale = composeMaskClipIsStale(clip, entry.clipIndex || 0, timelineDurations);
       const packId = String(item.package_id || "").trim();
+      // 红色重复标记与「留」按钮同一口径：只统计同一个包内的重复。
+      // 跨包同编号不算重复（包号已经标明来源），清理完后红字即时消失。
+      const duplicate = packShotCounts
+        ? (packShotCounts.get(`${packId}|${shotId}`) || 0) > 1
+        : (shotCounts ? (shotCounts.get(shotId) || 0) > 1 : false);
+      const duplicateInPack = duplicate;
       const maskId = composeMaskShelfKey(item);
       const label = packId || `白膜包${(entry.packageIndex || 0) + 1}`;
       const selected = maskId && maskId === composeSelectedMaskShelfId;
       const manifestPath = String(item.manifest_path || "").trim();
       const projectDir = String(item.project_dir || "").trim();
+      const cardTitle = label + " " + shotId + (stale ? "（旧切割：与当前分镜的编号/时长不一致，来自之前的切割版本）" : "") + " - " + path;
       return `
-        <article class="compose-shot-card compose-mask-card${selected ? " selected" : ""}" data-compose-mask-card data-mask-id="${escapeHtml(maskId)}" data-pack="${escapeHtml(packId)}" title="${escapeHtml(label + " " + shotId + " - " + path)}">
-          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { action: "grab", deletable: true, projectDir, packageId: packId, maskId, manifestPath, shotId })}
-          <div class="compose-shot-id"><b>${escapeHtml(shotId)}</b><span>${escapeHtml(label)}</span></div>
+        <article class="compose-shot-card compose-mask-card${selected ? " selected" : ""}${stale ? " is-stale" : ""}" data-compose-mask-card data-mask-id="${escapeHtml(maskId)}" data-pack="${escapeHtml(packId)}" title="${escapeHtml(cardTitle)}">
+          ${composeMaskVideoThumbHtml(path, `${label} ${shotId}`, { action: "grab", deletable: true, keepable: duplicateInPack, projectDir, packageId: packId, maskId, manifestPath, shotId })}
+          <div class="compose-shot-id"><b${duplicate ? ' class="is-duplicate" title="编号重复：这个包里同编号白膜卡有多张，请挑选保留"' : ""}>${escapeHtml(shotId)}</b><span>${escapeHtml(label)}</span></div>
+          ${stale ? `<i class="compose-mask-stale-badge">旧切割</i>` : ""}
         </article>
       `;
     }
@@ -18974,6 +19377,346 @@
       assistantSetStatus(["> 已放回白膜池", `> ${detail.shotId || "白膜片段"}`], "good");
     }
 
+    function whiteMaskDuplicateClips(shotId, keepClipPath, packageId = "") {
+      const target = String(shotId || "").trim();
+      const keepKey = normalizeLocalPathKey(keepClipPath);
+      const keepPack = String(packageId || "").trim();
+      const rows = [];
+      if (!target) return rows;
+      composeWhiteMaskShelfItems().forEach((item) => {
+        if (composeIsManualWhiteMaskItem(item)) return;
+        const itemPack = String(item.package_id || "").trim();
+        // 只清理同一个包内的重复（多次重跑产生的旧版本），
+        // 不动其他包里同编号的卡，避免误删别的包还在用的白膜。
+        if (keepPack && itemPack !== keepPack) return;
+        (Array.isArray(item.clips) ? item.clips : []).forEach((clip, clipIndex) => {
+          if (composeMaskClipShotId(clip, clipIndex) !== target) return;
+          const path = String(clip?.path || "").trim();
+          if (!path || normalizeLocalPathKey(path) === keepKey) return;
+          rows.push({
+            path,
+            maskId: composeMaskShelfKey(item),
+            packageId: itemPack,
+            manifestPath: String(item.manifest_path || "").trim(),
+            projectDir: String(item.project_dir || "").trim(),
+          });
+        });
+      });
+      // 同一文件可能被多条缓存条目重复引用，按文件路径去重后再计数/删除。
+      const seenPaths = new Set();
+      return rows.filter((row) => {
+        const key = normalizeLocalPathKey(row.path);
+        if (seenPaths.has(key)) return false;
+        seenPaths.add(key);
+        return true;
+      });
+    }
+
+    function appConfirm(options = {}) {
+      const title = String(options.title || "确认操作");
+      const lines = (Array.isArray(options.lines) ? options.lines : [String(options.text || "")]).filter(Boolean);
+      const confirmText = String(options.confirmText || "确定");
+      const cancelText = String(options.cancelText || "取消");
+      document.querySelector(".app-confirm-overlay")?.remove();
+      return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay app-confirm-overlay";
+        overlay.innerHTML = `
+          <div class="modal-box confirm-modal" role="dialog" aria-modal="true">
+            <h4>${escapeHtml(title)}</h4>
+            ${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
+            <div class="asset-editor-actions">
+              <button class="tiny-btn" type="button" data-app-confirm-cancel>${escapeHtml(cancelText)}</button>
+              <button class="tiny-btn" type="button" data-app-confirm-ok>${escapeHtml(confirmText)}</button>
+            </div>
+          </div>
+        `;
+        const done = (value) => {
+          document.removeEventListener("keydown", onKeyDown);
+          overlay.remove();
+          resolve(value);
+        };
+        const onKeyDown = (event) => {
+          if (event.key === "Escape") done(false);
+          if (event.key === "Enter") done(true);
+        };
+        overlay.addEventListener("click", (event) => {
+          if (event.target === overlay) done(false);
+        });
+        overlay.querySelector("[data-app-confirm-cancel]")?.addEventListener("click", () => done(false));
+        overlay.querySelector("[data-app-confirm-ok]")?.addEventListener("click", () => done(true));
+        document.addEventListener("keydown", onKeyDown);
+        document.body.appendChild(overlay);
+        overlay.querySelector("[data-app-confirm-ok]")?.focus();
+      });
+    }
+
+    function purgeWhiteMaskPackLocal(packId) {
+      const target = String(packId || "").trim();
+      if (!target) return;
+      // 架子上这个包的白膜项全部移除；手牌里从该包抓走的卡一并清掉（文件已删）。
+      const kept = [];
+      loadWhiteMaskShelf().forEach((item) => {
+        if (!composeIsManualWhiteMaskItem(item)) {
+          if (String(item.package_id || "").trim() !== target) kept.push(item);
+          return;
+        }
+        const clips = (Array.isArray(item.clips) ? item.clips : [])
+          .filter((clip) => String(clip?.source_package_id || item.package_id || "").trim() !== target);
+        if (clips.length === (Array.isArray(item.clips) ? item.clips.length : 0)) {
+          kept.push(item);
+          return;
+        }
+        if (clips.length) kept.push({ ...item, clips, shot_count: clips.length });
+      });
+      saveWhiteMaskShelf(kept);
+      patchGenerationPackRuntime(target, {
+        status: "idle",
+        whiteMaskPath: "",
+        maskPath: "",
+        maskSourcePath: "",
+        maskSegments: [],
+        maskSplitManifest: "",
+        maskRuns: [],
+        maskTaskId: "",
+        maskJobId: "",
+        maskPollContext: null,
+        lastMessage: "白膜已清空，可重新生成",
+        lastTone: "warn",
+        errorMessage: "",
+      });
+    }
+
+    function openWhiteMaskPackClearDialog(packId) {
+      const target = String(packId || "").trim();
+      if (!target) return;
+      const status = String(generationRuntimeForPack(target).status || "");
+      if (status === "mask_running" || status === "result_running") {
+        assistantSetStatus([`x ${target} 正在生成中`, "> 等任务结束，或在生成页强制结束后再清空。"], "warn");
+        return;
+      }
+      const clipCount = composeWhiteMaskShelfItems()
+        .filter((item) => !composeIsManualWhiteMaskItem(item) && String(item.package_id || "").trim() === target)
+        .reduce((sum, item) => sum + (Array.isArray(item.clips) ? item.clips.length : 0), 0);
+      const projectLabel = String(whiteMaskShelfCanonicalProjectDir || $("#projectDirInput")?.value.trim() || "").split(/[\\/]/).filter(Boolean).pop() || "当前项目";
+      document.querySelector(".white-mask-pack-clear-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay white-mask-pack-clear-overlay";
+      overlay.innerHTML = `
+        <div class="modal-box confirm-modal" role="dialog" aria-modal="true" aria-labelledby="whiteMaskPackClearTitle">
+          <h4 id="whiteMaskPackClearTitle">清空 ${escapeHtml(target)} 的全部白膜</h4>
+          <p>物理删除这个包的所有白膜卡（当前池子里 ${clipCount} 张 mp4 + 全部历史生成记录 + 包状态），不可恢复。清空后到生成页重跑会从白膜阶段重新开始。</p>
+          <strong class="confirm-target-name">${escapeHtml(`${target} · ${clipCount} 张白膜卡 · 项目 ${projectLabel}`)}</strong>
+          <p class="confirm-modal-status" data-white-mask-clear-status></p>
+          <div class="asset-editor-actions">
+            <button class="tiny-btn" type="button" data-cancel-white-mask-clear>取消</button>
+            <button class="tiny-btn" type="button" data-confirm-white-mask-clear>全部清空</button>
+          </div>
+        </div>
+      `;
+      let submitting = false;
+      const statusEl = overlay.querySelector("[data-white-mask-clear-status]");
+      const cancelBtn = overlay.querySelector("[data-cancel-white-mask-clear]");
+      const confirmBtn = overlay.querySelector("[data-confirm-white-mask-clear]");
+      const close = () => {
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const setBusy = (running) => {
+        submitting = Boolean(running);
+        if (cancelBtn) cancelBtn.disabled = submitting;
+        if (confirmBtn) {
+          confirmBtn.disabled = submitting;
+          confirmBtn.textContent = submitting ? "清空中" : "全部清空";
+        }
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape" && !submitting) close();
+      };
+      const runClear = async () => {
+        if (submitting) return;
+        setBusy(true);
+        if (statusEl) statusEl.textContent = "正在物理删除白膜文件...";
+        try {
+          const response = await fetch("/api/generation-package/clear-mask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_dir: $("#projectDirInput")?.value.trim() || "",
+              package_id: target,
+            }),
+          });
+          const raw = await response.text();
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (_) {
+            data = {};
+          }
+          if (!response.ok || data.error) throw new Error(data.error || raw || `HTTP ${response.status}`);
+          purgeWhiteMaskPackLocal(target);
+          closeComposeMaskVideoPreview();
+          renderComposePage();
+          const lines = [
+            `> 已清空 ${target} 的全部白膜`,
+            `> 物理删除文件 ${Number(data.files_deleted || 0)} 个，重跑将从白膜阶段重新开始`,
+          ];
+          assistantSetStatus(lines, "good");
+          addLogs(lines);
+          close();
+        } catch (error) {
+          const detailText = whiteMaskClipDeleteErrorText(error);
+          if (statusEl) {
+            statusEl.textContent = detailText;
+            statusEl.classList.add("bad");
+          }
+          assistantSetStatus([`x 清空 ${target} 白膜失败`, "> " + detailText], "bad");
+          setBusy(false);
+        }
+      };
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay && !submitting) close();
+      });
+      cancelBtn?.addEventListener("click", close);
+      confirmBtn?.addEventListener("click", runClear);
+      document.addEventListener("keydown", onKeyDown);
+      document.body.appendChild(overlay);
+      cancelBtn?.focus();
+    }
+
+    function openWhiteMaskKeepOnlyDialog(detail = {}) {
+      const fallbackProjectDir = String(detail.projectDir || "").trim() || $("#projectDirInput")?.value.trim() || "";
+      const keepClipPath = String(detail.clipPath || "").trim();
+      const shotId = String(detail.shotId || "").trim();
+      const packageId = String(detail.packageId || "").trim();
+      const dups = whiteMaskDuplicateClips(shotId, keepClipPath, packageId);
+      if (!keepClipPath || !shotId) return;
+      if (!dups.length) {
+        assistantSetStatus([`> ${shotId} 在 ${packageId || "这个包"} 内没有其他重复卡`, "> 其他包的同编号卡不会被删除"], "info");
+        return;
+      }
+      document.querySelector(".white-mask-keep-only-overlay")?.remove();
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay white-mask-keep-only-overlay";
+      overlay.innerHTML = `
+        <div class="modal-box confirm-modal" role="dialog" aria-modal="true" aria-labelledby="whiteMaskKeepOnlyTitle">
+          <h4 id="whiteMaskKeepOnlyTitle">只保留这张 ${escapeHtml(shotId)}</h4>
+          <p>保留当前选中的这张，${escapeHtml(packageId || "这个包")} 里其余 ${dups.length} 张同编号白膜卡将物理删除（mp4 文件 + 白膜包记录），不可恢复。其他包的同编号卡不受影响。</p>
+          <strong class="confirm-target-name">${escapeHtml(`${shotId} × ${dups.length + 1} → 留 1 删 ${dups.length}`)}</strong>
+          <p class="confirm-modal-status" data-white-mask-keep-status></p>
+          <div class="asset-editor-actions">
+            <button class="tiny-btn" type="button" data-cancel-white-mask-keep>取消</button>
+            <button class="tiny-btn" type="button" data-confirm-white-mask-keep>保留这张</button>
+          </div>
+        </div>
+      `;
+      let submitting = false;
+      const status = overlay.querySelector("[data-white-mask-keep-status]");
+      const cancelBtn = overlay.querySelector("[data-cancel-white-mask-keep]");
+      const confirmBtn = overlay.querySelector("[data-confirm-white-mask-keep]");
+      const close = () => {
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+      };
+      const setBusy = (running) => {
+        submitting = Boolean(running);
+        if (cancelBtn) cancelBtn.disabled = submitting;
+        if (confirmBtn) {
+          confirmBtn.disabled = submitting;
+          confirmBtn.textContent = submitting ? "处理中" : "保留这张";
+        }
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape" && !submitting) close();
+      };
+      const runKeepOnly = async () => {
+        if (submitting) return;
+        setBusy(true);
+        let deleted = 0;
+        const failed = [];
+        const removeLocalCopies = (rows) => rows.forEach((row) => {
+          removeWhiteMaskClipFromShelf(row.maskId, row.path);
+          removeWhiteMaskClipFromRuntime(row.packageId, row.maskId, row.path);
+        });
+        let batchDone = false;
+        try {
+          if (status) status.textContent = `正在批量删除 ${dups.length} 张重复卡...`;
+          const response = await fetch("/api/generation-package/delete-mask-clips", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_dir: dups[0]?.projectDir || fallbackProjectDir,
+              package_id: packageId,
+              clip_paths: dups.map((row) => row.path),
+            }),
+          });
+          const raw = await response.text();
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch (_) {
+            data = {};
+          }
+          if (!response.ok || data.error) throw new Error(data.error || raw || `HTTP ${response.status}`);
+          removeLocalCopies(dups);
+          deleted = dups.length;
+          batchDone = true;
+        } catch (error) {
+          failed.push(whiteMaskClipDeleteErrorText(error));
+        }
+        if (!batchDone) {
+          // 旧后端没有批量接口时退回逐张删除。
+          deleted = 0;
+          for (const row of dups) {
+            if (status) status.textContent = `正在删除重复卡 ${deleted + failed.length + 1} / ${dups.length}...`;
+            try {
+              const response = await fetch("/api/generation-package/delete-mask-clip", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  project_dir: row.projectDir || fallbackProjectDir,
+                  package_id: row.packageId,
+                  manifest_path: row.manifestPath,
+                  clip_path: row.path,
+                  shot_id: shotId,
+                }),
+              });
+              const raw = await response.text();
+              let data = {};
+              try {
+                data = raw ? JSON.parse(raw) : {};
+              } catch (_) {
+                data = {};
+              }
+              if (!response.ok || data.error) throw new Error(data.error || raw || `HTTP ${response.status}`);
+              removeWhiteMaskClipFromShelf(row.maskId, row.path);
+              removeWhiteMaskClipFromRuntime(row.packageId, row.maskId, row.path);
+              deleted += 1;
+            } catch (error) {
+              failed.push(`${row.packageId || "?"}: ${whiteMaskClipDeleteErrorText(error)}`);
+            }
+          }
+        }
+        closeComposeMaskVideoPreview();
+        renderComposePage();
+        const lines = [
+          `> 已保留 1 张 ${shotId}，删除重复卡 ${deleted} 张`,
+          ...failed.slice(0, 3).map((text) => `x 删除失败: ${text}`),
+        ];
+        assistantSetStatus(lines, failed.length && !deleted ? "bad" : (failed.length ? "warn" : "good"));
+        addLogs(lines);
+        close();
+      };
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay && !submitting) close();
+      });
+      cancelBtn?.addEventListener("click", close);
+      confirmBtn?.addEventListener("click", runKeepOnly);
+      document.addEventListener("keydown", onKeyDown);
+      document.body.appendChild(overlay);
+      cancelBtn?.focus();
+    }
+
     function openWhiteMaskClipDeleteDialog(detail = {}) {
       const projectDir = String(detail.projectDir || "").trim() || $("#projectDirInput")?.value.trim() || "";
       const packageId = String(detail.packageId || "").trim();
@@ -19123,6 +19866,17 @@
             shotId: button.dataset.shotId,
           });
         });
+        thumb.querySelector("[data-keep-white-mask-clip]")?.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const button = event.currentTarget;
+          openWhiteMaskKeepOnlyDialog({
+            projectDir: button.dataset.projectDir,
+            packageId: button.dataset.packageId,
+            clipPath: button.dataset.clipPath,
+            shotId: button.dataset.shotId,
+          });
+        });
         thumb.querySelector("[data-grab-white-mask-clip]")?.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -19190,6 +19944,32 @@
       const items = composeWhiteMaskShelfItems();
       composeSelectedWhiteMaskShelfItem(items);
       const cards = composeWhiteMaskClipCards(items);
+      const maskTimelineDurations = composeMaskTimelineDurationMap();
+      cards.sort((a, b) => composeShotIdCompare(
+        composeMaskClipShotId(a.clip, a.clipIndex || 0),
+        composeMaskClipShotId(b.clip, b.clipIndex || 0)
+      ) || (
+        Number(composeMaskClipIsStale(a.clip, a.clipIndex || 0, maskTimelineDurations))
+        - Number(composeMaskClipIsStale(b.clip, b.clipIndex || 0, maskTimelineDurations))
+      ));
+      const maskShotCounts = new Map();
+      const maskPackShotCounts = new Map();
+      // 重复判定按不同文件计数：同一 mp4 被多条 run 引用不算重复
+      const maskPackShotPaths = new Map();
+      items.forEach((item) => {
+        if (composeIsManualWhiteMaskItem(item)) return;
+        const packKey = String(item.package_id || "").trim();
+        composeSortedMaskClips(item.clips).forEach((clip, clipIndex) => {
+          const sid = composeMaskClipShotId(clip, clipIndex);
+          maskShotCounts.set(sid, (maskShotCounts.get(sid) || 0) + 1);
+          const packShotKey = `${packKey}|${sid}`;
+          const pathKey = normalizeLocalPathKey(clip?.path || clip?.video_path) || `${packShotKey}#${clipIndex}`;
+          if (!maskPackShotPaths.has(packShotKey)) maskPackShotPaths.set(packShotKey, new Set());
+          const pathSet = maskPackShotPaths.get(packShotKey);
+          pathSet.add(pathKey);
+          maskPackShotCounts.set(packShotKey, pathSet.size);
+        });
+      });
       if (summary) summary.textContent = cards.length
         ? `${cards.length} 张白膜卡 · ${items.length} 个白膜包`
         : (composeHidePackedCards ? "白膜池已隐藏手牌中的卡" : "生成白膜后自动保存");
@@ -19197,7 +19977,7 @@
         list.innerHTML = `<div class="empty" style="min-width:260px;">${composeHidePackedCards ? "没有可显示的白膜卡。点眼睛可显示全部。" : "暂无白膜包。生成白膜后会保存在这里。"}</div>`;
         return;
       }
-      list.innerHTML = cards.map((entry) => composeMaskCardHtml(entry)).join("");
+      list.innerHTML = cards.map((entry) => composeMaskCardHtml(entry, maskShotCounts, maskTimelineDurations, maskPackShotCounts)).join("");
       bindComposeMaskVideoPlayback(list);
       list.querySelectorAll("[data-compose-mask-card]").forEach((card) => {
         card.addEventListener("click", () => {
@@ -19259,6 +20039,7 @@
         grid.innerHTML = `<div class="empty" style="min-width:220px;">${composeHidePackedCards && composeBoardMode !== "current" ? "没有未入包卡牌。点眼睛可显示全部。" : "当前包为空"}</div>`;
         return;
       }
+      const poolShotState = composeGlobalShotStateMap();
       grid.innerHTML = items.map(({ seg, index, id }) => {
         const inCurrentPack = selectedIds.has(id);
         const inAnyPack = used.has(id);
@@ -19267,6 +20048,7 @@
           : "";
         return `
           <article class="compose-shot-card${stateClass}" draggable="true" data-compose-shot="${escapeHtml(id)}" data-index="${index}">
+            ${composeShotStateBadgesHtml(id, poolShotState)}
             ${composeThumbHtml(seg)}
             <div class="compose-shot-id">${escapeHtml(id)}</div>
           </article>
@@ -19338,26 +20120,66 @@
       const items = composeWhiteMaskShelfItems();
       const selectedItem = composeSelectedWhiteMaskShelfItem(items);
       if (title) title.textContent = "白膜卡包架";
-      if (summary) summary.textContent = items.length ? `${items.length} 个白膜卡包 · 可二次组包` : "暂无白膜卡包";
+      if (summary) summary.textContent = items.length ? `${items.length} 个白膜卡包 · 与卡包按编号对应` : "暂无白膜卡包";
       list.classList.remove("dense", "extra-dense");
       if (!items.length) {
         list.innerHTML = `<div class="empty" style="min-width:260px;">白膜生成完成后会进入这里。</div>`;
         return;
       }
-      list.innerHTML = items.map((item, index) => {
+      // 与源卡包按包号对齐：同一个 P 号的多次生成合并成一张卡（最新一次为代表），
+      // 并标注与当前卡包的同步状态，方便“白膜不合格 -> 回卡包改 -> 重新生成”的回路。
+      const maskGroups = new Map();
+      items.forEach((item) => {
+        const key = String(item.package_id || "").trim() || composeMaskShelfKey(item);
+        if (!maskGroups.has(key)) maskGroups.set(key, []);
+        maskGroups.get(key).push(item);
+      });
+      const packIdCompare = (left, right) => {
+        const num = (value) => {
+          const match = String(value || "").match(/(\d+)/);
+          return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+        };
+        return num(left) - num(right) || String(left).localeCompare(String(right));
+      };
+      const sortedMaskGroups = [...maskGroups.values()].map((groupItems) => {
+        const sorted = groupItems.slice().sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0));
+        return { items: sorted, item: sorted[0], runCount: sorted.length };
+      }).sort((a, b) => packIdCompare(String(a.item.package_id || ""), String(b.item.package_id || "")));
+      const selectedMaskKey = composeMaskShelfKey(selectedItem);
+      list.innerHTML = sortedMaskGroups.map((group, index) => {
+        const item = group.item;
         const clips = Array.isArray(item.clips) ? item.clips : [];
         const packId = String(item.package_id || "").trim();
         const maskId = composeMaskShelfKey(item);
-        const selected = maskId && maskId === composeMaskShelfKey(selectedItem);
+        const selected = group.items.some((entry) => composeMaskShelfKey(entry) === selectedMaskKey);
         const width = Math.min(100, Math.max(3, (clips.length / 10) * 100));
         const titleText = packId || item.package_label || `白膜包 ${index + 1}`;
+        let statusText = "手动白膜包";
+        let statusClass = "";
+        if (packId) {
+          const sourcePack = (composePlan.packs || []).find((pack) => String(pack.id || "") === packId);
+          if (!sourcePack) {
+            statusText = "源包已删 · 卡仍可用";
+            statusClass = " stale";
+          } else {
+            const maskShotKey = composeSortedShotIds(item.shot_ids || []).join("|");
+            const packShotKey = composeSortedShotIds(sourcePack.shotIds || []).join("|");
+            if (maskShotKey && packShotKey && maskShotKey !== packShotKey) {
+              statusText = "包已改 · 需重新生成";
+              statusClass = " stale";
+            } else {
+              statusText = `已同步 · ${clips.length}卡`;
+            }
+            if (group.runCount > 1) statusText += ` · 生成${group.runCount}次`;
+          }
+        }
         return `
           <section class="compose-pack mask-pack${selected ? " selected" : ""}" data-compose-mask-package="${escapeHtml(packId)}" data-mask-id="${escapeHtml(maskId)}" title="${escapeHtml(item.source_path || item.manifest_path || "")}">
             <div class="compose-pack-stack-wrap">${composeMaskPackStackHtml(item)}</div>
             <div class="compose-pack-head">
               <div class="compose-pack-title">${escapeHtml(titleText)}</div>
             </div>
-            <div class="compose-pack-shot-list">${escapeHtml("白膜卡包")}</div>
+            <div class="compose-pack-shot-list${statusClass}">${escapeHtml(statusText)}</div>
             <div class="compose-meter"><span style="width:${width}%"></span></div>
           </section>
         `;
@@ -19408,7 +20230,6 @@
             <div class="compose-pack-head">
               <div class="compose-pack-title">${escapeHtml(composePackCardTitle(pack))}</div>
             </div>
-            <div class="compose-pack-shot-list">${escapeHtml(pack.label || pack.type || pack.route || "")}</div>
             <div class="compose-meter${warn ? " warn" : ""}"><span style="width:${width}%"></span></div>
           </section>
         `;
@@ -19815,6 +20636,7 @@
         "maskJobId",
         "maskPollContext",
         "maskRuns",
+        "h3Jobs",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
@@ -20020,8 +20842,15 @@
 
     function generationPackBackend(pack = {}) {
       const backend = String(pack.backend || pack.route || "").trim().toLowerCase();
-      if (backend) return backend.includes("scail2") ? "scail2" : "seedance";
-      return storyGenerationRoute === "scail2" ? "scail2" : "seedance";
+      if (backend) {
+        if (backend.includes("scail2")) return "scail2";
+        if (backend.includes("h3") || backend.includes("minimax")) return "minimax_h3";
+        return "seedance";
+      }
+      const globalRoute = String(storyGenerationRoute || "").trim().toLowerCase();
+      if (globalRoute === "scail2") return "scail2";
+      if (globalRoute.includes("h3") || globalRoute.includes("minimax")) return "minimax_h3";
+      return "seedance";
     }
 
     function generationPackMinSeconds(pack = {}) {
@@ -20029,7 +20858,10 @@
     }
 
     function generationBackendLabel(pack = {}) {
-      return generationPackBackend(pack) === "scail2" ? "单人 Scail2" : "多人接口";
+      const backend = generationPackBackend(pack);
+      if (backend === "scail2") return "单人 Scail2";
+      if (backend === "minimax_h3") return "MiniMax H3（远程4090）";
+      return "多人接口";
     }
 
     function setGenerationPackBackend(packId, backend) {
@@ -20037,12 +20869,15 @@
       if (!id) return;
       const pack = (composePlan.packs || []).find((item) => String(item.id || "") === id);
       if (!pack) return;
-      const nextBackend = String(backend || "").trim() === "scail2" ? "scail2" : "seedance";
+      const requested = String(backend || "").trim().toLowerCase();
+      const nextBackend = requested === "scail2"
+        ? "scail2"
+        : (requested.includes("h3") || requested.includes("minimax") ? "minimax_h3" : "seedance");
       storyGenerationRoute = nextBackend;
       localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
       if (String(pack.backend || "") === nextBackend) return;
       pack.backend = nextBackend;
-      pack.route = nextBackend === "scail2" ? "Scail2" : "Seedance";
+      pack.route = nextBackend === "scail2" ? "Scail2" : (nextBackend === "minimax_h3" ? "MiniMax H3" : "Seedance");
       pack.type = nextBackend === "scail2" ? "单人" : "多人";
       composePlan.selectedPackId = id;
       generationWorkbench.selectedPackId = id;
@@ -20082,8 +20917,8 @@
     function generationPackSourceInfo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const shots = generationPackShots(pack);
-      const runtimePath = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
-      if (runtimePath && generationRuntimeCanRestoreForPack(runtime, pack)) {
+      const runtimePath = String(runtime.packageSourcePath || "").trim();
+      if (runtimePath && (generationRuntimeMatchesPack(runtime, pack) || (shots.length <= 1 && generationRuntimeCanRestoreForPack(runtime, pack)))) {
         return { path: runtimePath, time: 0.1, shotId: shots.length > 1 ? `整包 ${shots.length} 段` : "" };
       }
       if (shots.length > 1) {
@@ -20375,6 +21210,9 @@
         const button = event.currentTarget;
         clearGenerationPromptOverride(button.dataset.packId, button.dataset.promptStage);
       });
+      root.querySelector("[data-generation-reverse-prompt]")?.addEventListener("click", (event) => {
+        generationH3ReversePackPrompts(event.currentTarget.dataset.packId);
+      });
     }
 
     function generationPackRoleLabel(pack = {}) {
@@ -20411,19 +21249,32 @@
       return options.useMask ? appendUniquePromptBlock(basePrompt, seedanceWhiteControlGuardPrompt()) : basePrompt;
     }
 
+    const WHITE_MASK_STYLE_REF_PATH = "E:\\sp\\assets\\white_mask_style_ref.png";
+    const WHITE_MASK_STYLE_REF_PROMPT_CLAUSE = "最后一张参考图是统一的人偶造型风格示例，所有人偶的造型、材质、颜色和关节样式严格以它为准。";
+    function whiteMaskImagesWithStyleRef(images) {
+      const list = compactMaterials(images).filter((item) => String(item || "").trim() !== WHITE_MASK_STYLE_REF_PATH).slice(0, 8);
+      list.push(WHITE_MASK_STYLE_REF_PATH);
+      return list;
+    }
+
+    // H3 白膜换人专用提示词：在用户可编辑的 result 提示词基础上追加白膜换人规则
+    function generationH3CharswapPrompt(pack = {}) {
+      const base = generationEffectivePromptText(pack, "result");
+      const h3Rules = [
+        "【H3 白膜换人规则】输入参考视频是彩色人偶白膜，只用于锁定镜头顺序、数量、时长、景别、机位、构图、人物站位、动作节奏、表情起伏、人物距离、前后遮挡和人物颜色对应关系。",
+        "【背景保留】背景、场景道具、家具、镜子及其镜中倒影必须完整保留参考视频中的原样，不得抹白、不得简化、不得替换；镜中的人影倒影必须同步替换成对应的真人。",
+        "【身份来源】人物外观（脸型、五官、发型、年龄、身材、服装颜色和款式）只来自人物参考图，参考图中的背景、家具和构图一律忽略。",
+        "【一致性】每名人物全片外观保持一致，表情、视线方向、口型开合与白膜人偶完全一致；镜中倒影与本人外观一致。",
+      ].join("\n");
+      return appendUniquePromptBlock(base, h3Rules);
+    }
+
     function generationPackApiWhiteMaskPrompt(pack = {}) {
-      return "请以我上传的参考视频，完美复刻原视频中所有人物的站位、动作、节奏卡点、运动轨迹、和镜头构图。人物形象使用3D动画制作中的基础白模形象:无脸、无五官、无头发、无服装、无纹理、皮肤光滑，只保留简洁的人形身体结构和清晰关节。动作必须严格跟随参考视频。";
+      return "把参考视频转换成3D动画制作中的基础彩色人偶视频：所有人物变成光滑哑光的彩色树脂人偶，光头无头发，整个头部（头顶、后脑、太阳穴到眉弓）是一体浇注成型的连续光滑蛋壳曲面，没有发线、没有头套缝、没有头盔式分层，任何角度都看不到一圈接缝，参考人物的头发和发际线轮廓不得映射到人偶头上、直接忽略，身穿与身体同色的紧身连体打底衣（舞蹈练功服样式），打底衣与身体同为光滑哑光树脂材质、同一纯色，无衣领、无口袋、无拉链、无图案、无任何服装装饰细节，就像身体的第二层皮肤，全身光滑无皮肤纹理，仅保留清晰关节。面部是简化的玩偶脸：只有简洁的3D卡通眼睛和嘴巴，没有眉毛、没有鼻孔等真人五官细节，不复制原人物的脸型、五官特征和肤色，与原人物完全不相似。每位人物分配一种固定纯色（第1人红色、第2人蓝色、第3人黄色，以此类推），同一人物全片颜色不变。背景、场景道具、家具、镜子及其镜中倒影必须完整保留原样，不得抹白、不得改变、不得简化，只有人物被替换成人偶，镜中的人影倒影也同步变成对应颜色的人偶。参考视频和锚点帧只用于锁定站位、动作、节奏卡点、运动轨迹和镜头构图，其中的真人面部特征、发型和服装一律忽略，不得继承。情绪与节奏跟随原片：眼神方向、睁眼闭眼、喜怒类型与原片一致（愤怒不能变成高兴，垂眼不能变成睁眼），但只用玩偶的简化五官来表达。人物的口型开合与参考视频音轨中的外语配音节奏对应，不要模仿原画面的中文口型。画面中绝对不要出现任何文字、字幕、水印、标题或标牌文字，原视频中的中文字幕必须完全去除。";
     }
 
     function generationPackShotPayload(pack = {}) {
-      const shots = generationPackShots(pack)
-        .map(({ seg, id }) => ({
-          shot_id: id,
-          video_path: shotVideoPath(seg),
-          duration: composeShotDuration(seg),
-        }))
-        .filter((item) => item.video_path && Number(item.duration || 0) >= STORYBOARD_MIN_CUT_SECONDS);
-      return shots.length ? shots : generationPackShots(pack)
+      return generationPackShots(pack)
         .map(({ seg, id }) => ({
           shot_id: id,
           video_path: shotVideoPath(seg),
@@ -20432,11 +21283,80 @@
         .filter((item) => item.video_path);
     }
 
+    // 以白膜结果包里的卡为准：卡还在 = 成功且保留；卡不在 = 需要重新生成
+    // （历史空镜占位卡 scene_passthrough 一律视为缺失，不再自动跳过生成）
+    function generationPackMaskProgress(pack = {}) {
+      const runtime = generationRuntimeForPack(pack.id);
+      const shots = generationPackShotPayload(pack);
+      const clips = (Array.isArray(runtime.maskSegments) ? runtime.maskSegments : [])
+        .filter((clip) => String(clip?.path || "").trim() && !clip?.scene_passthrough);
+      const keptIds = new Set(clips.map((clip) => String(clip?.shot_id || "").trim()).filter(Boolean));
+      const keptShots = shots.filter((shot) => keptIds.has(shot.shot_id));
+      const missingShots = shots.filter((shot) => !keptIds.has(shot.shot_id));
+      return { shots, clips, keptShots, missingShots };
+    }
+
+    // 缺失段不足模型最小时长时，用相邻镜头凑时长（生成后这些相邻段的成果会被丢弃，仍保留旧卡）
+    function buildIncrementalMaskPlan(progress = {}) {
+      const shots = Array.isArray(progress.shots) ? progress.shots : [];
+      const missingShots = Array.isArray(progress.missingShots) ? progress.missingShots : [];
+      const missingIds = missingShots.map((shot) => String(shot.shot_id || "").trim()).filter(Boolean);
+      const submitIds = new Set(missingIds);
+      const totalOf = () => shots
+        .filter((shot) => submitIds.has(shot.shot_id))
+        .reduce((sum, shot) => sum + (Number(shot.duration) || 0), 0);
+      let guard = 0;
+      while (totalOf() < 4.2 && guard++ < shots.length * 2) {
+        const indices = shots
+          .map((shot, index) => (submitIds.has(shot.shot_id) ? index : -1))
+          .filter((index) => index >= 0);
+        const first = Math.min(...indices);
+        const last = Math.max(...indices);
+        if (first > 0) submitIds.add(shots[first - 1].shot_id);
+        else if (last < shots.length - 1) submitIds.add(shots[last + 1].shot_id);
+        else break;
+      }
+      return {
+        submitShots: shots.filter((shot) => submitIds.has(shot.shot_id)),
+        missingShotIds: missingIds,
+        orderedShotIds: shots.map((shot) => String(shot.shot_id || "").trim()).filter(Boolean),
+      };
+    }
+
+    async function prepareIncrementalMaskSource(pack = {}, submitShots = []) {
+      const planSignature = generationPackSignature(pack);
+      const packageIdentityId = generationPackIdentityId(pack);
+      const response = await fetch("/api/generation-package/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_dir: $("#projectDirInput")?.value.trim() || "",
+          package_id: pack.id || "P000",
+          shots: submitShots,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error || "缺失段白膜子包合成失败");
+      patchGenerationPackRuntime(pack.id, {
+        sourcePath: String(data.output_path || data.source_path || "").trim(),
+        packageSourcePath: String(data.output_path || data.source_path || "").trim(),
+        planSignature,
+        packageIdentityId,
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+        packageSegments: Array.isArray(data.segments) ? data.segments : submitShots,
+        packageDuration: Number(data.duration || 0),
+        lastMessage: `缺失段子包已合成\n${fileName(data.output_path || data.source_path || "")}`,
+        lastTone: "warn",
+        errorMessage: "",
+      });
+      return data;
+    }
+
     async function prepareGenerationPackageSource(pack = {}) {
       const shots = generationPackShotPayload(pack);
       if (!shots.length) throw new Error("当前生成包没有可合成的视频片段");
       const runtime = generationRuntimeForPack(pack.id);
-      const existingPath = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
+      const existingPath = String(runtime.packageSourcePath || "").trim();
       const packageIdentityId = generationPackIdentityId(pack);
       const planSignature = generationPackSignature(pack);
       if (
@@ -20488,7 +21408,7 @@
 
     function generationPreparedPackageInput(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
-      const path = String(runtime.packageSourcePath || runtime.sourcePath || "").trim();
+      const path = String(runtime.packageSourcePath || "").trim();
       const segments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
       const shots = generationPackShotPayload(pack);
       if (!path || !shots.length || segments.length !== shots.length) return null;
@@ -20573,7 +21493,8 @@
       const shots = generationPackShots(latest);
       if (shots.length <= 1) return;
       const runtime = generationRuntimeForPack(id);
-      if (runtime.sourcePreparing || runtime.sourcePreviewFailed || String(runtime.packageSourcePath || runtime.sourcePath || "").trim()) return;
+      if (runtime.sourcePreparing || runtime.sourcePreviewFailed) return;
+      if (String(runtime.packageSourcePath || "").trim() && generationRuntimeMatchesPack(runtime, latest)) return;
       patchGenerationPackRuntime(id, {
         sourcePreparing: true,
         sourcePreviewFailed: false,
@@ -20595,7 +21516,7 @@
       }
     }
 
-    async function splitGenerationPackageOutput(packageId, outputPath, outputRole = "result", sourcePath = "") {
+    async function splitGenerationPackageOutput(packageId, outputPath, outputRole = "result", sourcePath = "", mergePlan = null) {
       const pack = generationPackById(packageId);
       if (!pack || !outputPath) return null;
       const runtime = generationRuntimeForPack(pack.id);
@@ -20614,6 +21535,9 @@
           source_video_path: String(sourcePath || "").trim(),
           package_identity_id: generationPackIdentityId(pack),
           shots,
+          merge_order_shot_ids: outputRole === "mask" && mergePlan ? mergePlan.orderedShotIds || [] : [],
+          merge_missing_shot_ids: outputRole === "mask" && mergePlan ? mergePlan.missingShotIds || [] : [],
+          merge_kept_clips: outputRole === "mask" && mergePlan ? (Array.isArray(runtime.maskSegments) ? runtime.maskSegments : []) : [],
         }),
       });
       const data = await response.json();
@@ -20669,6 +21593,8 @@
         id: String(item?.id || item?.manifest_path || sourcePath || Date.now()).trim(),
         project_dir: String(item?.project_dir || item?.projectDir || currentProjectDir).trim(),
         project_id: String(item?.project_id || item?.projectId || "").trim(),
+        video_path: String(item?.video_path || item?.videoPath || "").trim(),
+        video_fingerprint: String(item?.video_fingerprint || item?.videoFingerprint || "").trim(),
         package_id: packageId,
         package_label: String(item?.package_label || packageId || "白膜包").trim(),
         shot_ids: Array.isArray(item?.shot_ids) ? item.shot_ids.map((id) => String(id || "").trim()).filter(Boolean) : [],
@@ -20807,17 +21733,51 @@
       whiteMaskShelfProjectRestorePromise = fetch("/api/generation-package/list-white-masks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project_dir: projectDir, include_history: true }),
+        body: JSON.stringify({ project_dir: projectDir, include_history: false }),
       })
         .then((response) => response.json().then((data) => ({ response, data })))
         .then(({ response, data }) => {
           if (!response.ok || data.error) throw new Error(data.error || "白膜包恢复失败");
+          whiteMaskShelfCanonicalProjectDir = String(data.project_dir || "").trim() || whiteMaskShelfCanonicalProjectDir;
+          whiteMaskShelfCanonicalVideoFingerprint = String(data.video_fingerprint || "").trim() || whiteMaskShelfCanonicalVideoFingerprint;
+          // 同视频项目白名单：服务端按指纹标过归属，当前项目也在内。
+          const allowed = new Set();
+          const canonicalId = String(whiteMaskShelfCanonicalProjectDir || "").split(/[\\/]/).filter(Boolean).pop();
+          if (canonicalId) allowed.add(canonicalId.toLowerCase());
+          (Array.isArray(data.items) ? data.items : []).forEach((item) => {
+            const fp = String(item?.video_fingerprint || "").trim();
+            const pid = String(item?.project_id || "").trim().toLowerCase();
+            if (pid && whiteMaskShelfCanonicalVideoFingerprint && fp === whiteMaskShelfCanonicalVideoFingerprint) allowed.add(pid);
+          });
+          if (allowed.size) whiteMaskShelfAllowedProjectIds = allowed;
           const incoming = (Array.isArray(data.items) ? data.items : [])
             .map((item) => normalizeWhiteMaskShelfItem(item))
-            .filter(Boolean);
+            .filter(Boolean)
+            .filter(whiteMaskShelfItemMatchesCurrentProject);
           const before = loadWhiteMaskShelf();
           const beforeKey = whiteMaskShelfSnapshotKey(before);
-          const merged = incoming.length ? saveWhiteMaskShelf([...incoming, ...before]) : before;
+          // 服务端列表为权威：凡服务端已覆盖的 (项目, 包)，缓存里不在服务端清单中的
+          // 旧条目（多指向已物理删除的旧 token 文件）一律丢弃；手动加入的条目保留。
+          const shelfItemStorageKeyOf = (item) => String(item?.manifest_path || item?.source_path || item?.id || "").trim();
+          const coverage = new Map();
+          const addCoverage = (item) => {
+            const itemKey = shelfItemStorageKeyOf(item);
+            whiteMaskShelfCoverageKeysOf(item).forEach((key) => {
+              if (!coverage.has(key)) coverage.set(key, new Set());
+              if (itemKey) coverage.get(key).add(itemKey);
+            });
+          };
+          incoming.forEach(addCoverage);
+          whiteMaskShelfServerCoverage = coverage;
+          const survivors = before.filter((item) => {
+            if (composeIsManualWhiteMaskItem(item)) return true;
+            const itemKey = shelfItemStorageKeyOf(item);
+            const keys = whiteMaskShelfCoverageKeysOf(item);
+            const covered = keys.some((key) => coverage.has(key));
+            if (!covered) return true; // 该包未被服务端覆盖，保留缓存
+            return keys.some((key) => coverage.get(key)?.has(itemKey));
+          });
+          const merged = incoming.length ? saveWhiteMaskShelf([...incoming, ...survivors]) : before;
           const changed = whiteMaskShelfSnapshotKey(merged) !== beforeKey;
           const runtimeChanged = applyWhiteMaskShelfItemsToRuntime(merged);
           if ((changed || runtimeChanged) && composeBoardMode === "mask") renderComposePage();
@@ -21047,7 +22007,12 @@
       seedanceDraft.model = models.includes(seedanceDraft.model)
         ? seedanceDraft.model
         : (models[0] || seedanceDraft.model || "sd-2.0-r3");
-      seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio || "9:16";
+      // 执行台顶栏的比例下拉是用户的显式选择，必须优先；
+      // 项目级 output_ratio 只作为没有界面值时的兜底，不能反过来覆盖界面
+      seedanceDraft.ratio = String($("#seedanceRatioSelect")?.value || "").trim()
+        || seedanceDraft.ratio
+        || storyProjectConfig.output_ratio
+        || "9:16";
       seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
       seedanceDraft.duration = duration;
       seedanceDraft.taskName = `${useMask ? "result" : "mask"}_${pack.id || "P000"}`;
@@ -21100,12 +22065,16 @@
         const path = String(clip?.path || "").trim();
         if (!path) return "";
         const shotId = String(clip?.shot_id || "").trim() || "S";
+        const badge = label === "白"
+          ? `<i style="position:absolute;top:1px;right:3px;font-style:normal;font-size:11px;color:#6fbf73;text-shadow:0 1px 2px #000;z-index:2;" title="已生成成功：再次生成白膜时会自动跳过这段；如需重做请先删除这张卡">✓</i>`
+          : "";
         return `
           <div class="generation-split-card" title="${escapeHtml(label + " " + shotId + " - " + path)}">
             <div class="generation-split-card-static">
               <b>${escapeHtml(label)}</b>
             </div>
             <span>${escapeHtml(label)} ${escapeHtml(shotId)}</span>
+            ${badge}
           </div>
         `;
       };
@@ -21137,7 +22106,13 @@
       if (status === "scail2_running") return "Scail2 生成中";
       if (status === "failed") return "生成失败";
       if (generationPackResultVideo(pack)) return "结果就绪";
-      if (generationPackMaskVideo(pack)) return "白膜就绪";
+      if (generationPackMaskVideo(pack)) {
+        const progress = generationPackMaskProgress(pack);
+        if (progress.clips.length && progress.missingShots.length) {
+          return `白膜 ${progress.keptShots.length}/${progress.shots.length}`;
+        }
+        return "白膜就绪";
+      }
       return "待生成";
     }
 
@@ -21180,9 +22155,18 @@
     }
 
     function generationPackageCardStateClass(pack = {}) {
+      const runtime = generationRuntimeForPack(pack.id);
+      const status = String(runtime?.status || "");
+      if (status === "mask_running" || status === "result_running" || status === "scail2_running") return " is-running";
       if (generationPackResultVideo(pack)) return " has-result";
       if (generationPackMaskVideo(pack)) return " has-mask";
       return "";
+    }
+
+    function generationCurrentModelLabel() {
+      const channel = seedanceApiChannelLabel(normalizeSeedanceApiChannel($("#seedanceApiChannelSelect")?.value || seedanceApiChannel));
+      const model = String(seedanceDraft.model || $("#seedanceModelSelect")?.value || "").trim();
+      return [channel, model].filter(Boolean).join(" · ");
     }
 
     function generationPackOutputPath(pack = {}) {
@@ -21217,7 +22201,14 @@
     }
 
     function generationAutoPromptText(pack = {}, stage = generationPromptStage(pack)) {
-      if (stage === "mask") return generationPackApiWhiteMaskPrompt(pack);
+      if (stage === "mask") {
+        if (generationPackBackend(pack) === "minimax_h3") {
+          const reversed = generationH3ReverseCombinedText(pack);
+          if (reversed) return reversed;
+          return "（尚未反推：点下方「反推提示词」，完成后这里显示本包每段的专属提示词；直接点「生成白膜」也会先自动反推再提交）";
+        }
+        return generationPackApiWhiteMaskPrompt(pack);
+      }
       if (stage === "result") return generationPackPrompt(pack, { useMask: true });
       return generationPackPrompt(pack, { useMask: false });
     }
@@ -21277,7 +22268,11 @@
       const autoText = generationAutoPromptText(pack, stage);
       const manualText = generationPromptOverride(pack, stage);
       const text = manualText || autoText;
-      const stateText = manualText ? "已人工修改，框内内容将发送" : "自动草稿，框内内容将发送";
+      const isH3Mask = stage === "mask" && generationPackBackend(pack) === "minimax_h3";
+      const stateText = manualText ? "已人工修改，框内内容将发送" : (isH3Mask ? "反推提示词，框内内容将发送" : "自动草稿，框内内容将发送");
+      const reverseButton = isH3Mask
+        ? `<button class="tiny-btn" type="button" data-generation-reverse-prompt data-pack-id="${escapeHtml(pack.id || "")}">反推提示词</button>`
+        : "";
       return `
         <div class="generation-prompt-editor" data-generation-prompt-editor>
           <div class="generation-prompt-title">
@@ -21287,6 +22282,7 @@
           <textarea class="generation-prompt-input" data-generation-prompt-input data-pack-id="${escapeHtml(pack.id || "")}" data-prompt-stage="${escapeHtml(stage)}">${escapeHtml(text)}</textarea>
           <div class="generation-prompt-actions">
             <span>${escapeHtml(pack.id || "P000")} · ${escapeHtml(stage === "mask" ? "生成白膜" : "生成结果")}</span>
+            ${reverseButton}
             <button class="tiny-btn" type="button" data-generation-reset-prompt data-pack-id="${escapeHtml(pack.id || "")}" data-prompt-stage="${escapeHtml(stage)}" ${manualText ? "" : "disabled"}>恢复自动草稿</button>
           </div>
         </div>
@@ -21454,6 +22450,7 @@
         splitClipsHtml ? `<div class="generation-output-strip">${splitClipsHtml}</div>` : "",
       ].join("");
       bindGenerationMaterialStripActions();
+      generationH3FetchCachedReverse(pack);  // H3 包：换包时拉取该包已反推的提示词进提示词框
       const runStatus = $("#generationRunStatus");
       if (runStatus) {
         runStatus.className = "generation-run-status" + (runtime.lastTone && runtime.lastTone !== "info" ? " " + runtime.lastTone : "");
@@ -21479,6 +22476,17 @@
             <div class="generation-step-title"><span>单人 Scail2 生成</span><b>${resultDone ? "完成" : (running ? "运行中" : "待生成")}</b></div>
             <div class="generation-step-detail">输入：原视频 + 单人角色参考图。输出：结果视频。</div>
           </div>`
+        : backend === "minimax_h3"
+        ? `
+          <div class="generation-step${whiteDone ? " done" : (runtime.status === "mask_running" ? " active" : "")}">
+            <div class="generation-step-title"><span>第一步：H3 逐段生成白膜</span><b>${whiteDone ? "完成" : (runtime.status === "mask_running" ? "运行中" : "待生成")}</b></div>
+            <div class="generation-step-detail">远程 4090 对每个片段单独生成白膜（提示词用服务端定稿模板），单段约 15-25 分钟，完成一段出一张卡。</div>
+          </div>
+          <div class="generation-step${resultDone ? " done" : (runtime.status === "result_running" ? " active" : "")}">
+            <div class="generation-step-title"><span>第二步：H3 逐段换人</span><b>${resultDone ? "完成" : (runtime.status === "result_running" ? "运行中" : "待生成")}</b></div>
+            <div class="generation-step-detail">输入：每段白膜卡 + 会上传的人物参考图（1-3 张）。输出：逐段结果视频，时长自动对齐源片段。</div>
+          </div>
+        `
         : `
           <div class="generation-step${whiteDone ? " done" : (runtime.status === "mask_running" ? " active" : "")}">
             <div class="generation-step-title"><span>第一步：生成白膜</span><b>${whiteDone ? "完成" : (runtime.status === "mask_running" ? "运行中" : "待生成")}</b></div>
@@ -21524,10 +22532,7 @@
 
     async function reloadGenerationPackagesFromCompose() {
       ensureComposePlan();
-      composePlan.packs = (composePlan.packs || []).map((pack) => ({
-        ...pack,
-        shotIds: composeSortedShotIds(pack.shotIds),
-      }));
+      // 保持用户在编排页拖好的镜头顺序，不要在这里重排，否则会打乱卡包内容。
       if (!composePlan.packs.some((pack) => pack.id === composePlan.selectedPackId)) {
         composePlan.selectedPackId = composePlan.packs[0]?.id || "";
       }
@@ -21660,8 +22665,61 @@
         assistantSetStatus(["单人包走 Scail2，不需要白膜。"], "warn");
         return;
       }
+      if (generationPackBackend(pack) === "minimax_h3") {
+        return startGenerationPackageH3Mask(pack, options);
+      }
+      const maskRuntime = generationRuntimeForPack(pack.id);
+      // 无条件清掉旧任务轮询：哪怕状态不是 mask_running，残留轮询也会把旧任务的错误回写盖掉新提交
+      const staleMaskTaskId = String(maskRuntime.maskTaskId || "").trim();
+      if (staleMaskTaskId) clearSeedancePackagePoll(staleMaskTaskId);
+      if (String(maskRuntime.status || "") === "mask_running") {
+        const runningTaskId = String(maskRuntime.maskTaskId || "").trim();
+        const confirmed = await appConfirm({
+          title: `${pack.id} 的白膜还在生成中`,
+          lines: [
+            runningTaskId ? `task_id: ${runningTaskId}` : "",
+            "任务尚未返回成功或失败，重复提交会导致状态来回跳动。",
+            "确定要强制结束当前任务并重新生成吗？",
+          ],
+          confirmText: "强制重跑",
+          cancelText: "继续等待",
+        });
+        if (!confirmed) {
+          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} 白膜仍在生成中`], "warn");
+          return;
+        }
+        if (runningTaskId) clearSeedancePackagePoll(runningTaskId);
+        patchGenerationPackRuntime(pack.id, { status: "idle", maskTaskId: "", maskPollContext: null }, { render: false });
+      }
       if (!ensureGenerationPackageDurationInRange(pack, "生成白膜")) return;
-      if (!ensureGenerationPackageManualReferences(pack, "生成白膜")) return;
+      // 白膜阶段不使用人物参考图：白膜是中性动作载体，任何身份特征（包括新人物的）都会污染下一步换人
+      const maskProgress = generationPackMaskProgress(pack);
+      const successKeptCount = maskProgress.keptShots.length;
+      let incrementalMaskPlan = null;
+      if (maskProgress.clips.length && !maskProgress.missingShots.length) {
+        const doneLines = [
+          `✓ ${pack.id} 白膜 ${maskProgress.shots.length} 段已全部就绪，无需重复提交`,
+          "> 如需重做某一段，请先在白膜结果包里删除那张卡，再点生成白膜",
+        ];
+        setSeedanceSubmitStatus(doneLines, "good");
+        assistantSetStatus(doneLines, "good");
+        patchGenerationPackRuntime(pack.id, { lastMessage: doneLines[0], lastTone: "good" });
+        return;
+      }
+      if (maskProgress.clips.length && maskProgress.missingShots.length) {
+        const keptSummary = successKeptCount ? `${successKeptCount} 段已成功将跳过` : "无保留段";
+        const confirmed = await appConfirm({
+          title: `${pack.id} 白膜增量生成`,
+          lines: [
+            `共 ${maskProgress.shots.length} 段，${keptSummary}，只提交缺失的 ${maskProgress.missingShots.length} 段。`,
+            "如需全部重跑，请先删除白膜结果包里的卡。",
+          ],
+          confirmText: "增量生成缺失段",
+          cancelText: "中止",
+        });
+        if (!confirmed) return;
+        incrementalMaskPlan = buildIncrementalMaskPlan(maskProgress);
+      }
       patchGenerationPackRuntime(pack.id, {
         status: "mask_running",
         lastMessage: "正在准备白膜输入",
@@ -21670,7 +22728,9 @@
       });
       let prepared = null;
       try {
-        prepared = await prepareGenerationPackageSource(pack);
+        prepared = incrementalMaskPlan
+          ? await prepareIncrementalMaskSource(pack, incrementalMaskPlan.submitShots)
+          : await prepareGenerationPackageSource(pack);
       } catch (error) {
         const message = error.message || String(error);
         patchGenerationPackRuntime(pack.id, {
@@ -21684,29 +22744,48 @@
       }
       const synced = syncGenerationPackageToSeedanceDraft(pack, { useMask: false });
       if (!synced) return;
+      if (incrementalMaskPlan) {
+        synced.sourcePath = String(prepared.output_path || prepared.source_path || "").trim();
+        const subDuration = Number(prepared.duration || 0)
+          || incrementalMaskPlan.submitShots.reduce((sum, shot) => sum + (Number(shot.duration) || 0), 0);
+        seedanceDraft.duration = Math.min(15, Math.max(4, Math.ceil(subDuration)));
+        seedanceDraft.videos = [synced.sourcePath];
+        syncSeedanceDurationSelect(seedanceDraft.duration);
+        renderSeedanceMaterialSlots("videos");
+      }
       seedanceDraft.prompt = generationEditorPromptText(pack, "mask");
+      // 白膜只带统一风格图，不带任何人物参考图（参考图留给换人阶段）
+      seedanceDraft.images = whiteMaskImagesWithStyleRef([]);
+      seedanceDraft.prompt = `${seedanceDraft.prompt}\n${WHITE_MASK_STYLE_REF_PROMPT_CLAUSE}`;
       seedanceDraft.taskName = `api_white_mask_${pack.id || "P000"}`;
       const promptInput = $("#seedancePromptInput");
       const taskNameInput = $("#seedanceTaskNameInput");
       if (promptInput) promptInput.value = seedanceDraft.prompt;
       if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
+      renderSeedanceMaterialSlots("images");
       renderSeedancePayload();
       const payloadHint = synced.sourcePath ? `> 白膜输入: ${fileName(synced.sourcePath)}` : "> 白膜输入为空";
+      const incrementalHint = incrementalMaskPlan
+        ? `> 增量生成: 跳过已成功 ${maskProgress.keptShots.length} 段，提交缺失 ${incrementalMaskPlan.missingShotIds.length} 段${incrementalMaskPlan.submitShots.length > incrementalMaskPlan.missingShotIds.length ? `（含凑时长相邻段 ${incrementalMaskPlan.submitShots.length - incrementalMaskPlan.missingShotIds.length} 段，成果会被丢弃）` : ""}`
+        : "";
       const requestMessage = seedanceStatusVisibleText([
         "> 已收到生成白膜请求",
         `> 生成包: ${pack.id}`,
         prepared?.shot_count ? `> 已合成镜头: ${prepared.shot_count} 段` : "",
+        incrementalHint,
         payloadHint,
       ]);
       setSeedanceSubmitStatus([
         "> 已收到生成白膜请求",
         `> 生成包: ${pack.id}`,
         prepared?.shot_count ? `> 已合成镜头: ${prepared.shot_count} 段` : "",
+        incrementalHint,
         payloadHint,
       ].filter(Boolean), "warn");
       patchGenerationPackRuntime(pack.id, {
         status: "mask_running",
         sourcePath: synced.sourcePath,
+        maskModelLabel: generationCurrentModelLabel(),
         pendingAutoResult: options.autoGenerateResult === true,
         lastMessage: requestMessage,
         lastTone: "warn",
@@ -21720,6 +22799,9 @@
         compareOutputLabel: "白膜视频",
         outputRole: "mask",
         autoGenerateResult: options.autoGenerateResult === true,
+        incrementalMask: incrementalMaskPlan
+          ? { missingShotIds: incrementalMaskPlan.missingShotIds, orderedShotIds: incrementalMaskPlan.orderedShotIds }
+          : null,
       });
     }
 
@@ -21730,6 +22812,29 @@
       generationWorkbench.promptStageByPack[pack.id] = "result";
       if (generationPackBackend(pack) === "scail2") {
         return startGenerationPackageScail2(pack.id);
+      }
+      if (generationPackBackend(pack) === "minimax_h3") {
+        return startGenerationPackageH3Result(pack);
+      }
+      const resultRuntime = generationRuntimeForPack(pack.id);
+      if (String(resultRuntime.status || "") === "result_running") {
+        const runningTaskId = String(resultRuntime.resultTaskId || "").trim();
+        const confirmed = await appConfirm({
+          title: `${pack.id} 的结果还在生成中`,
+          lines: [
+            runningTaskId ? `task_id: ${runningTaskId}` : "",
+            "任务尚未返回成功或失败，重复提交会导致状态来回跳动。",
+            "确定要强制结束当前任务并重新生成吗？",
+          ],
+          confirmText: "强制重跑",
+          cancelText: "继续等待",
+        });
+        if (!confirmed) {
+          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} 结果仍在生成中`], "warn");
+          return;
+        }
+        if (runningTaskId) clearSeedancePackagePoll(runningTaskId);
+        patchGenerationPackRuntime(pack.id, { status: "idle", resultTaskId: "", resultPollContext: null }, { render: false });
       }
       if (!ensureGenerationPackageDurationInRange(pack, "生成结果")) return;
       if (!generationPackMaskVideo(pack)) {
@@ -21758,6 +22863,7 @@
       patchGenerationPackRuntime(pack.id, {
         status: "result_running",
         sourcePath: synced.sourcePath,
+        resultModelLabel: generationCurrentModelLabel(),
         lastMessage: resultMessage,
         lastTone: "warn",
         errorMessage: "",
@@ -21775,6 +22881,11 @@
       const pack = generationPackById(packId);
       if (!pack) return;
       if (generationPackBackend(pack) === "scail2") return startGenerationPackageScail2(pack.id);
+      if (generationPackBackend(pack) === "minimax_h3") {
+        const h3Progress = generationPackMaskProgress(pack);
+        if (h3Progress.shots.length && !h3Progress.missingShots.length) return startGenerationPackageResult(pack.id);
+        return startGenerationPackageMask(pack.id, { autoGenerateResult: true });
+      }
       if (!ensureGenerationPackageDurationInRange(pack, "全流程生成")) return;
       if (generationPackMaskVideo(pack)) return startGenerationPackageResult(pack.id);
       return startGenerationPackageMask(pack.id, { autoGenerateResult: true });
@@ -21819,6 +22930,758 @@
       await startMode2ServerTransfer({ packageId: pack.id });
     }
 
+    // ---------------------------------------------------------------- MiniMax H3（远程4090）逐片段后端
+    // 与整片拆分路线不同：H3 对每个片段独立提交 /api/mode2/h3-white-mask 或 /api/mode2/h3-charswap，
+    // 远程 4090 单段约 15-25 分钟，前端按 /api/jobs/{job_id} 轮询，完成一段就把卡挂到对应片段上。
+    const generationH3PollTimers = {};
+
+    // ---------------------------------------------------------------- H3 白膜提示词反推（每段专属提示词）
+    // 反推结果存服务端 .h3_reverse_cache（按片段指纹），前端镜像到 runtime.reversePrompts（shot_id → 提示词）。
+    // 提示词框显示本包全部片段的反推提示词（多段用【shot_id】分节），换包即换内容；
+    // 用户手动改过的框内内容优先于反推原文，提交时按 shot 分节拆回每段发送。
+    const generationH3ReverseFetched = {};  // packId → 已拉取过服务端缓存，避免每次渲染都打 GET
+
+    function generationH3ReversePromptsFor(pack) {
+      const runtime = generationRuntimeForPack(pack.id);
+      return (runtime.reversePrompts && typeof runtime.reversePrompts === "object") ? runtime.reversePrompts : {};
+    }
+
+    function generationH3ReverseCombinedText(pack) {
+      const prompts = generationH3ReversePromptsFor(pack);
+      const parts = generationPackShotPayload(pack)
+        .filter((shot) => String(prompts[shot.shot_id] || "").trim())
+        .map((shot) => ({ id: shot.shot_id, text: String(prompts[shot.shot_id]).trim() }));
+      if (!parts.length) return "";
+      if (parts.length === 1) return parts[0].text;
+      return parts.map((part) => `【${part.id}】\n${part.text}`).join("\n\n");
+    }
+
+    // 用户手改过的框内文本 → 按【shot_id】分节拆回每段；只有一段时整段都算
+    function generationH3EditedPromptMap(pack) {
+      const override = generationPromptOverride(pack, "mask");
+      if (!override.trim()) return {};
+      const shotIds = generationPackShotPayload(pack).map((shot) => shot.shot_id);
+      const map = {};
+      const sections = override.split(/【([^】]+)】/).slice(1);
+      for (let i = 0; i + 1 < sections.length; i += 2) {
+        const id = String(sections[i] || "").trim();
+        const text = String(sections[i + 1] || "").trim();
+        if (id && text && shotIds.includes(id)) map[id] = text;
+      }
+      if (!Object.keys(map).length && shotIds.length === 1) map[shotIds[0]] = override.trim();
+      return map;
+    }
+
+    async function generationH3FetchCachedReverse(pack, options = {}) {
+      if (!pack?.id || generationPackBackend(pack) !== "minimax_h3") return;
+      if (!options.force && generationH3ReverseFetched[pack.id]) return;
+      generationH3ReverseFetched[pack.id] = true;
+      const shots = generationPackShotPayload(pack);
+      const prompts = { ...generationH3ReversePromptsFor(pack) };
+      let added = false;
+      await Promise.all(shots.map(async (shot) => {
+        if (prompts[shot.shot_id] || !shot.video_path) return;
+        try {
+          const response = await fetch("/api/mode2/h3-reverse-prompt?clip_path=" + encodeURIComponent(shot.video_path));
+          const data = await response.json().catch(() => ({}));
+          if (data.status === "ready" && String(data.prompt || "").trim()) {
+            prompts[shot.shot_id] = String(data.prompt).trim();
+            added = true;
+          }
+        } catch (_) { /* 拉取失败不阻塞页面 */ }
+      }));
+      if (added) {
+        patchGenerationPackRuntime(pack.id, { reversePrompts: prompts }, { render: false });
+        // 用户没手改过才回填框（手改内容优先，不被覆盖）
+        if (!generationPromptOverride(pack, "mask").trim() && pack.id === generationWorkbench.selectedPackId) {
+          const input = document.querySelector(`[data-generation-prompt-input][data-pack-id="${CSS.escape(pack.id)}"][data-prompt-stage="mask"]`);
+          if (input) input.value = generationH3ReverseCombinedText(pack) || input.value;
+        }
+      }
+    }
+
+    async function generationH3RequestReverse(clipPath) {
+      const response = await fetch("/api/mode2/h3-reverse-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clip_path: clipPath }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.error || !data.job_id) throw new Error(data.error || "反推提交失败");
+      return String(data.job_id);
+    }
+
+    async function generationH3WaitReverseJob(jobId) {
+      for (;;) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        const response = await fetch("/api/jobs/" + encodeURIComponent(jobId));
+        const data = await response.json().catch(() => ({}));
+        if (data.status === "done") return String(data.result?.prompt || "").trim();
+        if (data.status === "failed") throw new Error(data.error || "反推失败");
+      }
+    }
+
+    // 确保 entries 里每段都有提示词：手改 > 已反推缓存 > 现场反推；返回 shotId → prompt
+    async function generationH3EnsureReversePrompts(pack, entries, statusFn) {
+      const prompts = { ...generationH3ReversePromptsFor(pack) };
+      const edited = generationH3EditedPromptMap(pack);
+      let dirty = false;
+      for (const entry of entries) {
+        if (edited[entry.shotId]) {
+          prompts[entry.shotId] = edited[entry.shotId];
+          continue;
+        }
+        if (String(prompts[entry.shotId] || "").trim()) continue;
+        statusFn?.(`> ${entry.shotId}: 反推提示词中（约2分钟）...`);
+        const jobId = await generationH3RequestReverse(entry.sourcePath);
+        const prompt = await generationH3WaitReverseJob(jobId);
+        if (!prompt) throw new Error(`${entry.shotId} 反推结果为空`);
+        prompts[entry.shotId] = prompt;
+        dirty = true;
+        statusFn?.(`✓ ${entry.shotId}: 反推完成`);
+      }
+      if (dirty || Object.keys(prompts).length !== Object.keys(generationH3ReversePromptsFor(pack)).length) {
+        patchGenerationPackRuntime(pack.id, { reversePrompts: prompts }, { render: false });
+      }
+      return prompts;
+    }
+
+    // 提示词框上的「反推提示词」按钮：对本包全部片段逐一反推（已有的跳过）
+    async function generationH3ReversePackPrompts(packId) {
+      const pack = generationPackById(packId);
+      if (!pack?.id) return;
+      const shots = generationPackShotPayload(pack);
+      const entries = shots.map((shot) => ({ shotId: shot.shot_id, sourcePath: shot.video_path }));
+      if (!entries.length) {
+        setSeedanceSubmitStatus(["x 当前包没有视频片段，无法反推"], "bad");
+        return;
+      }
+      try {
+        setSeedanceSubmitStatus([`> ${pack.id}: 开始反推 ${entries.length} 段提示词...`], "warn");
+        await generationH3EnsureReversePrompts(pack, entries,
+          (line) => setSeedanceSubmitStatus([line], "warn"));
+        patchGenerationPackRuntime(pack.id, {}, { render: true });
+        setSeedanceSubmitStatus([`✓ ${pack.id}: 反推完成，提示词框已更新`], "good");
+      } catch (error) {
+        setSeedanceSubmitStatus([`x 反推失败: ${error.message || error}`], "bad");
+      }
+    }
+
+    function generationH3PollKey(packId, role) {
+      return `${String(packId || "").trim()}:${role === "mask" ? "mask" : "result"}`;
+    }
+
+    function clearGenerationH3Poll(packId, role) {
+      const key = generationH3PollKey(packId, role);
+      if (generationH3PollTimers[key]) clearInterval(generationH3PollTimers[key]);
+      delete generationH3PollTimers[key];
+    }
+
+    function generationH3VideoSize() {
+      // 与 syncGenerationPackageToSeedanceDraft 同一套画幅推导：执行台比例下拉优先，其次草稿，再项目 output_ratio
+      const ratio = String($("#seedanceRatioSelect")?.value || seedanceDraft.ratio || storyProjectConfig.output_ratio || "9:16").trim();
+      return ratio === "16:9" ? { width: 864, height: 480 } : { width: 480, height: 864 };
+    }
+
+    function generationH3JobsFor(runtime = {}, role = "mask") {
+      const jobs = runtime.h3Jobs && typeof runtime.h3Jobs === "object" ? runtime.h3Jobs : null;
+      if (!jobs || String(jobs.role || "") !== role) return null;
+      jobs.entries = Array.isArray(jobs.entries) ? jobs.entries : [];
+      return jobs;
+    }
+
+    function generationH3OrderedClips(pack, clips) {
+      const order = new Map(generationPackShotPayload(pack).map((shot, index) => [shot.shot_id, index]));
+      return (Array.isArray(clips) ? clips : [])
+        .filter((clip) => String(clip?.path || "").trim())
+        .slice()
+        .sort((a, b) => (order.get(String(a?.shot_id || "").trim()) ?? 999) - (order.get(String(b?.shot_id || "").trim()) ?? 999));
+    }
+
+    async function submitGenerationH3Job(endpoint, body) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.error || !data.job_id) throw new Error(data.error || `H3 提交失败（HTTP ${response.status}）`);
+      return String(data.job_id);
+    }
+
+    async function startGenerationPackageH3Mask(pack, options = {}) {
+      if (!pack?.id) return;
+      const runtime = generationRuntimeForPack(pack.id);
+      const existingJobs = generationH3JobsFor(runtime, "mask");
+      const hasRunningEntries = Boolean(existingJobs?.entries?.some((entry) => entry.status === "running" && entry.jobId));
+      if (String(runtime.status || "") === "mask_running" && hasRunningEntries) {
+        const confirmed = await appConfirm({
+          title: `${pack.id} 的 H3 白膜还在生成中`,
+          lines: [
+            "远程 4090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
+            "确定要重新提交缺失片段吗？",
+          ],
+          confirmText: "强制重跑",
+          cancelText: "继续等待",
+        });
+        if (!confirmed) {
+          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} H3 白膜仍在生成中`], "warn");
+          return;
+        }
+      }
+      clearGenerationH3Poll(pack.id, "mask");
+      const progress = generationPackMaskProgress(pack);
+      if (!progress.shots.length) {
+        const lines = ["x 当前生成包没有可生成的视频片段", "> 请先在编排页确认卡包。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      if (progress.clips.length && !progress.missingShots.length) {
+        const doneLines = [
+          `✓ ${pack.id} 白膜 ${progress.shots.length} 段已全部就绪，无需重复提交`,
+          "> 如需重做某一段，请先在白膜结果包里删除那张卡，再点生成白膜",
+        ];
+        setSeedanceSubmitStatus(doneLines, "good");
+        assistantSetStatus(doneLines, "good");
+        patchGenerationPackRuntime(pack.id, { lastMessage: doneLines[0], lastTone: "good" });
+        return;
+      }
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!projectDir) {
+        const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        patchGenerationPackRuntime(pack.id, { status: "failed", lastMessage: "H3 白膜已停止：项目目录为空", lastTone: "bad" });
+        return;
+      }
+      const size = generationH3VideoSize();
+      const entries = progress.missingShots.map((shot) => ({
+        jobId: "",
+        shotId: shot.shot_id,
+        sourcePath: shot.video_path,
+        duration: Number(shot.duration || 0),
+        status: "running",
+        outputPath: "",
+        error: "",
+        logsTail: [],
+      }));
+      const jobs = {
+        role: "mask",
+        autoGenerateResult: options.autoGenerateResult === true,
+        startedAt: Date.now(),
+        entries,
+      };
+      const introLines = [
+        "> 已收到 MiniMax H3 白膜请求",
+        `> 生成包: ${pack.id}，逐段提交 ${entries.length} 段${progress.keptShots.length ? `（${progress.keptShots.length} 段已有卡，自动跳过）` : ""}`,
+        `> 画幅: ${size.width}x${size.height}，时长自动对齐源片段，提示词逐段反推（缺段先自动反推，约2分钟/段）`,
+        "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常",
+      ];
+      setSeedanceSubmitStatus(introLines, "warn");
+      assistantSetStatus(introLines, "warn");
+      addLogs(introLines);
+      patchGenerationPackRuntime(pack.id, {
+        status: "mask_running",
+        h3Jobs: jobs,
+        pendingAutoResult: options.autoGenerateResult === true,
+        packageIdentityId: generationPackIdentityId(pack),
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+        lastMessage: seedanceStatusVisibleText(introLines),
+        lastTone: "warn",
+        errorMessage: "",
+      });
+      let reversePrompts = {};
+      try {
+        reversePrompts = await generationH3EnsureReversePrompts(pack, entries, (line) => {
+          setSeedanceSubmitStatus([line], "warn");
+          addLogs([line]);
+        });
+      } catch (error) {
+        const failLines = [`x 反推失败，已停止提交: ${error.message || error}`, "> 修复反推接口后重试，或在提示词框手动填写后再生成"];
+        setSeedanceSubmitStatus(failLines, "bad");
+        addLogs(failLines);
+        patchGenerationPackRuntime(pack.id, { status: "failed", lastMessage: failLines[0], lastTone: "bad" });
+        return;
+      }
+      await Promise.all(entries.map(async (entry) => {
+        try {
+          entry.jobId = await submitGenerationH3Job("/api/mode2/h3-white-mask", {
+            clip_path: entry.sourcePath,
+            project_dir: projectDir,
+            width: size.width,
+            height: size.height,
+            prompt: reversePrompts[entry.shotId] || "",
+          });
+        } catch (error) {
+          entry.status = "failed";
+          entry.error = error.message || String(error);
+        }
+      }));
+      const submitFailed = entries.filter((entry) => entry.status === "failed");
+      const submitOk = entries.length - submitFailed.length;
+      const submitLines = [
+        submitOk ? `> H3 白膜已提交 ${submitOk} 段` : "x H3 白膜全部提交失败",
+        ...submitFailed.slice(0, 3).map((entry) => `> ${entry.shotId}: ${entry.error}`),
+      ];
+      setSeedanceSubmitStatus(submitLines, submitOk ? "good" : "bad");
+      addLogs(submitLines);
+      patchGenerationPackRuntime(pack.id, {
+        status: submitOk ? "mask_running" : "failed",
+        h3Jobs: jobs,
+        lastMessage: seedanceStatusVisibleText(submitLines),
+        lastTone: submitOk ? "warn" : "bad",
+        errorMessage: submitOk ? "" : seedanceStatusVisibleText(submitLines),
+      });
+      if (!submitOk) return;
+      pollGenerationH3Jobs(pack.id, "mask");
+    }
+
+    async function startGenerationPackageH3Result(pack) {
+      if (!pack?.id) return;
+      const runtime = generationRuntimeForPack(pack.id);
+      const existingJobs = generationH3JobsFor(runtime, "result");
+      const hasRunningEntries = Boolean(existingJobs?.entries?.some((entry) => entry.status === "running" && entry.jobId));
+      if (String(runtime.status || "") === "result_running" && hasRunningEntries) {
+        const confirmed = await appConfirm({
+          title: `${pack.id} 的 H3 换人还在生成中`,
+          lines: [
+            "远程 4090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
+            "确定要重新提交吗？",
+          ],
+          confirmText: "强制重跑",
+          cancelText: "继续等待",
+        });
+        if (!confirmed) {
+          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} H3 换人仍在生成中`], "warn");
+          return;
+        }
+      }
+      clearGenerationH3Poll(pack.id, "result");
+      // 人物参考图沿用现有「会上传的参考图」绑定（1-3 张）
+      const refs = ensureGenerationPackageManualReferences(pack, "生成结果");
+      if (!refs) return;
+      const charImages = refs.slice(0, 3);
+      // 白膜卡按片段一一对应：有卡才提交换人；已有结果卡的片段自动跳过（重做请先删卡）
+      const maskClips = generationH3OrderedClips(pack, Array.isArray(runtime.maskSegments) ? runtime.maskSegments : [])
+        .filter((clip) => !clip?.scene_passthrough);
+      if (!maskClips.length) {
+        const lines = ["x 没有可用的白膜卡", "> H3 换人按片段读取白膜结果包里的卡，请先生成白膜。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        return;
+      }
+      const maskByShot = new Map(maskClips.map((clip) => [String(clip?.shot_id || "").trim(), String(clip?.path || "").trim()]));
+      const resultShotIds = new Set((Array.isArray(runtime.resultSegments) ? runtime.resultSegments : [])
+        .map((clip) => String(clip?.shot_id || "").trim()).filter(Boolean));
+      const shots = generationPackShotPayload(pack);
+      const todo = shots.filter((shot) => maskByShot.has(shot.shot_id) && !resultShotIds.has(shot.shot_id));
+      if (!todo.length) {
+        const allDone = shots.length && shots.every((shot) => resultShotIds.has(shot.shot_id));
+        const lines = allDone
+          ? [`✓ ${pack.id} 结果 ${shots.length} 段已全部就绪，无需重复提交`, "> 如需重做某一段，请先删除对应结果卡，再点生成结果"]
+          : ["x 没有可提交的片段", "> 有白膜卡的片段都已有结果卡；缺白膜的片段请先生成白膜。"];
+        setSeedanceSubmitStatus(lines, allDone ? "good" : "bad");
+        assistantSetStatus(lines, allDone ? "good" : "bad");
+        return;
+      }
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!projectDir) {
+        const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
+        setSeedanceSubmitStatus(lines, "bad");
+        assistantSetStatus(lines, "bad");
+        patchGenerationPackRuntime(pack.id, { status: "failed", lastMessage: "H3 换人已停止：项目目录为空", lastTone: "bad" });
+        return;
+      }
+      const size = generationH3VideoSize();
+      const entries = todo.map((shot) => ({
+        jobId: "",
+        shotId: shot.shot_id,
+        sourcePath: maskByShot.get(shot.shot_id),
+        duration: Number(shot.duration || 0),
+        status: "running",
+        outputPath: "",
+        error: "",
+        logsTail: [],
+      }));
+      const jobs = { role: "result", autoGenerateResult: false, startedAt: Date.now(), entries };
+      const introLines = [
+        "> 已收到 MiniMax H3 换人请求",
+        `> 生成包: ${pack.id}，逐段提交 ${entries.length} 段${resultShotIds.size ? `（${resultShotIds.size} 段已有结果卡，自动跳过）` : ""}`,
+        `> 人物参考图: ${charImages.map((path, index) => `${generationReferenceLabelForPath(path, index)} / ${fileName(path)}`).join(", ")}`,
+        `> 画幅: ${size.width}x${size.height}，时长自动对齐白膜片段`,
+        "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常",
+      ];
+      setSeedanceSubmitStatus(introLines, "warn");
+      assistantSetStatus(introLines, "warn");
+      addLogs(introLines);
+      patchGenerationPackRuntime(pack.id, {
+        status: "result_running",
+        h3Jobs: jobs,
+        referenceImages: charImages,
+        referenceCount: charImages.length,
+        packageIdentityId: generationPackIdentityId(pack),
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+        lastMessage: seedanceStatusVisibleText(introLines),
+        lastTone: "warn",
+        errorMessage: "",
+      });
+      const resultPrompt = generationH3CharswapPrompt(pack);
+      await Promise.all(entries.map(async (entry) => {
+        try {
+          entry.jobId = await submitGenerationH3Job("/api/mode2/h3-charswap", {
+            mask_video_path: entry.sourcePath,
+            char_image_paths: charImages,
+            project_dir: projectDir,
+            width: size.width,
+            height: size.height,
+            prompt: resultPrompt,
+          });
+        } catch (error) {
+          entry.status = "failed";
+          entry.error = error.message || String(error);
+        }
+      }));
+      const submitFailed = entries.filter((entry) => entry.status === "failed");
+      const submitOk = entries.length - submitFailed.length;
+      const submitLines = [
+        submitOk ? `> H3 换人已提交 ${submitOk} 段` : "x H3 换人全部提交失败",
+        ...submitFailed.slice(0, 3).map((entry) => `> ${entry.shotId}: ${entry.error}`),
+      ];
+      setSeedanceSubmitStatus(submitLines, submitOk ? "good" : "bad");
+      addLogs(submitLines);
+      patchGenerationPackRuntime(pack.id, {
+        status: submitOk ? "result_running" : "failed",
+        h3Jobs: jobs,
+        lastMessage: seedanceStatusVisibleText(submitLines),
+        lastTone: submitOk ? "warn" : "bad",
+        errorMessage: submitOk ? "" : seedanceStatusVisibleText(submitLines),
+      });
+      if (!submitOk) return;
+      pollGenerationH3Jobs(pack.id, "result");
+    }
+
+    function attachGenerationH3Clips(pack, role, entries) {
+      const runtime = generationRuntimeForPack(pack.id);
+      const identityId = generationPackIdentityId(pack);
+      const added = entries.map((entry) => ({
+        shot_id: entry.shotId,
+        path: entry.outputPath,
+        source_path: entry.sourcePath,
+        duration: Number(entry.duration || 0),
+        backend: "minimax_h3",
+      }));
+      if (role === "mask") {
+        const fresh = (Array.isArray(runtime.maskSegments) ? runtime.maskSegments : [])
+          .filter((clip) => !entries.some((entry) => String(entry.shotId) === String(clip?.shot_id || "").trim()));
+        const next = generationH3OrderedClips(pack, [...fresh, ...added]);
+        patchGenerationPackRuntime(pack.id, {
+          maskSegments: next,
+          whiteMaskPath: next.length ? String(next[0].path || "") : String(runtime.whiteMaskPath || ""),
+          maskPackageIdentityId: identityId,
+          packageIdentityId: identityId,
+          packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+        });
+        return;
+      }
+      const fresh = (Array.isArray(runtime.resultSegments) ? runtime.resultSegments : [])
+        .filter((clip) => !entries.some((entry) => String(entry.shotId) === String(clip?.shot_id || "").trim()));
+      const next = generationH3OrderedClips(pack, [...fresh, ...added]);
+      patchGenerationPackRuntime(pack.id, {
+        resultSegments: next,
+        resultPath: next.length ? String(next[0].path || "") : String(runtime.resultPath || ""),
+        resultPackageIdentityId: identityId,
+        packageIdentityId: identityId,
+        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+      });
+      applyGenerationResultClipsToTimeline(added, "");
+    }
+
+    function finalizeGenerationH3Jobs(pack, role, jobs) {
+      const label = role === "mask" ? "白膜" : "换人";
+      const doneEntries = jobs.entries.filter((entry) => entry.status === "done");
+      const failedEntries = jobs.entries.filter((entry) => entry.status === "failed");
+      const runtime = generationRuntimeForPack(pack.id);
+      const identityId = generationPackIdentityId(pack);
+      const lines = [
+        failedEntries.length
+          ? `> MiniMax H3 ${label}结束: ${doneEntries.length} 段成功，${failedEntries.length} 段失败`
+          : `✓ MiniMax H3 ${label}全部完成: ${doneEntries.length} 段`,
+        ...failedEntries.slice(0, 4).map((entry) => `> ${entry.shotId}: ${entry.error || "未知错误"}`),
+        failedEntries.length && doneEntries.length ? "> 失败片段缺卡，可再次点击生成补齐" : "",
+      ].filter(Boolean);
+      const visible = seedanceStatusVisibleText(lines);
+      const tone = failedEntries.length ? (doneEntries.length ? "warn" : "bad") : "good";
+      if (role === "mask") {
+        const clips = generationH3OrderedClips(pack, runtime.maskSegments);
+        const run = clips.length ? {
+          id: `h3-mask-${pack.id}-${Date.now()}`,
+          role: "mask",
+          source_path: String(clips[0]?.path || ""),
+          manifest_path: "",
+          clips,
+          shot_count: clips.length,
+          created_at: Date.now() / 1000,
+        } : null;
+        if (run) appendWhiteMaskShelfRun(pack.id, run);
+        patchGenerationPackRuntime(pack.id, {
+          status: doneEntries.length ? "mask_done" : "failed",
+          maskSegments: clips,
+          whiteMaskPath: clips.length ? String(clips[0].path || "") : String(runtime.whiteMaskPath || ""),
+          maskPackageIdentityId: identityId,
+          packageIdentityId: identityId,
+          packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+          maskRuns: appendGenerationRun(runtime.maskRuns, run),
+          h3Jobs: jobs,
+          pendingAutoResult: false,
+          lastMessage: visible,
+          lastTone: tone,
+          errorMessage: doneEntries.length ? "" : visible,
+        });
+      } else {
+        const clips = generationH3OrderedClips(pack, runtime.resultSegments);
+        const run = clips.length ? {
+          id: `h3-result-${pack.id}-${Date.now()}`,
+          role: "result",
+          source_path: String(clips[0]?.path || ""),
+          manifest_path: "",
+          clips,
+          shot_count: clips.length,
+          created_at: Date.now() / 1000,
+        } : null;
+        patchGenerationPackRuntime(pack.id, {
+          status: doneEntries.length ? "result_done" : "failed",
+          resultSegments: clips,
+          resultPath: clips.length ? String(clips[0].path || "") : String(runtime.resultPath || ""),
+          resultPackageIdentityId: identityId,
+          packageIdentityId: identityId,
+          packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
+          resultRuns: appendGenerationRun(runtime.resultRuns, run),
+          h3Jobs: jobs,
+          lastMessage: visible,
+          lastTone: tone,
+          errorMessage: doneEntries.length ? "" : visible,
+        });
+      }
+      setSeedanceSubmitStatus(lines, tone);
+      assistantSetStatus(lines, tone);
+      addLogs(lines);
+      if (role === "mask" && jobs.autoGenerateResult === true && doneEntries.length) {
+        window.setTimeout(() => startGenerationPackageResult(pack.id), 250);
+      }
+    }
+
+    function pollGenerationH3Jobs(packId, role) {
+      const key = generationH3PollKey(packId, role);
+      if (generationH3PollTimers[key]) clearInterval(generationH3PollTimers[key]);
+      const label = role === "mask" ? "白膜" : "换人";
+      const tick = async () => {
+        const pack = generationPackById(packId);
+        if (!pack) {
+          clearGenerationH3Poll(packId, role);
+          return;
+        }
+        const runtime = generationRuntimeForPack(packId);
+        const jobs = generationH3JobsFor(runtime, role);
+        if (!jobs || !jobs.entries.some((entry) => entry.status === "running")) {
+          clearGenerationH3Poll(packId, role);
+          return;
+        }
+        const doneNow = [];
+        for (const entry of jobs.entries) {
+          if (entry.status !== "running" || !entry.jobId) continue;
+          try {
+            const response = await fetch("/api/jobs/" + encodeURIComponent(entry.jobId));
+            const job = await response.json();
+            if (!response.ok || (job.error && !job.status)) throw new Error(job.error || "job_not_found");
+            entry.logsTail = (Array.isArray(job.logs) ? job.logs.slice(-3) : []).map((line) => String(line || ""));
+            if (job.status === "done") {
+              const outputPath = role === "mask"
+                ? String(job.result?.whitemask_path || job.result?.output_path || "").trim()
+                : String(job.result?.charswap_path || job.result?.output_path || "").trim();
+              entry.status = outputPath ? "done" : "failed";
+              entry.outputPath = outputPath;
+              entry.error = outputPath ? "" : "任务完成但没有返回输出路径";
+              if (outputPath) doneNow.push(entry);
+            } else if (job.status === "failed" || job.status === "cancelled") {
+              entry.status = "failed";
+              entry.error = String(job.error || job.status || "未知错误");
+            }
+          } catch (error) {
+            // 查询失败不判死，下一轮继续轮询
+            entry.logsTail = [`> 查询失败（会继续轮询）: ${error.message || error}`];
+          }
+        }
+        // 完成一段就立刻挂到对应片段的卡上
+        if (doneNow.length) attachGenerationH3Clips(pack, role, doneNow);
+        const total = jobs.entries.length;
+        const doneCount = jobs.entries.filter((entry) => entry.status === "done").length;
+        const failedCount = jobs.entries.filter((entry) => entry.status === "failed").length;
+        const activeEntry = jobs.entries.find((entry) => entry.status === "running" && Array.isArray(entry.logsTail) && entry.logsTail.length)
+          || jobs.entries.find((entry) => entry.status === "running");
+        const lines = [
+          `> MiniMax H3 ${label}运行中: ${doneCount}/${total} 段完成${failedCount ? `，${failedCount} 段失败` : ""}`,
+          "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常，完成一段出一张卡",
+          ...(activeEntry ? [
+            `> ${activeEntry.shotId}${activeEntry.jobId ? ` job:${activeEntry.jobId}` : ""}`,
+            ...((Array.isArray(activeEntry.logsTail) ? activeEntry.logsTail : []).map((line) => `> ${line}`)),
+          ] : []),
+        ];
+        const visible = seedanceStatusVisibleText(lines);
+        setSeedanceSubmitStatus(lines, "warn");
+        patchGenerationPackRuntime(packId, {
+          status: role === "mask" ? "mask_running" : "result_running",
+          h3Jobs: jobs,
+          lastMessage: visible,
+          lastTone: "warn",
+        }, { render: false });
+        const runStatus = $("#generationRunStatus");
+        if (runStatus && generationWorkbench.selectedPackId === packId) runStatus.textContent = visible;
+        if (!jobs.entries.some((entry) => entry.status === "running")) {
+          clearGenerationH3Poll(packId, role);
+          finalizeGenerationH3Jobs(pack, role, jobs);
+        }
+      };
+      generationH3PollTimers[key] = setInterval(tick, 10000);
+      tick();
+    }
+
+    function resumeGenerationH3Polling(pack = {}) {
+      const id = String(pack?.id || "").trim();
+      if (!id) return;
+      const runtime = generationRuntimeForPack(id);
+      ["mask", "result"].forEach((role) => {
+        const jobs = generationH3JobsFor(runtime, role);
+        if (!jobs || !jobs.entries.some((entry) => entry.status === "running" && entry.jobId)) return;
+        if (generationH3PollTimers[generationH3PollKey(id, role)]) return;
+        patchGenerationPackRuntime(id, {
+          status: role === "mask" ? "mask_running" : "result_running",
+          lastMessage: `已恢复 MiniMax H3 ${role === "mask" ? "白膜" : "换人"}任务轮询`,
+          lastTone: "warn",
+        }, { render: false });
+        pollGenerationH3Jobs(id, role);
+      });
+    }
+
+    // ---------------------------------------------------------------- 人偶白膜重生
+    let dollRetakePolling = false;
+
+    function dollRetakeSetStatus(text, tone = "") {
+      const box = $("#dollRetakeStatus");
+      if (!box) return;
+      box.textContent = text || "";
+      box.style.color = tone === "bad" ? "#e0655f" : tone === "ok" ? "#6fbf73" : "";
+    }
+
+    function dollRetakeRefreshShots() {
+      const select = $("#dollRetakeShotSelect");
+      if (!select) return;
+      const pack = generationPackById(generationWorkbench.selectedPackId);
+      const shots = pack ? generationPackShotPayload(pack) : [];
+      const previous = select.value;
+      select.innerHTML = "";
+      if (!shots.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "（无镜头，先选生成包）";
+        select.appendChild(opt);
+        return;
+      }
+      shots.forEach((shot) => {
+        const opt = document.createElement("option");
+        opt.value = shot.video_path;
+        opt.dataset.shotId = shot.shot_id;
+        opt.textContent = `${shot.shot_id}（${Number(shot.duration || 0).toFixed(1)}s）`;
+        select.appendChild(opt);
+      });
+      if (previous && shots.some((shot) => shot.video_path === previous)) select.value = previous;
+    }
+
+    async function dollRetakeSubmit() {
+      if (dollRetakePolling) return;
+      const select = $("#dollRetakeShotSelect");
+      const clipPath = String(select?.value || "").trim();
+      if (!clipPath) {
+        dollRetakeSetStatus("请先选择生成包和镜头", "bad");
+        return;
+      }
+      const colorSelect = $("#dollRetakeColorSelect");
+      const doll = String(colorSelect?.value || "white");
+      const customColor = doll === "custom" ? String($("#dollRetakeCustomColor")?.value || "").trim() : "";
+      if (doll === "custom" && !customColor) {
+        dollRetakeSetStatus("请填写自定义颜色", "bad");
+        return;
+      }
+      const pack = generationPackById(generationWorkbench.selectedPackId);
+      const body = {
+        clip_path: clipPath,
+        shot_id: String(select.selectedOptions[0]?.dataset.shotId || "").trim(),
+        project_dir: String($("#projectDirInput")?.value || "").trim(),
+        package_id: pack ? String(pack.id || "") : "",
+        doll,
+        custom_color: customColor,
+      };
+      dollRetakeSetStatus("> 正在提交人偶重生…");
+      try {
+        const response = await fetch(storyboardApiUrl("/api/whitematte-shot-submit"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (!response.ok || data.error) throw new Error(data.error || `HTTP ${response.status}`);
+        dollRetakeSetStatus(`> 已提交（慢放 ${data.speed}x，${data.anchor_count} 锚点），生成中…`);
+        dollRetakePoll({
+          task_id: data.task_id,
+          speed: data.speed,
+          work_dir: data.work_dir,
+          shot_id: data.shot_id,
+        });
+      } catch (error) {
+        dollRetakeSetStatus("x 提交失败: " + (error.message || String(error)), "bad");
+      }
+    }
+
+    async function dollRetakePoll(job) {
+      dollRetakePolling = true;
+      try {
+        for (;;) {
+          await new Promise((resolve) => setTimeout(resolve, 10000));
+          const response = await fetch(storyboardApiUrl("/api/whitematte-shot-status"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(job),
+          });
+          const data = await response.json();
+          if (!response.ok || data.error) throw new Error(data.error || `HTTP ${response.status}`);
+          if (data.restored_path) {
+            dollRetakeSetStatus(`✓ 完成（已还原原节奏）: ${data.restored_path}`, "ok");
+            const player = $("#generationMaskPlayer");
+            if (player) {
+              player.innerHTML = "";
+              const video = document.createElement("video");
+              video.controls = true;
+              video.muted = true;
+              video.loop = true;
+              video.src = mediaSrc(data.restored_path, 0.1);
+              video.style.maxWidth = "100%";
+              player.appendChild(video);
+            }
+            return;
+          }
+          if (data.status === "FAILED") {
+            dollRetakeSetStatus("x 生成失败: " + (data.fail_reason || "通道1任务失败"), "bad");
+            return;
+          }
+          dollRetakeSetStatus(`> 生成中… ${data.status || ""} ${Math.round(Number(data.progress || 0))}%`);
+        }
+      } catch (error) {
+        dollRetakeSetStatus("x 轮询失败: " + (error.message || String(error)), "bad");
+      } finally {
+        dollRetakePolling = false;
+      }
+    }
+
     function initGenerationWorkbench() {
       setGenerationScail2UploadAudioEnabled(localStorage.getItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY) === "1");
       $("#scail2UploadAudioToggle")?.addEventListener("change", (event) => {
@@ -21834,6 +23697,12 @@
       $("#rerunWhiteMaskBtn")?.addEventListener("click", () => startGenerationPackageMask());
       $("#rerunResultBtn")?.addEventListener("click", () => startGenerationPackageResult());
       $("#generateScail2PackageBtn")?.addEventListener("click", () => startGenerationPackageScail2());
+      $("#dollRetakeBtn")?.addEventListener("click", () => dollRetakeSubmit());
+      $("#dollRetakeShotSelect")?.addEventListener("focus", () => dollRetakeRefreshShots());
+      $("#dollRetakeColorSelect")?.addEventListener("change", (event) => {
+        const customInput = $("#dollRetakeCustomColor");
+        if (customInput) customInput.hidden = event.target.value !== "custom";
+      });
       renderGenerationPackageWorkbench();
     }
 
@@ -24963,6 +26832,10 @@
     function resumeGenerationPackageTaskPolling(pack = {}) {
       const id = String(pack?.id || "").trim();
       if (!id) return;
+      if (generationPackBackend(pack) === "minimax_h3") {
+        resumeGenerationH3Polling(pack);
+        return;
+      }
       const runtime = generationRuntimeForPack(id);
       const status = String(runtime.status || "");
       const hasMaskOutput = Boolean(String(runtime.whiteMaskPath || runtime.maskPath || "").trim());
@@ -25017,6 +26890,15 @@
       const outputRole = String(context.outputRole || "result").trim();
       const isMaskOutput = outputRole === "mask";
       const roleLabel = seedancePackageTaskRoleLabel(outputRole);
+      if (packageId) {
+        const runtimeNow = generationRuntimeForPack(packageId);
+        const activeTaskId = String((isMaskOutput ? runtimeNow.maskTaskId : runtimeNow.resultTaskId) || "").trim();
+        if (activeTaskId && activeTaskId !== id) {
+          // 这个轮询属于旧任务：已有更新的任务在跑，旧任务的结果直接丢弃，避免状态来回跳动。
+          clearSeedancePackagePoll(id);
+          return;
+        }
+      }
       try {
         const apiChannel = normalizeSeedanceApiChannel(context.apiChannel || seedanceApiChannel);
         const requestConfig = seedanceApiRequestConfig(apiChannel);
@@ -25044,11 +26926,12 @@
           setSeedanceSubmitStatus(lines, status === "FAILED" ? "bad" : "warn");
           addLogs(lines);
           if (packageId) {
+            // 进度刷新不整页重渲染，避免原视频播放器被反复重建导致无限刷新
             patchGenerationPackRuntime(packageId, {
               status: isMaskOutput ? "mask_running" : "result_running",
               lastMessage: seedanceStatusVisibleText(lines),
               lastTone: "warn",
-            });
+            }, { render: false });
           }
         }
         if (status === "SUCCESS") {
@@ -25058,7 +26941,7 @@
           let splitWarning = "";
           if (packageId && outputPath) {
             try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", context.sourcePath);
+              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", context.sourcePath, context.incrementalMask || null);
             } catch (error) {
               splitWarning = error.message || String(error);
             }
@@ -25084,20 +26967,33 @@
           if (outputPath && compareSource) renderSeedanceSingleMaskCompare(compareSource, outputPath, context.outputLabel || "通道2生成结果", 0);
           if (packageId) {
             if (isMaskOutput) {
+              const incremental = context.incrementalMask || null;
+              const mergedWhiteMaskPath = String(splitData?.white_mask_path || "").trim();
+              const splitClips = Array.isArray(splitData?.clips) ? splitData.clips : [];
+              const existingMaskSegments = generationRuntimeForPack(packageId).maskSegments;
+              const nextMaskSegments = splitClips.length
+                ? splitClips
+                : (incremental && Array.isArray(existingMaskSegments) ? existingMaskSegments : []);
+              const submittedCount = Array.isArray(splitData?.submitted_clips) ? splitData.submitted_clips.length : 0;
               const maskRun = generationRunFromSplitData(splitData, "mask");
               if (maskRun) appendWhiteMaskShelfRun(packageId, maskRun);
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "mask_done" : "failed",
-                whiteMaskPath: outputPath || "",
+                whiteMaskPath: mergedWhiteMaskPath || outputPath || "",
                 maskSourcePath: compareSource,
                 maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                maskSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
+                maskSegments: nextMaskSegments,
                 maskSplitManifest: String(splitData?.manifest_path || "").trim(),
                 maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
                 maskTaskId: id,
                 maskPollContext: null,
+                ...(incremental ? {
+                  packageSourcePath: "",
+                  packageSegments: generationPackShotPayload(generationPackById(packageId) || { id: packageId }),
+                  packageDuration: composePackDuration(generationPackById(packageId) || {}),
+                } : {}),
                 lastMessage: outputPath
-                  ? `API 白膜生成完成\n${splitData?.clips?.length ? `已拆分 ${splitData.clips.length} 段\n` : ""}输出: ${outputPath}`
+                  ? `API 白膜生成完成\n${incremental && splitClips.length ? `增量新增 ${submittedCount || splitClips.length} 段，合并后整包 ${splitClips.length} 段\n` : (splitClips.length ? `已拆分 ${splitClips.length} 段\n` : "")}输出: ${mergedWhiteMaskPath || outputPath}`
                   : "API 白膜没有返回本地视频路径",
                 lastTone: outputPath && !splitWarning ? "good" : "warn",
                 errorMessage: outputPath ? "" : "API 白膜没有返回本地视频路径",
@@ -25128,7 +27024,13 @@
           }
         } else if (status === "FAILED" || data.success === false) {
           clearSeedancePackagePoll(id);
-          const lines = [`x ${packageId || "生成包"} ${roleLabel}生成失败`, "> " + (data.fail_reason || data.error || "未知错误")];
+          const runtimeForLabel = packageId ? generationRuntimeForPack(packageId) : {};
+          const modelLabel = String(
+            (isMaskOutput ? runtimeForLabel.maskModelLabel : runtimeForLabel.resultModelLabel)
+            || runtimeForLabel.maskModelLabel
+            || ""
+          ).trim();
+          const lines = [`x ${packageId || "生成包"} ${roleLabel}生成失败${modelLabel ? `（${modelLabel}）` : ""}`, "> " + (data.fail_reason || data.error || "未知错误")];
           setSeedanceSubmitStatus(lines, "bad");
           addLogs(lines);
           if (packageId) {
@@ -25142,7 +27044,13 @@
           }
         }
       } catch (error) {
-        const lines = [`x 查询 ${packageId || "生成包"} ${roleLabel}任务失败`, `> task_id: ${id}`, "> " + (error.message || error)];
+        const catchRuntime = packageId ? generationRuntimeForPack(packageId) : {};
+        const catchModelLabel = String(
+          (isMaskOutput ? catchRuntime.maskModelLabel : catchRuntime.resultModelLabel)
+          || catchRuntime.maskModelLabel
+          || ""
+        ).trim();
+        const lines = [`x 查询 ${packageId || "生成包"} ${roleLabel}任务失败${catchModelLabel ? `（${catchModelLabel}）` : ""}`, `> task_id: ${id}`, "> " + (error.message || error)];
         const statusText = `ERROR ${error.message || error}`;
         if (statusText !== seedancePackageLastStatusText[id]) {
           seedancePackageLastStatusText[id] = statusText;
@@ -25274,6 +27182,7 @@
         outputRole: String(options.outputRole || seedancePendingCompare?.outputRole || "result").trim(),
         apiChannel,
         autoGenerateResult: options.autoGenerateResult === true,
+        incrementalMask: options.incrementalMask || null,
         timelineIndex: selectedTimelineIndex,
       };
       if (!isPackageTask) {
@@ -25282,6 +27191,13 @@
           ...compareContext,
         };
         currentSeedanceTimelineIndex = selectedTimelineIndex;
+      }
+      if (isPackageTask) {
+        // 新提交开始前先停掉同包同角色的旧任务轮询：
+        // 否则旧任务的失败/结果会在新提交期间插队显示，盖上新模型名误导。
+        const runtimeBeforeSubmit = generationRuntimeForPack(optionPackageId);
+        const staleTaskId = String((compareContext.outputRole === "mask" ? runtimeBeforeSubmit.maskTaskId : runtimeBeforeSubmit.resultTaskId) || "").trim();
+        if (staleTaskId) clearSeedancePackagePoll(staleTaskId);
       }
       saveSeedanceDraft();
       if (!isPackageTask) setSeedanceSubmitting(true);
@@ -25388,7 +27304,7 @@
           let splitWarning = "";
           if (packageId && outputPath) {
             try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", compare.sourcePath);
+              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", compare.sourcePath, compare.incrementalMask || null);
             } catch (error) {
               splitWarning = error.message || String(error);
             }
@@ -25416,19 +27332,31 @@
           }
           if (packageId) {
             if (isMaskOutput) {
+              const incremental = compare.incrementalMask || null;
+              const mergedWhiteMaskPath = String(splitData?.white_mask_path || "").trim();
+              const splitClips = Array.isArray(splitData?.clips) ? splitData.clips : [];
+              const existingMaskSegments = generationRuntimeForPack(packageId).maskSegments;
+              const nextMaskSegments = splitClips.length
+                ? splitClips
+                : (incremental && Array.isArray(existingMaskSegments) ? existingMaskSegments : []);
               const maskRun = generationRunFromSplitData(splitData, "mask");
               if (maskRun) appendWhiteMaskShelfRun(packageId, maskRun);
               patchGenerationPackRuntime(packageId, {
                 status: outputPath ? "mask_done" : "failed",
-                whiteMaskPath: outputPath || "",
+                whiteMaskPath: mergedWhiteMaskPath || outputPath || "",
                 maskSourcePath: String(compare.sourcePath || shotVideoPath(seg) || "").trim(),
                 maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                maskSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
+                maskSegments: nextMaskSegments,
                 maskSplitManifest: String(splitData?.manifest_path || "").trim(),
                 maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
                 maskTaskId: currentSeedanceTaskId || "",
+                ...(incremental ? {
+                  packageSourcePath: "",
+                  packageSegments: generationPackShotPayload(generationPackById(packageId) || { id: packageId }),
+                  packageDuration: composePackDuration(generationPackById(packageId) || {}),
+                } : {}),
                 lastMessage: outputPath
-                  ? `API 白膜生成完成\n${splitData?.clips?.length ? `已拆分 ${splitData.clips.length} 段\n` : ""}输出: ${outputPath}`
+                  ? `API 白膜生成完成\n${splitClips.length ? `已拆分 ${splitClips.length} 段\n` : ""}输出: ${mergedWhiteMaskPath || outputPath}`
                   : "API 白膜没有返回本地视频路径",
                 lastTone: outputPath && !splitWarning ? "good" : "warn",
                 errorMessage: outputPath ? "" : "API 白膜没有返回本地视频路径",
@@ -25465,7 +27393,8 @@
             });
           }
           seedancePendingCompare = null;
-          const lines = ["x 通道2生成失败", "> " + (data.fail_reason || data.error || "未知错误")];
+          const singleFailModelLabel = generationCurrentModelLabel();
+          const lines = [`x 通道2生成失败${singleFailModelLabel ? `（${singleFailModelLabel}）` : ""}`, "> " + (data.fail_reason || data.error || "未知错误")];
           setSeedanceSubmitStatus(lines, "bad");
           addLogs(lines);
         }
@@ -25664,10 +27593,20 @@
       bindClick("#timelinePrevBtn", () => moveTimeline(-1));
       bindClick("#timelineNextBtn", () => moveTimeline(1));
       bindClick("#playStoryboardBtn", () => playStoryboardSequence());
+      bindClick("#composeDesubBtn", () => desubMode2SourceVideo());
       bindClick("#composeAutoPackBtn", () => composeCreateSmartPlan());
       bindClick("#composeAddPackBtn", () => composeAddPack());
       bindClick("#composeRemovePackBtn", () => composeRemoveSelectedPack());
-      bindClick("#composeClearBtn", () => composeClearPlan());
+      bindClick("#composeClearMaskBtn", () => {
+        const items = composeWhiteMaskShelfItems();
+        const selected = composeSelectedWhiteMaskShelfItem(items);
+        const target = String(selected?.package_id || composePlan.selectedPackId || "").trim();
+        if (!target) {
+          assistantSetStatus(["> 先在白膜卡包架点选一个要清空的包"], "warn");
+          return;
+        }
+        openWhiteMaskPackClearDialog(target);
+      });
       bindClick("#composeConfirmBtn", () => confirmComposePlan());
       document.querySelectorAll(".module-step").forEach((step) => {
         step.addEventListener("click", (event) => {

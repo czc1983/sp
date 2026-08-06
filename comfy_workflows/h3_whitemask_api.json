@@ -1,0 +1,188 @@
+{
+  "127": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "128": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "119": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    }
+  },
+  "120": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "140": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "h3_test24.mp4"
+    }
+  },
+  "141": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "140",
+        0
+      ]
+    }
+  },
+  "136": {
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "inputs": {
+      "clip": [
+        "128",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ],
+      "audio_vae": [
+        "120",
+        0
+      ],
+      "prompt": "把视频里的人物全部转换成彩色树脂关节人偶素体：口型与音频对齐，同一人偶的颜色保持同一种色调不变，与其它人偶颜色要有明显区别。衣服完全消融进身体，通体同色光滑哑光树脂材质，像BJD娃娃素体；光头没有头发、没有眉毛和睫毛、身体带球形关节、极简人偶面部。背景、场景道具、家具、镜子及其镜中倒影必须完整保留原样，不得抹白、不得改变、不得简化，只有人物被替换成人偶，镜中的人影倒影同步变成对应颜色的人偶。严格按照参考视频的构图、人物数量、位置、姿态和遮挡关系演变，运镜和时间轴完全不变，仅保留柔和光影明暗。表情只按可观察部件保留：眼睑开合程度、视线方向、眉形、嘴角、嘴部开合与参考视频逐拍一致；禁止用任何情绪结论词概括表情。绝对不要真实皮肤质感、不要头发丝、不要睫毛、不要布料质感，不要任何文字、字幕、水印。",
+      "width": 480,
+      "height": 864,
+      "length": 124,
+      "ref_image_size": "match",
+      "ref_videos.ref_video_0": [
+        "141",
+        0
+      ],
+      "ref_video_audios.ref_video_audio_0": [
+        "141",
+        1
+      ]
+    }
+  },
+  "129": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 861774310677723
+    }
+  },
+  "123": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "res_multistep"
+    }
+  },
+  "124": {
+    "class_type": "BasicScheduler",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "scheduler": "simple",
+      "steps": 20,
+      "denoise": 1.0
+    }
+  },
+  "126": {
+    "class_type": "BasicGuider",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "conditioning": [
+        "136",
+        0
+      ]
+    }
+  },
+  "125": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": [
+        "129",
+        0
+      ],
+      "guider": [
+        "126",
+        0
+      ],
+      "sampler": [
+        "123",
+        0
+      ],
+      "sigmas": [
+        "124",
+        0
+      ],
+      "latent_image": [
+        "136",
+        1
+      ]
+    }
+  },
+  "122": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ]
+    }
+  },
+  "121": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "120",
+        0
+      ]
+    }
+  },
+  "130": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "122",
+        0
+      ],
+      "audio": [
+        "121",
+        0
+      ],
+      "fps": 24.0
+    }
+  },
+  "92": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "130",
+        0
+      ],
+      "filename_prefix": "h3_whitemask_v4",
+      "format": "auto",
+      "codec": "auto"
+    }
+  }
+}

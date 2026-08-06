@@ -550,20 +550,27 @@ def create_pre_director_video_chunks(
     return chunks
 
 
-def cut_segment(video_path: str | Path, start: float, end: float, output_path: str | Path) -> None:
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    duration = max(0.01, end - start)
+def _cut_segment_once(
+    video_path: str | Path,
+    start: float,
+    duration: float,
+    output_path: str | Path,
+    *,
+    input_seek: bool = False,
+) -> None:
+    seek_args = (
+        ["-ss", f"{start:.6f}", "-i", str(video_path)]
+        if input_seek
+        else ["-i", str(video_path), "-ss", f"{start:.6f}"]
+    )
     args = [
         ffmpeg_path(),
         "-y",
         "-loglevel",
         "error",
-        "-i",
-        str(video_path),
-        "-ss",
-        f"{start:.3f}",
+        *seek_args,
         "-t",
-        f"{duration:.3f}",
+        f"{duration:.6f}",
         "-map",
         "0:v:0?",
         "-map",
@@ -584,6 +591,36 @@ def cut_segment(video_path: str | Path, start: float, end: float, output_path: s
     ]
     # 如果没音频流就去掉音频 map
     run_command(args)
+
+
+def _has_video_stream(video_path: str | Path) -> bool:
+    try:
+        return int(probe_video(video_path).width or 0) > 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def cut_segment(video_path: str | Path, start: float, end: float, output_path: str | Path) -> None:
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    duration = max(0.01, end - start)
+    _cut_segment_once(video_path, start, duration, output_path)
+    if not _has_video_stream(video_path) or _has_video_stream(output_path):
+        return
+    # 超短窗口落在帧与帧之间时一帧都切不出来，视频流会被静默丢掉只留音频。
+    # 纯音频片段混进整包合成会让 ffmpeg 的 -map 0:v:0 直接失败，
+    # 所以对齐到帧边界、用输入端定位重切，保证至少留下一帧。
+    aligned_start, aligned_end, _start_frame, _end_frame = align_segment_to_frames(video_path, start, end)
+    _cut_segment_once(
+        video_path,
+        aligned_start,
+        max(0.01, aligned_end - aligned_start),
+        output_path,
+        input_seek=True,
+    )
+    if not _has_video_stream(output_path):
+        raise FfmpegError(
+            f"cut_segment_produced_no_video: {output_path} window=({start:.3f}, {end:.3f})"
+        )
 
 
 def align_segment_to_frames(video_path: str | Path, start: float, end: float) -> tuple[float, float, int, int]:

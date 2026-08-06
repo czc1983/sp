@@ -1,0 +1,535 @@
+"""MiniMax H3 生成后端（Mode 2「原视频→白膜→结果视频」链路的新执行器）。
+
+封装远程 ComfyUI 上已验证的两个 MiniMax H3 API 工作流：
+
+- 白膜生成（R2V：参考视频 → 彩色人偶白膜），模板 comfy_workflows/h3_whitemask_api.json
+- 白膜换人（白膜视频 + 人物参考图 → 结果视频），模板 comfy_workflows/h3_charswap_api.json
+
+独立于 Mode 1 的传输/渲染流程，仅复用通用 ComfyClient 的 HTTP 能力。
+base_url 默认取环境变量 H3_COMFY_URL，缺省为远程 8189 ComfyUI。
+"""
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import math
+import os
+import secrets
+import uuid
+from pathlib import Path
+from typing import Any, Callable
+
+from spvideo.comfy_client import ComfyClient
+
+DEFAULT_H3_COMFY_URL = "https://8189-cpod-1tpdn4punkor-s1.pod.compshare.cn"  # 5090 独占机（2026-08-06 起）
+
+TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "comfy_workflows"
+WHITEMASK_TEMPLATE = TEMPLATE_DIR / "h3_whitemask_api.json"
+CHARSWAP_TEMPLATE = TEMPLATE_DIR / "h3_charswap_api.json"
+
+# API prompt 模板里的关键节点 id
+NODE_LOAD_VIDEO = "140"
+NODE_H3 = "136"
+NODE_SCHEDULER = "124"
+NODE_GUIDER = "126"
+NODE_UNET = "127"
+NODE_NOISE = "129"
+NODE_SAVE_VIDEO = "92"
+NODE_BLOCKCACHE = "202"
+LOAD_IMAGE_BASE_ID = 150  # 150/151/152...
+
+# BlockCache（T8）跨步缓存加速：5090 实测 20 步 124 帧从 131.6s 降到 72.3s（1.8x），
+# 画面与基准几乎无损；HyperStep 更快但细节会偏离基准，SolAttn 会丢参考视频 token
+# 导致场景漂移，均不进生产。可用 H3_BLOCKCACHE=off 关闭、H3_BLOCKCACHE_THRESHOLD 调阈值。
+BLOCKCACHE_CLASS = "MiniMaxH3BlockCacheT8"
+BLOCKCACHE_DEFAULT_THRESHOLD = 0.12
+
+MAX_CHAR_IMAGES = 3
+
+# H3 输出帧率固定 24fps，且帧数必须落在 17k+5 网格上（5/22/39/.../107/124）
+H3_FPS = 24
+H3_FRAME_STEP = 17
+H3_FRAME_BASE = 5
+
+_FULL_FFMPEG_PATH: str | None = None
+
+
+def _resolve_h3_base_url(explicit: str | None = None) -> str:
+    """确定 H3 ComfyUI 地址：显式传入 > 健康的环境变量 > 默认值。
+
+    H3 的 pod 是临时的（compshare），旧 pod 停止后环境变量指向的地址会 404。
+    这里做一次存活探测：环境变量指向的地址不可用就回落到默认值，避免任务
+    全部打到死 pod 上失败。探测结果缓存 60 秒，避免每次提交都多一次网络请求。
+    """
+    if explicit:
+        return explicit
+    env_url = os.environ.get("H3_COMFY_URL")
+    if env_url and _h3_url_alive(env_url):
+        return env_url
+    return DEFAULT_H3_COMFY_URL
+
+
+_h3_url_health_cache: dict[str, bool] = {}
+_h3_url_health_checked_at: float = 0.0
+_H3_URL_HEALTH_TTL = 60.0
+
+
+def _h3_url_alive(base_url: str) -> bool:
+    global _h3_url_health_checked_at
+    import time
+
+    now = time.time()
+    if base_url in _h3_url_health_cache and now - _h3_url_health_checked_at < _H3_URL_HEALTH_TTL:
+        return _h3_url_health_cache[base_url]
+    alive = False
+    try:
+        import requests
+
+        response = requests.get(base_url.rstrip("/") + "/system_stats", timeout=8)
+        alive = response.status_code == 200
+    except Exception:  # noqa: BLE001
+        alive = False
+    _h3_url_health_cache[base_url] = alive
+    _h3_url_health_checked_at = now
+    return alive
+
+
+def snap_frame_count(frames: int) -> int:
+    """把帧数向上吸附到 17k+5 网格，最少 5 帧。
+
+    必须向上取整：向下会把源片尾部内容截掉（4.68s 源片被截成 4.46s 的教训），
+    向上则用末帧克隆（tpad）补齐，内容完整；多出的定格尾可在下游按源时长裁回。
+    """
+    frames = max(H3_FRAME_BASE, int(frames))
+    k = max(0, math.ceil((frames - H3_FRAME_BASE) / H3_FRAME_STEP))
+    return H3_FRAME_STEP * k + H3_FRAME_BASE
+
+
+def _full_ffmpeg() -> str:
+    """挑一个带 libx264 编码器和 tpad 滤镜的完整版 ffmpeg。
+
+    remotion 自带的精简版 ffmpeg 没有滤镜和 libx264（whitematte_recipe 踩过坑），
+    归一化必须用完整版；结果缓存。
+    """
+    global _FULL_FFMPEG_PATH
+    if _FULL_FFMPEG_PATH:
+        return _FULL_FFMPEG_PATH
+    from spvideo import ffmpeg_tools
+
+    candidates = [
+        str(Path(__file__).resolve().parent.parent / "assets" / "ffmpeg-full" / "ffmpeg.exe"),
+        *ffmpeg_tools.FFMPEG_CANDIDATES,
+    ]
+    checked: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = ffmpeg_tools.find_binary([candidate])
+        except ffmpeg_tools.FfmpegError:
+            continue
+        if resolved in checked:
+            continue
+        checked.add(resolved)
+        try:
+            encoders = ffmpeg_tools.run_command([resolved, "-hide_banner", "-encoders"]).stdout
+            filters = ffmpeg_tools.run_command([resolved, "-hide_banner", "-filters"]).stdout
+        except ffmpeg_tools.FfmpegError:
+            continue
+        if "libx264" in encoders and "tpad" in filters:
+            _FULL_FFMPEG_PATH = resolved
+            return resolved
+    raise ffmpeg_tools.FfmpegError("h3_normalize_no_full_ffmpeg: 找不到带 libx264/tpad 的完整版 ffmpeg")
+
+
+def normalize_reference_video(
+    clip_path: str | Path,
+    work_dir: str | Path,
+    *,
+    length: int | None = None,
+    audio_path: str | Path | None = None,
+    log: Callable[[str], None] | None = None,
+) -> tuple[Path, int]:
+    """发送前时长对齐：把参考视频转成 24fps、帧数吸附到 17k+5 网格。
+
+    H3 输出帧数只能是 17k+5 且帧率固定 24fps；参考视频不先对齐，输出时长就会和
+    源片错位（2 秒源片被拉成 3 秒就是这么来的）。源片不足目标帧数时用末帧克隆
+    补齐（tpad），保证内容完整且帧数精确。返回 (归一化视频路径, 对齐后的帧数)。
+
+    音轨处理（H3 的 ref_video_audios 输入要求视频必须带音轨，用于驱动口型）：
+    - audio_path 给定时（如外语配音），用该音轨替换原音轨，并按视频时长截断；
+    - 未给定时保留源片原音轨；源片本身无音轨时补一条静音轨兜底。
+    """
+    from spvideo import ffmpeg_tools
+
+    logger = log or (lambda _message: None)
+    clip = Path(clip_path)
+    meta = ffmpeg_tools.probe_video(clip)
+    source_frames = int(round(meta.duration * H3_FPS)) if meta.duration > 0 else 0
+    if length is not None:
+        target_frames = snap_frame_count(length)
+    elif source_frames >= H3_FRAME_BASE:
+        target_frames = snap_frame_count(source_frames)
+    else:
+        target_frames = snap_frame_count(124)
+    audio = Path(audio_path).resolve() if audio_path else None
+    if audio is not None and not audio.is_file():
+        raise FileNotFoundError(f"h3 audio not found: {audio}")
+    work = Path(work_dir)
+    work.mkdir(parents=True, exist_ok=True)
+    audio_tag = ""
+    if audio is not None:
+        audio_tag = "_a" + hashlib.md5(str(audio).encode("utf-8")).hexdigest()[:6]
+    out_path = work / f"{clip.stem}_h3ref_{target_frames}f{audio_tag}.mp4"
+    logger(
+        f"> H3 时长对齐: 源 {meta.fps:.2f}fps {meta.duration:.2f}s"
+        f" → 24fps {target_frames} 帧 ({target_frames / H3_FPS:.2f}s)"
+    )
+    if audio is not None:
+        logger(f"> H3 口型音轨: {audio.name}")
+    if out_path.is_file() and out_path.stat().st_size > 0:
+        logger(f"> H3 时长对齐: 复用已归一化文件 {out_path.name}")
+        return out_path, target_frames
+    seconds = target_frames / H3_FPS
+    args = [_full_ffmpeg(), "-y", "-i", str(clip)]
+    if audio is not None:
+        args += ["-i", str(audio), "-map", "0:v", "-map", "1:a"]
+    elif meta.audio_codec:
+        args += ["-map", "0:v", "-map", "0:a:0"]
+    else:
+        args += [
+            "-f", "lavfi", "-t", f"{seconds:.3f}", "-i", "anullsrc=r=44100:cl=stereo",
+            "-map", "0:v", "-map", "1:a",
+        ]
+    args += [
+        "-vf",
+        f"fps={H3_FPS},tpad=stop_mode=clone:stop={H3_FRAME_STEP}",
+        "-frames:v",
+        str(target_frames),
+        "-c:v",
+        "libx264",
+        "-crf",
+        "18",
+        "-preset",
+        "veryfast",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-t",
+        f"{seconds:.3f}",
+        str(out_path),
+    ]
+    ffmpeg_tools.run_command(args)
+    if not out_path.is_file() or out_path.stat().st_size <= 0:
+        raise ffmpeg_tools.FfmpegError(f"h3_normalize_output_missing: {out_path}")
+    return out_path, target_frames
+
+
+def _load_template(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _random_seed() -> int:
+    return secrets.randbelow(2**53)
+
+
+def _blockcache_enabled() -> bool:
+    return os.environ.get("H3_BLOCKCACHE", "on").strip().lower() not in ("0", "off", "false", "no")
+
+
+def _blockcache_threshold() -> float:
+    try:
+        return float(os.environ.get("H3_BLOCKCACHE_THRESHOLD", "") or BLOCKCACHE_DEFAULT_THRESHOLD)
+    except ValueError:
+        return BLOCKCACHE_DEFAULT_THRESHOLD
+
+
+def _apply_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
+    """在 UNETLoader(127) 与 Scheduler(124)/Guider(126) 之间插入 BlockCache 节点。
+
+    幂等：124/126 的 model 仍直连 127 时才改线；已接其他补丁节点（如手工加的
+    HyperStep/SolAttn）时不覆盖，尊重模板现状。
+    """
+    if NODE_UNET not in workflow:
+        return workflow
+    workflow[NODE_BLOCKCACHE] = {
+        "class_type": BLOCKCACHE_CLASS,
+        "inputs": {
+            "model": [NODE_UNET, 0],
+            "residual_diff_threshold": _blockcache_threshold(),
+            "start_percent": 0.08,
+            "end_percent": 0.95,
+            "max_consecutive_hits": 2,
+            "cache_device": "cpu",
+            "metric_stride": 8,
+            "verbose": False,
+        },
+    }
+    for nid in (NODE_SCHEDULER, NODE_GUIDER):
+        node = workflow.get(nid)
+        if isinstance(node, dict) and node.get("inputs", {}).get("model") == [NODE_UNET, 0]:
+            node["inputs"]["model"] = [NODE_BLOCKCACHE, 0]
+    return workflow
+
+
+def strip_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
+    """移除 BlockCache 节点并把 124/126 接回 127（远程无此插件时降级用）。"""
+    node = workflow.pop(NODE_BLOCKCACHE, None)
+    if node is None:
+        return workflow
+    for nid in (NODE_SCHEDULER, NODE_GUIDER):
+        target = workflow.get(nid)
+        if isinstance(target, dict) and target.get("inputs", {}).get("model") == [NODE_BLOCKCACHE, 0]:
+            target["inputs"]["model"] = [NODE_UNET, 0]
+    return workflow
+
+
+def _apply_common_overrides(
+    workflow: dict[str, Any],
+    *,
+    video_file: str,
+    prompt: str | None,
+    width: int,
+    height: int,
+    length: int,
+    steps: int,
+    seed: int | None,
+    filename_prefix: str | None,
+) -> dict[str, Any]:
+    """覆盖运行时可调字段：140 file、136 prompt/尺寸、124 steps、129 seed、92 prefix。"""
+    workflow[NODE_LOAD_VIDEO]["inputs"]["file"] = video_file
+    h3_inputs = workflow[NODE_H3]["inputs"]
+    if prompt:
+        h3_inputs["prompt"] = prompt
+    h3_inputs["width"] = int(width)
+    h3_inputs["height"] = int(height)
+    h3_inputs["length"] = int(length)
+    workflow[NODE_SCHEDULER]["inputs"]["steps"] = int(steps)
+    workflow[NODE_NOISE]["inputs"]["noise_seed"] = int(seed) if seed is not None else _random_seed()
+    if filename_prefix:
+        workflow[NODE_SAVE_VIDEO]["inputs"]["filename_prefix"] = filename_prefix
+    if _blockcache_enabled():
+        _apply_blockcache(workflow)
+    return workflow
+
+
+def build_white_mask_workflow(
+    video_file: str,
+    *,
+    prompt: str | None = None,
+    width: int = 480,
+    height: int = 864,
+    length: int = 124,
+    steps: int = 20,
+    seed: int | None = None,
+    filename_prefix: str | None = None,
+) -> dict[str, Any]:
+    """离线构造白膜生成工作流（video_file 为已上传到 ComfyUI input 目录的文件名）。"""
+    workflow = copy.deepcopy(_load_template(WHITEMASK_TEMPLATE))
+    return _apply_common_overrides(
+        workflow,
+        video_file=video_file,
+        prompt=prompt,
+        width=width,
+        height=height,
+        length=length,
+        steps=steps,
+        seed=seed,
+        filename_prefix=filename_prefix,
+    )
+
+
+def build_charswap_workflow(
+    video_file: str,
+    char_image_files: list[str],
+    *,
+    prompt: str | None = None,
+    width: int = 480,
+    height: int = 864,
+    length: int = 124,
+    steps: int = 20,
+    seed: int | None = None,
+    filename_prefix: str | None = None,
+) -> dict[str, Any]:
+    """离线构造白膜换人工作流，按实际人物参考图数量增删 LoadImage 节点。"""
+    if not 1 <= len(char_image_files) <= MAX_CHAR_IMAGES:
+        raise ValueError(f"char_image_files count must be 1..{MAX_CHAR_IMAGES}, got {len(char_image_files)}")
+    workflow = copy.deepcopy(_load_template(CHARSWAP_TEMPLATE))
+    _apply_common_overrides(
+        workflow,
+        video_file=video_file,
+        prompt=prompt,
+        width=width,
+        height=height,
+        length=length,
+        steps=steps,
+        seed=seed,
+        filename_prefix=filename_prefix,
+    )
+    # 移除模板里固化的 LoadImage 节点和 136 的 ref_images.* 引用，按实际数量重建
+    for node_id in [
+        nid for nid, node in workflow.items() if isinstance(node, dict) and node.get("class_type") == "LoadImage"
+    ]:
+        del workflow[node_id]
+    h3_inputs = workflow[NODE_H3]["inputs"]
+    for key in [key for key in h3_inputs if str(key).startswith("ref_images.")]:
+        del h3_inputs[key]
+    for index, image_file in enumerate(char_image_files):
+        node_id = str(LOAD_IMAGE_BASE_ID + index)
+        workflow[node_id] = {"class_type": "LoadImage", "inputs": {"image": image_file}}
+        h3_inputs[f"ref_images.ref_image_{index}"] = [node_id, 0]
+    return workflow
+
+
+class MiniMaxH3Client:
+    """MiniMax H3 工作流执行器，复用通用 ComfyClient 与远程 ComfyUI 通信。"""
+
+    def __init__(self, base_url: str | None = None):
+        self.base_url = _resolve_h3_base_url(base_url).rstrip("/")
+        self._comfy = ComfyClient(self.base_url)
+        self._remote_classes: set[str] | None = None
+
+    @property
+    def comfy(self) -> ComfyClient:
+        return self._comfy
+
+    def _remote_has_node(self, class_type: str) -> bool:
+        """远程 ComfyUI 是否注册了某节点类（/object_info，结果缓存）。"""
+        if self._remote_classes is None:
+            try:
+                import requests
+
+                resp = requests.get(self.base_url + "/object_info", timeout=15)
+                self._remote_classes = set(resp.json().keys()) if resp.status_code == 200 else set()
+            except Exception:  # noqa: BLE001
+                self._remote_classes = set()
+        return class_type in self._remote_classes
+
+    def _ensure_workflow_compat(self, workflow: dict[str, Any], log: Callable[[str], None]) -> dict[str, Any]:
+        """远程没有 BlockCache 插件时降级为无缓存链路，避免整单校验失败。"""
+        if NODE_BLOCKCACHE in workflow and not self._remote_has_node(BLOCKCACHE_CLASS):
+            log("> H3 加速: 远程未安装 BlockCache 插件，本次降级为无缓存运行")
+            strip_blockcache(workflow)
+        return workflow
+
+    def run_white_mask(
+        self,
+        clip_path: str | Path,
+        *,
+        prompt: str | None = None,
+        width: int = 480,
+        height: int = 864,
+        length: int | None = None,
+        steps: int = 20,
+        out_dir: str | Path,
+        seed: int | None = None,
+        out_name: str = "whitemask.mp4",
+        audio_path: str | Path | None = None,
+        log: Callable[[str], None] | None = None,
+    ) -> Path:
+        """参考视频 → 彩色人偶白膜视频，返回本地产物路径。
+
+        length 为 None 时按源片时长自动对齐到 H3 的 17k+5 帧网格（发送前完成）。
+        audio_path 给定时（如外语配音）替换参考视频音轨，H3 会按该音轨驱动口型。
+        """
+        logger = log or (lambda _message: None)
+        clip = Path(clip_path)
+        if not clip.is_file():
+            raise FileNotFoundError(f"h3 clip not found: {clip}")
+        normalized, aligned_length = normalize_reference_video(
+            clip, Path(out_dir) / "h3_norm", length=length, audio_path=audio_path, log=logger
+        )
+        logger(f"> H3 上传参考视频: {normalized.name}")
+        video_file = self._comfy.upload_file(normalized)
+        workflow = build_white_mask_workflow(
+            video_file,
+            prompt=prompt,
+            width=width,
+            height=height,
+            length=aligned_length,
+            steps=steps,
+            seed=seed,
+            filename_prefix=f"h3_whitemask_{uuid.uuid4().hex[:8]}",
+        )
+        if NODE_BLOCKCACHE in workflow:
+            logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
+        self._ensure_workflow_compat(workflow, logger)
+        prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
+        return self._download_result(prompt_id, history, Path(out_dir), out_name)
+
+    def run_charswap(
+        self,
+        mask_video_path: str | Path,
+        char_image_paths: list[str | Path],
+        *,
+        prompt: str | None = None,
+        width: int = 480,
+        height: int = 864,
+        length: int | None = None,
+        steps: int = 20,
+        out_dir: str | Path,
+        seed: int | None = None,
+        out_name: str = "charswap.mp4",
+        audio_path: str | Path | None = None,
+        log: Callable[[str], None] | None = None,
+    ) -> Path:
+        """白膜视频 + 1~3 张人物参考图 → 换人结果视频，返回本地产物路径。
+
+        length 为 None 时按白膜视频时长自动对齐到 H3 的 17k+5 帧网格（发送前完成）。
+        audio_path 给定时（如外语配音）替换白膜视频音轨，H3 会按该音轨驱动口型。
+        """
+        logger = log or (lambda _message: None)
+        mask_video = Path(mask_video_path)
+        if not mask_video.is_file():
+            raise FileNotFoundError(f"h3 mask video not found: {mask_video}")
+        images = [Path(p) for p in char_image_paths]
+        if not 1 <= len(images) <= MAX_CHAR_IMAGES:
+            raise ValueError(f"char_image_paths count must be 1..{MAX_CHAR_IMAGES}, got {len(images)}")
+        for image in images:
+            if not image.is_file():
+                raise FileNotFoundError(f"h3 char image not found: {image}")
+        normalized, aligned_length = normalize_reference_video(
+            mask_video, Path(out_dir) / "h3_norm", length=length, audio_path=audio_path, log=logger
+        )
+        logger(f"> H3 上传白膜视频: {normalized.name}")
+        video_file = self._comfy.upload_file(normalized)
+        image_files = []
+        for image in images:
+            logger(f"> H3 上传人物参考图: {image.name}")
+            image_files.append(self._comfy.upload_file(image))
+        workflow = build_charswap_workflow(
+            video_file,
+            image_files,
+            prompt=prompt,
+            width=width,
+            height=height,
+            length=aligned_length,
+            steps=steps,
+            seed=seed,
+            filename_prefix=f"h3_charswap_{uuid.uuid4().hex[:8]}",
+        )
+        if NODE_BLOCKCACHE in workflow:
+            logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
+        self._ensure_workflow_compat(workflow, logger)
+        prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
+        return self._download_result(prompt_id, history, Path(out_dir), out_name)
+
+    def _download_result(
+        self,
+        prompt_id: str,
+        history: dict[str, Any],
+        out_dir: Path,
+        out_name: str,
+    ) -> Path:
+        item = history.get(prompt_id) if isinstance(history, dict) else None
+        outputs = item.get("outputs") if isinstance(item, dict) else None
+        node_output = outputs.get(NODE_SAVE_VIDEO) if isinstance(outputs, dict) else None
+        asset = ComfyClient.first_output_asset(node_output)
+        if asset is None:
+            raise RuntimeError(
+                "MiniMax H3 workflow produced no SaveVideo output: "
+                + ComfyClient.history_debug_summary(item)
+            )
+        target = out_dir / out_name
+        self._comfy.download_output_asset(asset, target)
+        return target

@@ -1,0 +1,127 @@
+{
+ "seg_001": {
+  "prompt_id": "aea847dc-295a-42ed-bd6a-3d51415a92d9",
+  "downloaded": true,
+  "reroll_pid": "aea847dc-295a-42ed-bd6a-3d51415a92d9"
+ },
+ "seg_002": {
+  "prompt_id": "e7c2cf4c-2dab-4619-92e3-172224e1d6d9",
+  "downloaded": false,
+  "reroll_pid": "e7c2cf4c-2dab-4619-92e3-172224e1d6d9"
+ },
+ "seg_003": {
+  "prompt_id": "3ca4ba3b-1f9d-4a88-8aa0-bf1d800f7b61",
+  "downloaded": false,
+  "reroll_pid": "3ca4ba3b-1f9d-4a88-8aa0-bf1d800f7b61"
+ },
+ "seg_004": {
+  "prompt_id": "a52b6f2b-7b55-47d6-a053-0c2e26080949",
+  "downloaded": true
+ },
+ "seg_005": {
+  "prompt_id": "aee760c5-dfd2-4e61-8a8d-ecc88147af52",
+  "downloaded": false,
+  "reroll_pid": "aee760c5-dfd2-4e61-8a8d-ecc88147af52"
+ },
+ "seg_006": {
+  "prompt_id": "d33289d6-7564-4d16-b58f-a22844714195",
+  "downloaded": false,
+  "reroll_pid": "d33289d6-7564-4d16-b58f-a22844714195"
+ },
+ "seg_007": {
+  "prompt_id": "a64b4310-cc72-4a00-877f-6f32aa556f36",
+  "downloaded": false,
+  "reroll_pid": "a64b4310-cc72-4a00-877f-6f32aa556f36"
+ },
+ "seg_008": {
+  "prompt_id": "85e9c7fe-1a9f-4cf8-8db5-046075f21135",
+  "downloaded": false,
+  "reroll_pid": "85e9c7fe-1a9f-4cf8-8db5-046075f21135"
+ },
+ "seg_009": {
+  "prompt_id": "af4eca76-0db0-43f6-b796-83dabbf7a96f",
+  "downloaded": false,
+  "reroll_pid": "af4eca76-0db0-43f6-b796-83dabbf7a96f"
+ },
+ "seg_011": {
+  "prompt_id": "b1120509-41a8-4888-8928-8282dbd5e42c",
+  "downloaded": false,
+  "reroll_pid": "b1120509-41a8-4888-8928-8282dbd5e42c"
+ },
+ "seg_012": {
+  "prompt_id": "de7b4a83-4a1a-4376-bc4e-43d7286f7b08",
+  "downloaded": false,
+  "reroll_pid": "de7b4a83-4a1a-4376-bc4e-43d7286f7b08"
+ },
+ "seg_013": {
+  "prompt_id": "0b1c68b3-8bad-4fdb-8fb4-4d385863146c",
+  "downloaded": true
+ },
+ "seg_014": {
+  "prompt_id": "56b14d1f-62a9-4bad-b32e-96bf45be1f3b",
+  "downloaded": true
+ },
+ "seg_015": {
+  "prompt_id": "77580220-3b2d-48f9-8a52-582a4e4072b9",
+  "downloaded": false,
+  "reroll_pid": "77580220-3b2d-48f9-8a52-582a4e4072b9"
+ },
+ "seg_017": {
+  "prompt_id": "13874222-8bea-4e52-8924-c1c5c5145274",
+  "downloaded": true
+ },
+ "seg_018": {
+  "prompt_id": "087e094c-876a-4e2c-a026-faf6c332638c",
+  "downloaded": true
+ },
+ "seg_019": {
+  "prompt_id": "e8c4168e-f57f-473b-8ee6-956cd4e47b8c",
+  "downloaded": true
+ },
+ "seg_020": {
+  "prompt_id": "d8856054-dc93-43ba-9f0c-7e1cc48eea58",
+  "downloaded": false,
+  "reroll_pid": "d8856054-dc93-43ba-9f0c-7e1cc48eea58"
+ },
+ "seg_021": {
+  "prompt_id": "b40a66e0-bb25-4b51-836b-cf7002b9ddcc",
+  "downloaded": false,
+  "reroll_pid": "b40a66e0-bb25-4b51-836b-cf7002b9ddcc"
+ },
+ "seg_022": {
+  "prompt_id": "3e2fd819-8f95-474f-aa3a-c0b71610d59c",
+  "downloaded": true
+ },
+ "seg_016": {
+  "downloaded": true
+ },
+ "seg_023": {
+  "prompt_id": "3e207783-7b71-40a3-9022-d7542f26b2c2",
+  "downloaded": false,
+  "reroll_pid": "3e207783-7b71-40a3-9022-d7542f26b2c2"
+ },
+ "seg_025": {
+  "prompt_id": "64774c30-9295-46fd-a521-5fdd2e3e2c76",
+  "downloaded": true
+ },
+ "seg_026": {
+  "prompt_id": "a2f8b69e-8ec5-4db1-bb01-9e17308f7a2c",
+  "downloaded": true
+ },
+ "seg_027": {
+  "prompt_id": "d01e18ed-1481-480f-8661-24ae8c818368",
+  "downloaded": true
+ },
+ "seg_028": {
+  "prompt_id": "bee622d4-9b11-40f4-8baa-0c4fcc7f0c53",
+  "downloaded": true
+ },
+ "seg_029": {
+  "prompt_id": "efb63029-0afb-485c-9be4-4960ba166321",
+  "downloaded": true
+ },
+ "seg_030": {
+  "prompt_id": "4f1c21ea-d9f4-4f7a-8da4-10f136d345bf",
+  "downloaded": true
+ }
+}

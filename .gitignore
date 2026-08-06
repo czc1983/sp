@@ -42,6 +42,7 @@ reference_bg_test/
 .storyboard_asset_frames/
 .storyboard_mode2_jobs/
 .storyboard_mode2_projects/
+.h3_reverse_cache/
 .sam*/
 04_AI*/
 mulu*/
@@ -92,3 +93,19 @@ web_ui/*.broken_*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 云服务器连接密钥（勿提交）
+scripts/.cpod_askpass*.sh
+scripts/cpod_ssh*.sh
+
+# 翻译/H3 运行数据与密钥配置（勿提交，含 API Key）
+.dub_config/
+.dub_projects/
+.dub_uploads/
+.dub_jobs/
+.dub_exports/
+.h3_reverse_cache/
+.deploy/
+
+# 大型二进制（本地保留，勿提交；超过 GitHub 100MB 限制）
+assets/ffmpeg-full/

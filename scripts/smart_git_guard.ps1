@@ -43,15 +43,15 @@ function Test-SourcePath($Path) {
 
 function Get-TrackedChangedPaths {
     $Paths = @()
-    $Paths += git diff --name-only
-    $Paths += git diff --name-only --cached
-    $Paths += git diff --name-only --diff-filter=D
+    $Paths += git -c core.quotepath=false diff --name-only
+    $Paths += git -c core.quotepath=false diff --name-only --cached
+    $Paths += git -c core.quotepath=false diff --name-only --diff-filter=D
     return $Paths | Where-Object { $_ } | Sort-Object -Unique
 }
 
 function Get-UntrackedSourcePaths {
     if (-not $IncludeUntracked) { return @() }
-    return git ls-files --others --exclude-standard |
+    return git -c core.quotepath=false ls-files --others --exclude-standard |
         Where-Object { $_ -and (Test-SourcePath $_) } |
         Sort-Object -Unique
 }
@@ -65,6 +65,17 @@ function Get-WorktreeFingerprint {
     return [BitConverter]::ToString($Hash).Replace("-", "").ToLowerInvariant()
 }
 
+function Invoke-PushIfAhead {
+    # Push whenever local is ahead of upstream, even if this run made no new
+    # commit (covers retry-after-offline and manual commits between runs).
+    $ahead = git rev-list --count "@{upstream}..HEAD" 2>$null
+    if ($LASTEXITCODE -eq 0 -and [int]$ahead -gt 0) {
+        Write-Step "Push pending commits"
+        Invoke-Git @("push")
+        Write-Host "Pushed $ahead pending commit(s)." -ForegroundColor Green
+    }
+}
+
 function Invoke-OneCheckpoint {
     $Repo = (git rev-parse --show-toplevel).Trim()
     Set-Location $Repo
@@ -73,12 +84,13 @@ function Invoke-OneCheckpoint {
     if (-not $Status) {
         Write-Step "Clean"
         Write-Host "No changes to checkpoint."
+        if ($Push) { Invoke-PushIfAhead }
         return
     }
 
     Write-Step "Safe guard"
     $SafeScript = Join-Path $Repo "scripts/safe_checkpoint.ps1"
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $SafeScript -Name $Name
+    & (Join-Path $PSHOME "powershell.exe") -NoProfile -ExecutionPolicy Bypass -File $SafeScript -Name $Name
     if ($LASTEXITCODE -ne 0) {
         throw "safe_checkpoint.ps1 failed; no commit or push will be attempted."
     }
@@ -96,6 +108,7 @@ function Invoke-OneCheckpoint {
     if (-not $StagePaths) {
         Write-Step "Nothing staged"
         Write-Host "Changes exist, but none match the source-code checkpoint allowlist."
+        if ($Push) { Invoke-PushIfAhead }
         return
     }
 
@@ -130,6 +143,7 @@ function Invoke-OneCheckpoint {
 
 $RepoRoot = (git rev-parse --show-toplevel).Trim()
 Set-Location $RepoRoot
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 if ($Push -and -not $AutoCommit) {
     throw "-Push requires -AutoCommit."

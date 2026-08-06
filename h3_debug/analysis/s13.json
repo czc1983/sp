@@ -1,0 +1,12 @@
+{
+ "person_count": "ok",
+ "color": "bad",
+ "mirror": "ok",
+ "composition": "ok",
+ "material": "ok",
+ "no_text": "bad",
+ "verdict": "issues",
+ "notes": "人偶颜色与名册配色不符，白色衬衫男应为哑光墨绿但呈暖陶土，深色暗纹男应为哑光深灰蓝但呈深蓝，且人偶版有字幕残留",
+ "_seg": "seg_013",
+ "_duration": 4.8
+}

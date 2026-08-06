@@ -1,0 +1,208 @@
+{
+  "127": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "128": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "119": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    }
+  },
+  "120": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "140": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "h3_whitemask_v3.mp4"
+    }
+  },
+  "141": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "140",
+        0
+      ]
+    }
+  },
+  "136": {
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "inputs": {
+      "clip": [
+        "128",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ],
+      "audio_vae": [
+        "120",
+        0
+      ],
+      "prompt": "One single continuous shot, no cuts, no transitions. <Video 1> is a colored-doll animatic: its timeline, camera, framing, poses, actions, occlusion and all background, scene props, furniture, mirrors and their reflections must stay exactly unchanged, the background is NOT white-matte, it must be preserved exactly as shown in <Video 1>. Only replace the colored dolls with real people: the warm-red doll in <Video 1> becomes the person from <Picture 1>; the deep-blue doll in <Video 1> becomes the person from <Picture 2>. From each reference picture take ONLY the character identity (face, hairstyle, skin, outfit); its background, furniture and framing must be completely ignored. The scene, all objects, props, mirrors and reflections stay exactly as in <Video 1>; reflections of people in mirrors must also become the corresponding real people, consistent with their identity. Each person's appearance stays perfectly consistent through the whole clip, and their expressions, gaze direction and mouth movements stay exactly the same as the dolls in <Video 1>. No text, no subtitles, no logos.",
+      "width": 480,
+      "height": 864,
+      "length": 124,
+      "ref_image_size": "match",
+      "ref_videos.ref_video_0": [
+        "141",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "150",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "151",
+        0
+      ],
+      "ref_video_audios.ref_video_audio_0": [
+        "141",
+        1
+      ]
+    }
+  },
+  "129": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 667788221100
+    }
+  },
+  "123": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "res_multistep"
+    }
+  },
+  "124": {
+    "class_type": "BasicScheduler",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "scheduler": "beta",
+      "steps": 20,
+      "denoise": 1.0
+    }
+  },
+  "126": {
+    "class_type": "BasicGuider",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "conditioning": [
+        "136",
+        0
+      ]
+    }
+  },
+  "125": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": [
+        "129",
+        0
+      ],
+      "guider": [
+        "126",
+        0
+      ],
+      "sampler": [
+        "123",
+        0
+      ],
+      "sigmas": [
+        "124",
+        0
+      ],
+      "latent_image": [
+        "136",
+        1
+      ]
+    }
+  },
+  "122": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "119",
+        0
+      ]
+    }
+  },
+  "121": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "125",
+        0
+      ],
+      "vae": [
+        "120",
+        0
+      ]
+    }
+  },
+  "130": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "122",
+        0
+      ],
+      "audio": [
+        "121",
+        0
+      ],
+      "fps": 24.0
+    }
+  },
+  "92": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "130",
+        0
+      ],
+      "filename_prefix": "h3_wmswap_v1",
+      "format": "auto",
+      "codec": "auto"
+    }
+  },
+  "150": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "h3_char1.png"
+    }
+  },
+  "151": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "h3_char2.png"
+    }
+  }
+}
