@@ -234,6 +234,9 @@ def analyze_pre_director(
         for key in ("spatial_map", "production_notes"):
             value = mode2_plan.get(key)
             plan[key] = value if isinstance(value, dict) else {}
+        for key in ("locations", "risks"):
+            value = mode2_plan.get(key)
+            plan[key] = [item for item in (value or []) if isinstance(item, dict)] if isinstance(value, list) else []
     plan["boundary_hints"] = _boundary_hints(scenes, duration)
     plan["characters"] = _collect_characters(scenes)
     if include_asset_manifest:

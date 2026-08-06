@@ -33,7 +33,7 @@ SP_ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = SP_ROOT / ".dub_config" / "settings.json"
 CACHE_ROOT = SP_ROOT / ".h3_reverse_cache"
 # 反推规则版本：规则改动后必须 bump，避免旧缓存把已废弃的结论带回来。
-PROMPT_CACHE_VERSION = "v5_format_option_20260805"
+PROMPT_CACHE_VERSION = "v6_scene_context_20260806"
 PROMPT_FORMATS = {"sp_v4", "official_v1"}
 DEFAULT_PROMPT_FORMAT = "sp_v4"
 
@@ -51,6 +51,22 @@ FIXED_HEADER = """视频 1 是构图、动作、口型、运镜与光影的唯�
 
 class ReversePromptError(RuntimeError):
     """反推管线失败（接口、抽帧、配置等）。"""
+
+
+def _context_block(scene_context: str) -> str:
+    """把全片预分析的剧情背景包装成各 Pass 通用的消歧块。"""
+    return f"""全片剧情背景（来自整片预分析，是已确认的事实，不是推测）：
+{scene_context.strip()}
+
+背景使用规则：
+1. 以上背景只用于消歧——判断人物身份、动作含义和可见部件状态（例如"痛苦挣扎"背景下张嘴皱眉是痛苦呼喊而非大笑）。
+2. 各条规则中的"禁止推测剧情"指禁止编造背景之外的新剧情、新人物、新关系；背景本身可以直接作为判读依据。
+3. 落笔仍只写画面中可见的事实；背景解释了"为什么"，但不能写出画面里看不到的东西。"""
+
+
+def _context_hash(scene_context: str | None, roster_text: str | None) -> str:
+    raw = f"{(scene_context or '').strip()}|{(roster_text or '').strip()}"
+    return hashlib.md5(raw.encode("utf-8")).hexdigest()[:12]
 
 
 def _load_api_config() -> tuple[str, str]:
@@ -130,7 +146,8 @@ class _ReverseSession:
     """一次反推的上下文：接口、缓存、调用日志。"""
 
     def __init__(self, clip: Path, *, fast_model: str, review_model: str,
-                 prompt_format: str, log: Callable[[str], None]):
+                 prompt_format: str, log: Callable[[str], None],
+                 context_hash: str = ""):
         self.clip = clip
         self.fast_model = fast_model
         self.review_model = review_model
@@ -145,6 +162,10 @@ class _ReverseSession:
                 self.cache = json.loads(self.cache_path.read_text(encoding="utf-8"))
             except Exception:  # noqa: BLE001
                 self.cache = {}
+        # 剧情背景或名册变化时，旧的分 Pass 缓存全部作废重推。
+        if self.cache.get("context_hash") != context_hash:
+            self.cache = {}
+        self.cache["context_hash"] = context_hash
         self.call_log: list[dict[str, Any]] = []
 
     def save_cache(self) -> None:
@@ -242,6 +263,7 @@ def reverse_prompt_for_clip(
     clip_path: str | Path,
     *,
     roster_text: str | None = None,
+    scene_context: str | None = None,
     fast_model: str = DEFAULT_FAST_MODEL,
     review_model: str = DEFAULT_REVIEW_MODEL,
     prompt_format: str = DEFAULT_PROMPT_FORMAT,
@@ -253,8 +275,14 @@ def reverse_prompt_for_clip(
     if not clip.is_file():
         raise ReversePromptError(f"h3_reverse_clip_missing: {json.dumps(str(clip))}")
 
+    context = (scene_context or "").strip()
+    ctx_block = _context_block(context) if context else ""
+    ctx_hash = _context_hash(scene_context, roster_text)
     s = _ReverseSession(clip, fast_model=fast_model, review_model=review_model,
-                        prompt_format=prompt_format, log=logger)
+                        prompt_format=prompt_format, log=logger,
+                        context_hash=ctx_hash)
+    if context:
+        logger("> 反推: 已注入全片剧情背景（消歧用）")
     if s.cache.get("final_prompt"):
         logger("> 反推: 命中缓存，直接复用")
         return {**s.cache.get("result_meta", {}), "prompt": s.cache["final_prompt"], "cached": True}

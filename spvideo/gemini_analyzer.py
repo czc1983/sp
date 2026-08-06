@@ -295,6 +295,8 @@ class GeminiClient:
         prop_timeline = [dict(item) for item in data.get("prop_timeline", []) if isinstance(item, dict)]
         spatial_map = data.get("spatial_map") if isinstance(data.get("spatial_map"), dict) else {}
         production_notes = data.get("production_notes") if isinstance(data.get("production_notes"), dict) else {}
+        locations = [dict(item) for item in data.get("locations", []) if isinstance(item, dict)] if isinstance(data.get("locations"), list) else []
+        risks = [dict(item) for item in data.get("risks", []) if isinstance(item, dict)] if isinstance(data.get("risks"), list) else []
         raw_manifest = data.get("asset_manifest")
         raw_results = raw_manifest.get("results", []) if isinstance(raw_manifest, dict) else []
         results: list[dict[str, Any]] = []
@@ -356,13 +358,15 @@ class GeminiClient:
                 "reason": str(raw.get("reason") or "").strip(),
             })
         return {
-            "analysis_schema_version": 2,
+            "analysis_schema_version": 3,
             "story_summary": str(data.get("story_summary") or "").strip(),
             "scenes": scenes,
             "role_timeline": role_timeline,
             "prop_timeline": prop_timeline,
             "spatial_map": spatial_map,
             "production_notes": production_notes,
+            "locations": locations,
+            "risks": risks,
             "asset_manifest": {"results": results},
         }
 
@@ -1020,88 +1024,61 @@ _VIDEO_URL_PROMPT = """你是一个专业的视频预导演。请直接观看这
 }}
 """
 
-_MODE2_PLAN_PROMPT = """你是 Mode2 短剧预导演、换人工作流分析员和视觉资产整理员。请在同一次视觉分析中完成故事理解、语义场景时间线、角色运动定位、空间关系和可执行资产清单。
+_MODE2_PLAN_PROMPT = """你是 Mode2 短剧预导演和视觉资产整理员。本项目后续走 MiniMax H3 白膜换人链路：每个镜头之后会另有一次逐镜头精细分析来反推生成提示词，所以你这次只做全片级理解——故事、角色身份、场景边界、情绪基调和资产登记，不要逐帧细节。
 
 输入方式：{source_mode}
 视频总时长约 {duration}s。
 本地分析帧编号与时间：{frame_manifest}
 {audio_context}
 
-你的输出是给后续“人物替换/白膜路线/SCAIL2 逐人替换/Seedance 草稿”使用的，不是普通剧情简介。必须尽可能提取可执行信息：
-- 谁在什么时间出现；
-- 人物在画面中的大概区域；
-- 人物站位、身体朝向、头部朝向、运动方向；
-- 人物之间的前后/左右/遮挡/接触/视线关系；
-- 手、脸、身体、道具、镜子、桌面、门窗、床、沙发等关键物的空间位置；
-- 哪些信息适合自动换人，哪些地方需要人工标注或复查。
+分析目标（只要这些，不要更多）：
+1. 全片故事梗概：谁、在什么环境、发生了什么、情绪走向。
+2. 角色名册：按稳定的脸、发型、体型和服装连续性识别，同一人在不同景别和遮挡下仍用同一 identity。角色名来源优先级：音频对白明确称呼 > 画面文字 > 关系候选（丈夫/妻子/男主/女主等）；无法确定真名时 role_name 留空，但 role_candidates 要给出可用候选。
+3. 语义场景时间线：按真实物理空间和剧情节拍切分（卧室、走廊、车内等不同空间必须分开；同一房间的正反打共用同一 location），给出每段的地点、出场人物、关键动作和情绪基调。scenes 使用原视频全局秒数，尽量避免小于 2 秒的无意义碎片。
+4. 资产清单：每个稳定人物、每个独立物理场景、每个明确可见且对剧情有用的物品各建一条。物品必须在画面中清楚可见，严禁根据剧情、对白或常识猜测；evidence_times 必须来自实际可见画面；representative_frame_index 从"本地分析帧编号与时间"中选最清晰、遮挡最少的一帧（1-based），没有可靠对应帧填 null。混合不清或无法确认时 kind=mixed。
+5. 风险提醒：用自然语言列出需要人工复查的时间段（如镜子反射、亲密接触、严重遮挡、多人同框换位），不需要坐标。
 
-分析原则：
-1. 角色必须按稳定的脸、发型、体型和服装连续性识别，同一人在不同景别、姿势和遮挡下仍使用同一个 identity。matched_role 只有画面或对白有依据时填写，不确定则留空。
-2. 场景按真实物理空间识别。卧室、走廊、车内、庭院等不同空间必须分开；同一房间的正反打、远近景可以共用同一 physical_scene。
-3. 物品必须在给出的画面或视频中清楚可见。严禁根据剧情摘要、对白、场景常识或关键词猜测物品；只在叙述中提到但画面没有看见的物品不能进入 asset_manifest。
-4. evidence_times 必须来自实际可见画面。representative_frame_index 是“本地分析帧编号与时间”中的 1-based 编号，选择最清晰、遮挡最少、最能代表该资产的一帧；没有可靠对应帧时填 null。
-5. 每个稳定人物、每个独立物理场景、每个明确可见且对剧情有用的物品分别建立结果。混合不清或无法确认时 kind=mixed，不能伪装成可用资产。
-6. scenes 使用原视频全局秒数，描述画面、人物和可见动作；尽量避免小于 2 秒的无意义碎片。
-7. bbox 使用归一化画面坐标 [x1,y1,x2,y2]，左上角为 [0,0]，右下角为 [1,1]。只要能目测估计就填写；严重遮挡时填可见区域并降低 confidence。
-8. 角色名来源优先级：音频对白明确称呼 > 画面文字 > 剧情关系候选。无法确定真名时 role_name 为空，但 role_candidates 要给出“男子/女子/丈夫/妻子/男主/女主”等可用候选。
-9. 对近景、拥抱、亲吻、拉扯、牵手、压住、遮挡、镜中反射等高风险换人场景，必须在 production_notes.risks 中写明风险和需要人工定位的角色。
+明确不要输出（这些由后续逐镜头分析负责，写了也是浪费）：人物 bbox 坐标、屏幕位置/景深枚举、身体/头部朝向、姿态枚举、遮挡关系、接触点、视线方向、运动方向、逐帧动作描述、换人策略建议、镜头运镜细节。
+
+情绪字段（emotion_tone / emotion / emotion_arc）是给人工审阅和后续逐镜头分析消歧用的元数据（例如区分"痛苦呼喊"和"大笑"），允许使用情绪词，要写得具体。
 
 只输出严格 JSON，不要 markdown。结构必须是：
 {{
-  "analysis_schema_version": 2,
-  "story_summary": "全片故事摘要",
+  "analysis_schema_version": 3,
+  "story_summary": "全片故事摘要（含谁在什么环境、发生了什么、情绪走向）",
+  "characters": [
+    {{
+      "identity": "R001",
+      "visual_label": "稳定视觉人物称呼",
+      "role_name": "对白明确称呼；否则为空",
+      "role_candidates": ["候选称呼"],
+      "relationships": ["与其他人物的关系"],
+      "appearance": "跨全片稳定外观特征（发型、体型、服装细节，供后续身份比对）",
+      "emotion_arc": "该角色在全片中的情绪变化（一句话）",
+      "confidence": 0.0
+    }}
+  ],
   "scenes": [
     {{
       "start": 0.0,
       "end": 4.0,
+      "location": "稳定物理空间名",
       "description": "画面和剧情描述",
-      "scene_type": "person_talking / interview / broll / unknown",
       "characters": ["稳定视觉人物称呼"],
       "character_details": [
         {{
           "visual_label": "稳定视觉人物称呼",
           "role_name": "对白明确称呼；否则为空",
-          "role_candidates": ["有依据的关系称呼候选"],
+          "role_candidates": ["候选称呼"],
           "relationships": ["与其他人物的关系"],
           "description": "可区分的外观与服装",
-          "bbox": [0.12, 0.20, 0.55, 0.92],
-          "screen_position": "left / center / right / upper / lower / full_frame / closeup",
-          "depth_position": "foreground / midground / background",
-          "body_facing": "toward_camera / away_from_camera / left / right / toward_other / unclear",
-          "head_facing": "toward_camera / away_from_camera / left / right / down / up / toward_other / unclear",
-          "pose": "standing / sitting / lying / leaning / kneeling / walking / close_embrace / unclear",
-          "action": "当前时间段内该人物的可见动作",
-          "motion_direction": "left_to_right / right_to_left / forward / backward / mostly_static / unclear",
-          "occlusion": "无遮挡/被谁遮挡/遮挡谁/只露出局部",
-          "contact_points": ["与谁或什么发生接触，如右手抓住女子左手、脸贴近脖子"],
-          "gaze_or_attention": "看向谁/看向物品/闭眼/不清楚",
+          "emotion": "该人物本段的情绪状态（具体，如痛苦挣扎/强装镇定）",
           "confidence": 0.0
         }}
       ],
-      "visible_props": [
-        {{
-          "name": "画面可见物品或空间结构",
-          "bbox": [0.0, 0.0, 1.0, 1.0],
-          "screen_position": "left / center / right / background / foreground",
-          "description": "物品外观和用途",
-          "confidence": 0.0
-        }}
-      ],
-      "spatial_relations": [
-        {{
-          "subject": "人物或物品名",
-          "relation": "behind / in_front_of / left_of / right_of / touching / holding / leaning_on / reflected_in / occluding / near",
-          "object": "人物或物品名",
-          "description": "自然语言说明",
-          "confidence": 0.0
-        }}
-      ],
-      "camera": {{
-        "shot_size": "closeup / medium / full / wide / detail_insert",
-        "camera_motion": "static / push_in / pull_out / pan / tilt / handheld / unclear",
-        "angle": "front / side / over_shoulder / high / low / mirror_reflection / unclear"
-      }},
+      "emotion_tone": "本段整体情绪基调（如紧张/温情/绝望）",
       "key_action": "关键可见动作",
+      "camera_shot": "closeup / medium / full / wide / unclear",
       "boundary_kind": "shot_change / role_change / action_change / location_change / topic_change / video_start",
       "boundary_reason": "边界理由",
       "boundary_confidence": 0.0
@@ -1114,37 +1091,19 @@ _MODE2_PLAN_PROMPT = """你是 Mode2 短剧预导演、换人工作流分析员�
       "role_name": "明确角色名；不确定为空",
       "role_candidates": ["候选称呼"],
       "time_ranges": [[0.0, 2.5]],
-      "representative_times": [0.8, 1.6],
       "appearance": "跨全片稳定外观特征",
-      "motion_summary": "跨全片动作和站位变化",
-      "risk_notes": "换人/分割风险，如遮挡、粘连、镜像、只有局部",
       "confidence": 0.0
     }}
   ],
-  "prop_timeline": [
+  "locations": [
     {{
-      "name": "关键物品或空间结构",
-      "kind": "prop / furniture / mirror / doorway / background_structure",
-      "time_ranges": [[0.0, 2.5]],
-      "bbox": [0.0, 0.0, 1.0, 1.0],
-      "spatial_role": "人物站位或动作参考作用",
-      "confidence": 0.0
+      "physical_scene": "稳定物理空间名",
+      "layout_summary": "该空间的一句话布局（不需要精确坐标）"
     }}
   ],
-  "spatial_map": {{
-    "physical_scene": "稳定物理空间名",
-    "layout_summary": "房间、人物、物品的整体空间布局",
-    "locked_background_elements": ["后续生成应保持位置关系的背景/家具/镜子/台面"],
-    "replaceable_style_elements": ["可改成外国风格但不应改变空间位置的元素"]
-  }},
-  "production_notes": {{
-    "replacement_strategy": "建议走白膜路线/SCAIL2逐人替换/Seedance草稿/需要人工锚点",
-    "manual_anchor_suggestions": [
-      {{"time": 0.8, "role": "R001 或视觉称呼", "reason": "为什么这一帧适合标身份定位"}}
-    ],
-    "risks": ["可能串人、遮挡、镜像、亲密接触、手部粘连等"],
-    "do_not_change": ["必须保留的空间关系和动作关系"]
-  }},
+  "risks": [
+    {{"time": 0.8, "roles": ["视觉称呼"], "issue": "需要人工复查的风险描述，如镜中反射/亲密接触/严重遮挡"}}
+  ],
   "asset_manifest": {{
     "results": [
       {{
@@ -1156,13 +1115,7 @@ _MODE2_PLAN_PROMPT = """你是 Mode2 短剧预导演、换人工作流分析员�
         "physical_scene": "稳定物理空间键；非场景可填所属空间",
         "evidence_times": [1.2, 3.4],
         "representative_frame_index": 1,
-        "bbox": [0.12, 0.20, 0.55, 0.92],
-        "spatial_position": {{"screen_position": "left", "depth_position": "foreground"}},
         "appearance": "资产的可见外观",
-        "motion_notes": "人物/物品在全片中的运动或关系",
-        "visible_props": [
-          {{"name": "画面明确可见的物品", "evidence_times": [3.4], "confidence": 0.9}}
-        ],
         "confidence": 0.0,
         "reason": "视觉证据与代表帧选择理由"
       }}
