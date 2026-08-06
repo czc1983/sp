@@ -20440,6 +20440,24 @@ def _run_storyboard_draft_job_v2(job_id: str, payload: dict[str, Any]) -> None:
             understanding_status=understanding_status,
             boundary_hints=shot_metadata_boundary_hints,
         )
+        # H3 网格后处理：超过本地工作流上限（124f=5.17s）的镜头按网格均衡细分，
+        # 并为每个镜头标注 h3_frames / h3_pad_seconds / h3_review。
+        # 此路径的边界全部来自真实视觉切点，因此这里只做细分与标注，不做碎片合并。
+        from spvideo.h3_segment_tuning import (
+            MAX_SEGMENT_DURATION as _H3_MAX_SEGMENT,
+            annotate_h3_targets,
+            split_overlong_segments,
+        )
+        _h3_before = len(shots)
+        shots = split_overlong_segments(shots, max_duration=_H3_MAX_SEGMENT)
+        shots = annotate_h3_targets(shots)
+        if len(shots) != _h3_before:
+            for _idx, _shot in enumerate(shots, start=1):
+                _shot["segment_id"] = f"S{_idx:03d}"
+            add_log(f"> H3 网格: 超长镜头按 5.17s 网格均衡细分 {_h3_before} → {len(shots)} 段")
+        _h3_review_count = sum(1 for _shot in shots if _shot.get("h3_review"))
+        if _h3_review_count:
+            add_log(f"> H3 网格: {_h3_review_count} 段需人工注意（人数>3 或过短）")
         class_counts = {
             value: sum(1 for item in shots if item.get("shot_class") == value)
             for value in ("scene", "single", "multi", "unknown")
