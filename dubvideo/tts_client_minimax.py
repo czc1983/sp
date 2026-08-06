@@ -21,8 +21,8 @@ class MiniMaxTtsSettings:
     volume: float = 1.0
     pitch: int = 0
     audio_format: str = "mp3"
-    sample_rate: int = 32000
-    bitrate: int = 128000
+    sample_rate: int = 44100
+    bitrate: int = 256000
     channel: int = 1
     language_boost: str = "auto"
     request_interval_ms: int = 500
@@ -44,8 +44,8 @@ class MiniMaxTtsSettings:
             volume=float(data.get("volume") or 1.0),
             pitch=int(data.get("pitch") or 0),
             audio_format=str(data.get("audio_format") or "mp3"),
-            sample_rate=int(data.get("sample_rate") or 32000),
-            bitrate=int(data.get("bitrate") or 128000),
+            sample_rate=int(data.get("sample_rate") or 44100),
+            bitrate=int(data.get("bitrate") or 256000),
             channel=int(data.get("channel") or 1),
             language_boost=str(data.get("language_boost") or "auto"),
             request_interval_ms=int(data.get("request_interval_ms") or 500),
@@ -193,6 +193,7 @@ class MiniMaxTtsClient:
         output_dir: Path,
         settings: MiniMaxTtsSettings,
         progress: Callable[[str, int], None] | None = None,
+        force_refresh: bool = False,
     ) -> dict[str, Any]:
         output_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = output_dir / "manifest.json"
@@ -217,7 +218,7 @@ class MiniMaxTtsClient:
             audio_path = output_dir / filename
             signature = _cache_signature(settings, voice_id, segment.language, segment.emotion)
             cached = existing.get(sid)
-            if _can_reuse(cached, segment.text, audio_path, signature):
+            if not force_refresh and _can_reuse(cached, segment.text, audio_path, signature):
                 if progress:
                     progress(f"复用已有 TTS: {sid} ({index}/{total})", int(index / max(total, 1) * 100))
             else:

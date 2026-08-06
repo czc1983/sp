@@ -450,7 +450,9 @@ def run_tts_job(job_id: str, payload: dict[str, Any]) -> None:
         )
     except Exception as exc:  # noqa: BLE001 - 情绪识别失败不阻塞配音
         append_log(job_id, f"> 自动情绪识别失败（不影响配音）: {exc}")
-    result = client.synthesize_segments(segments, output_dir, minimax, progress=progress)
+    # 用户要求：点「生成成片」一律不用缓存，全部分段按当前设置重新合成
+    append_log(job_id, "> 缓存已关闭：全部分段重新合成最新干声")
+    result = client.synthesize_segments(segments, output_dir, minimax, progress=progress, force_refresh=True)
     if should_cancel(job_id):
         raise RuntimeError("job_cancelled")
     append_log(job_id, "> 保存字幕文件")
