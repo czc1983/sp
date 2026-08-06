@@ -25,14 +25,24 @@ def _get_face_app():
         return _face_app
 
     import os
+    # 优先 buffalo_l（大模型，侧脸/暗光下同人判定明显更稳）；
+    # 模型文件未下载或加载失败时回退 buffalo_s。det_size 320 → 512 提升小脸召回。
+    model_name = os.environ.get("SP_FACE_MODEL", "buffalo_l")
     try:
         from insightface.app import FaceAnalysis
-        _face_app = FaceAnalysis(
-            name="buffalo_s",
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
-        )
-        _face_app.prepare(ctx_id=0, det_size=(320, 320))
-        logger.info("[人脸识别] InsightFace Buffalo-S 模型加载完成 (GPU)")
+        try:
+            _face_app = FaceAnalysis(
+                name=model_name,
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            )
+        except Exception:
+            logger.warning("[人脸识别] %s 不可用，回退 buffalo_s", model_name)
+            _face_app = FaceAnalysis(
+                name="buffalo_s",
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            )
+        _face_app.prepare(ctx_id=0, det_size=(512, 512))
+        logger.info("[人脸识别] InsightFace 模型加载完成 (GPU, %s)", _face_app.models and model_name)
     except Exception:
         try:
             from insightface.app import FaceAnalysis as FaceAnalysisCPU
@@ -40,7 +50,7 @@ def _get_face_app():
                 name="buffalo_s",
                 providers=["CPUExecutionProvider"],
             )
-            _face_app.prepare(ctx_id=-1, det_size=(320, 320))
+            _face_app.prepare(ctx_id=-1, det_size=(512, 512))
             logger.info("[人脸识别] InsightFace Buffalo-S 模型加载完成 (CPU)")
         except Exception as e:
             logger.error("[人脸识别] InsightFace 加载失败: %s", e)

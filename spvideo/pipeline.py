@@ -61,8 +61,8 @@ def run_segmentation_v2(
     video_path: str | Path,
     project_dir: str | Path,
     sample_interval: float = 1.0,
-    min_segment_duration: float = 1.0,
-    max_segment_duration: float = 6.0,
+    min_segment_duration: float = 1.5,
+    max_segment_duration: float = 5.1,
     export_video: bool = True,
     extract_backgrounds: bool = False,
     yolo_conf_threshold: float = 0.35,
@@ -353,26 +353,26 @@ def run_segmentation_v2(
     else:
         logger.info("[视觉模型] 已跳过 — 用户关闭")
 
-    # ── 3.75 max_segment_duration 强制切分 ────────────────────────────
+    # ── 3.75 H3 网格后处理：超长切分 + 碎片合并 + 网格标注 ─────────────
+    # 旧逻辑按 max_segment_duration 硬切且统一复制第一段的属性（bug），
+    # 现改为 H3 帧网格（17k+5 @24fps，上限 124f=5.17s）感知的后处理。
     if max_segment_duration > 0:
-        boundaries = sorted({s["start"] for s in sub_segments} | {s["end"] for s in sub_segments})
-        old_count = len(boundaries) - 1
-        split_boundaries = split_long_ranges(boundaries, max_segment_duration)
-        if len(split_boundaries) > len(boundaries):
-            logger.info("[强制切分] %d → %d 段（max=%.1fs）", old_count, len(split_boundaries) - 1, max_segment_duration)
-            new_segments: list[dict[str, object]] = []
-            for start, end in zip(split_boundaries, split_boundaries[1:]):
-                new_seg = dict(sub_segments[0])
-                new_seg["start"] = start
-                new_seg["end"] = end
-                new_seg["start_sources"] = list(sub_segments[0].get("start_sources", []))
-                new_seg["end_sources"] = list(sub_segments[0].get("end_sources", []))
-                new_seg["start_sources"].append("split_long_range")
-                new_seg["end_sources"].append("split_long_range")
-                new_segments.append(new_seg)
-            sub_segments = new_segments
-            seg_result["sub_segments"] = sub_segments
-            seg_result["stats"]["total_sub_segments"] = len(sub_segments)
+        from .h3_segment_tuning import MAX_SEGMENT_DURATION as H3_GRID_MAX
+        from .h3_segment_tuning import tune_segments_for_h3
+
+        effective_max = min(float(max_segment_duration), H3_GRID_MAX)
+        before = len(sub_segments)
+        sub_segments, h3_report = tune_segments_for_h3(
+            sub_segments,
+            min_duration=max(1.5, float(min_segment_duration)),
+            max_duration=effective_max,
+        )
+        seg_result["sub_segments"] = sub_segments
+        seg_result["stats"]["total_sub_segments"] = len(sub_segments)
+        seg_result["stats"]["h3_tuning"] = h3_report
+        if len(sub_segments) != before:
+            logger.info("[H3网格] 后处理调整段数: %d → %d（上限 %.2fs）",
+                        before, len(sub_segments), effective_max)
 
     # ── 3.8 背景提取 ─────────────────────────────────────────────────
     bg_results = []
