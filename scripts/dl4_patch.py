@@ -10,7 +10,7 @@ URL = "https://hf-mirror.com/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/
 PART = "/root/ComfyUI-H3/models/diffusion_models/minimax_h3_ref2va_int8_convrot.safetensors.part"
 DEST = PART[:-5]
 THREADS = 12
-SCAN = 4 * 1024 * 1024
+SCAN = 256 * 1024  # 细粒度扫零：能捕捉被杀进程留下的半写 4MB 块尾部零区
 BACKOFF = 8 * 1024 * 1024
 
 total = os.path.getsize(PART)
@@ -68,8 +68,17 @@ def dl(start, end, idx):
     return False
 
 t0 = time.time()
-threads = []
+# 把每个洞再切成 32MB 子块并行下（单流会被 hf-mirror 限速到 0.6MB/s）
+SUB = 32 * 1024 * 1024
+subtasks = []
 for idx, (s, e) in enumerate(holes):
+    off = s
+    while off <= e:
+        subtasks.append((off, min(e, off + SUB - 1), idx))
+        off += SUB
+print(f"{len(subtasks)} sub-ranges to fill", flush=True)
+threads = []
+for (s, e, idx) in subtasks:
     t = threading.Thread(target=dl, args=(s, e, idx), daemon=True)
     t.start()
     threads.append(t)
