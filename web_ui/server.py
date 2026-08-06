@@ -1514,6 +1514,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 if clip is None or not clip.exists():
                     raise ValueError("clip_not_found")
                 roster_text = str(payload.get("roster_text") or "").strip() or None
+                scene_context = str(payload.get("scene_context") or "").strip() or None
                 prompt_format = str(payload.get("prompt_format") or "").strip() or "sp_v4"
                 job_id = uuid.uuid4().hex[:8]
                 job = {
@@ -1532,7 +1533,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 _write_storyboard_job_snapshot(job)
                 thread = threading.Thread(
                     target=_run_h3_reverse_prompt_job,
-                    args=(job_id, str(clip), roster_text, prompt_format),
+                    args=(job_id, str(clip), roster_text, prompt_format, scene_context),
                     daemon=True,
                 )
                 thread.start()
@@ -10871,11 +10872,103 @@ def _run_scail2_white_mask_job(
         finish("failed", error=error_message)
 
 
+def _build_h3_scene_context_card(clip_path: str) -> str | None:
+    """从项目 understanding 缓存（pre_director.json）构建该片段的全片剧情背景卡。
+
+    片段文件名形如 {shot_id}_{start_ms:08d}_{end_ms:08d}.mp4；从片段路径向上查找
+    understanding/pre_director.json。找不到或解析失败返回 None（反推照常进行，
+    只是没有背景消歧）。背景卡只用于身份/动作/表情消歧，不进最终提示词。
+    """
+    try:
+        clip = Path(clip_path)
+        understanding_path = None
+        for parent in clip.parents:
+            candidate = parent / "understanding" / "pre_director.json"
+            if candidate.is_file():
+                understanding_path = candidate
+                break
+        if understanding_path is None:
+            return None
+        plan = json.loads(understanding_path.read_text(encoding="utf-8"))
+        if not isinstance(plan, dict):
+            return None
+
+        lines: list[str] = []
+        story = str(plan.get("story_summary") or "").strip()
+        if story:
+            lines.append(f"故事梗概：{story}")
+
+        clip_start = clip_end = None
+        match = re.search(r"_(\d{6,8})_(\d{6,8})\.mp4$", clip.name)
+        if match:
+            clip_start = int(match.group(1)) / 1000.0
+            clip_end = int(match.group(2)) / 1000.0
+            lines.append(f"本片段时间范围：原片 {clip_start:.1f}s ~ {clip_end:.1f}s")
+
+        scenes = [item for item in (plan.get("scenes") or []) if isinstance(item, dict)]
+        if clip_start is not None and clip_end is not None and scenes:
+            pad = 0.3
+            overlapping = [
+                scene for scene in scenes
+                if min(clip_end + pad, _mode2_float(scene.get("end"), 0.0))
+                - max(clip_start - pad, _mode2_float(scene.get("start"), 0.0)) > 0
+            ]
+        else:
+            overlapping = scenes
+
+        for index, scene in enumerate(overlapping[:4], start=1):
+            parts: list[str] = []
+            location = str(scene.get("location") or "").strip()
+            if location:
+                parts.append(f"地点：{location}")
+            description = str(scene.get("description") or "").strip()
+            if description:
+                parts.append(description)
+            key_action = str(scene.get("key_action") or "").strip()
+            if key_action:
+                parts.append(f"关键动作：{key_action}")
+            tone = str(scene.get("emotion_tone") or "").strip()
+            if tone:
+                parts.append(f"情绪基调：{tone}")
+            if parts:
+                header = f"相关场景{index}（原片 {_mode2_float(scene.get('start'), 0.0):.1f}s~{_mode2_float(scene.get('end'), 0.0):.1f}s）"
+                lines.append(header + "：" + "；".join(parts))
+
+        labels = {
+            str(label).strip()
+            for scene in overlapping
+            for label in (scene.get("characters") or [])
+            if str(label).strip()
+        }
+        roster_entries = plan.get("role_timeline") or plan.get("characters") or []
+        for entry in roster_entries:
+            if not isinstance(entry, dict):
+                continue
+            label = str(entry.get("visual_label") or "").strip()
+            if not label or (labels and label not in labels):
+                continue
+            name = str(entry.get("role_name") or "").strip()
+            appearance = str(entry.get("appearance") or entry.get("description") or "").strip()
+            arc = str(entry.get("emotion_arc") or "").strip()
+            segment = f"角色 {label}" + (f"（{name}）" if name else "")
+            if appearance:
+                segment += f"：{appearance}"
+            if arc:
+                segment += f"；情绪走向：{arc}"
+            lines.append(segment)
+
+        text = "\n".join(lines).strip()
+        return text[:1500] if text else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _run_h3_reverse_prompt_job(
     job_id: str,
     clip_path: str,
     roster_text: str | None,
     prompt_format: str = "sp_v4",
+    scene_context: str | None = None,
 ) -> None:
     """后台反推单个片段的 H3 白膜提示词（结果进 .h3_reverse_cache，可重复读取）。"""
     def add_log(message: str) -> None:
@@ -10901,7 +10994,13 @@ def _run_h3_reverse_prompt_job(
     try:
         from spvideo.h3_reverse_prompt import reverse_prompt_for_clip
 
+        context = (scene_context or "").strip() or _build_h3_scene_context_card(clip_path)
+        if context:
+            add_log("> 已加载全片剧情背景卡（身份/动作/表情消歧用）")
+        else:
+            add_log("> 未找到 understanding 缓存，本次反推无剧情背景")
         output = reverse_prompt_for_clip(clip_path, roster_text=roster_text,
+                                        scene_context=context,
                                         prompt_format=prompt_format, log=add_log)
         finish("done", result={
             "clip_path": clip_path,

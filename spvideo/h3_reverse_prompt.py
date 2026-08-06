@@ -333,6 +333,8 @@ def reverse_prompt_for_clip(
 【肢体接触】各帧中是否可见人物之间的肢体接触（如手搭肩、拥抱、牵手），是谁的手放在谁的什么部位
 【场景】室内/室外、可见的家具或结构（只列看得见的）
 【可见文字】任何一帧画面里出现的字幕/文字内容及其出现的时间点（没有就写"无"）"""
+        if ctx_block:
+            pass_a_prompt = ctx_block + "\n\n" + pass_a_prompt
         arch = s.chat([{"role": "user", "content": s.frames_content(frames, times) + [{"type": "text", "text": pass_a_prompt}]}],
                       s.fast_model, "A")
         s.cache["arch"] = arch
@@ -343,7 +345,7 @@ def reverse_prompt_for_clip(
     for t in times:
         if str(t) in frame_notes:
             continue
-        pass_b_prompt = f"""背景档案（已确认的事实，请沿用其中的人物编号，不得新增人物）：
+        pass_b_prompt = (ctx_block + "\n\n" if ctx_block else "") + f"""背景档案（已确认的事实，请沿用其中的人物编号，不得新增人物）：
 {arch}
 
 现在只看这一张帧（第 {t} 秒）。逐条回答以下窄问题，每条一两句话，拿不准写"不确定"，禁止推测剧情。
@@ -375,7 +377,7 @@ def reverse_prompt_for_clip(
             frame_notes2[key] = note
             continue
         neighbors = [times[j] for j in (i - 1, i, i + 1) if 0 <= j < len(times)]
-        recheck_prompt = f"""背景档案（已确认的事实，请沿用人物编号）：
+        recheck_prompt = (ctx_block + "\n\n" if ctx_block else "") + f"""背景档案（已确认的事实，请沿用人物编号）：
 {arch}
 
 下面是与第 {t} 秒相邻的抽帧（依次是 {neighbors} 秒），以及之前只凭第 {t} 秒单帧做出的观察：
@@ -414,8 +416,10 @@ def reverse_prompt_for_clip(
 
     # ---------- 汇总 ----------
     md = [f"- 视频时长约 {video_duration}s，抽帧时间点：{times}",
-          f"- 事实层模型：{s.fast_model}；复核模型：{s.review_model}", "",
-          "## Pass A · 人物与场景档案", arch, "", "## Pass B · 逐帧观察（经 B2 身份重审）"]
+          f"- 事实层模型：{s.fast_model}；复核模型：{s.review_model}", ""]
+    if context:
+        md += ["## 全片剧情背景（整片预分析已确认的事实，供消歧，禁止在此之外脑补）", context, ""]
+    md += ["## Pass A · 人物与场景档案", arch, "", "## Pass B · 逐帧观察（经 B2 身份重审）"]
     for t in times:
         md += [f"### 第 {t}s", frame_notes2.get(str(t), ""), ""]
     md += ["## Pass C · 镜头与光影", camera, ""]
@@ -441,17 +445,18 @@ def reverse_prompt_for_clip(
     if s.cache.get(review_key):
         final_prompt = s.cache[review_key]
     else:
+        review_context = f"【剧情背景（整片预分析已确认的事实）】\n{context}\n\n" if context else ""
         review_prompt = f"""下面是参考视频的 {len(times)} 张抽帧（时间点：{times} 秒）、已确认的人物档案，以及一份根据反推结果组装的视频生成提示词草稿。
 
 【人物档案】
 {arch}
 
-【提示词草稿】
+{review_context}【提示词草稿】
 {draft}
 
 你是苛刻的校对员。逐条核对草稿中关于参考视频本身的每一个事实性描述（人物身份、位置、姿态、视线、眼睑、眉形/嘴角、嘴部、手部、遮挡、镜中内容、镜头运动、光影），与抽帧画面比对：
 1. 特别注意人物身份是否与档案矛盾（背影人物的服装必须与档案逐人比对，指出画面依据）。
-2. 特别警惕"叙事化脑补"：草稿中任何动作/情绪描述，若抽帧画面里没有直接可见的依据（例如从"距离近"推断出的亲吻、拥抱升级），必须删除。
+2. 特别警惕"叙事化脑补"：草稿中任何动作/情绪描述，若抽帧画面里没有直接可见的依据（例如从"距离近"推断出的亲吻、拥抱升级），必须删除。但与给定剧情背景一致的动作判读不算脑补（例如背景为"痛苦挣扎"时，把张嘴皱眉写作痛苦呼喊而非大笑），可以保留。
 3. 表情描述硬性规则：删除大笑、微笑、痛苦、悲伤、愤怒、撕心裂肺等一切情绪结论词；只能改写成抽帧里直接可见的部件状态（眼睑从闭合转为睁开、视线方向、眉形、嘴角上扬/下撇、嘴部开合）。无法直接确认的表情细节一律删除，不许保留情绪标签。
 4. 树脂素体冲突词硬性规则：删除头发、头发丝、睫毛、真实皮肤纹理、布料质感等源片质感词；档案中的发型/服装只用于身份比对，最终提示词里服装只能写成消融进身体的同色哑光树脂。
 5. 风格转换部分（树脂人偶、颜色分配、负面清单）属于需求指令，不核对，但若与时间轴描述矛盾也需理顺。
