@@ -31,6 +31,7 @@ class MiniMaxTtsSettings:
     speaker_voice_map: dict[str, str] | None = None
     emotion: str = ""
     auto_emotion: bool = True
+    emotion_prosody: bool = True
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MiniMaxTtsSettings":
@@ -53,6 +54,7 @@ class MiniMaxTtsSettings:
             speaker_voice_map=dict(data.get("speaker_voice_map") or {}),
             emotion=str(data.get("emotion") or ""),
             auto_emotion=bool(data.get("auto_emotion", True)),
+            emotion_prosody=bool(data.get("emotion_prosody", True)),
         )
 
 
@@ -70,6 +72,24 @@ LANGUAGE_BOOST = {
     "it": "Italian",
     "pt": "Portuguese",
 }
+
+# 情绪 → 韵律微调（语速倍率、音量倍率、音高偏移）。
+# MiniMax 的 emotion 参数只是轻度倾向，强情绪需要韵律参数配合才能顶上去。
+# 改动映射后 bump PROSODY_VERSION，让旧缓存自动失效重合成。
+PROSODY_VERSION = "v1_20260806"
+EMOTION_PROSODY: dict[str, tuple[float, float, int]] = {
+    "happy":     (1.05, 1.10, 1),
+    "sad":       (0.92, 0.92, -1),
+    "angry":     (1.08, 1.20, 1),
+    "fearful":   (1.10, 1.05, 2),
+    "disgusted": (0.95, 1.00, -1),
+    "surprise":  (1.10, 1.12, 2),
+    "neutral":   (1.00, 1.00, 0),
+}
+
+
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
 
 
 class MiniMaxTtsClient:
@@ -103,15 +123,24 @@ class MiniMaxTtsClient:
         if language_boost.lower() == "auto":
             language_boost = LANGUAGE_BOOST.get(language.lower(), "")
 
+        speed = settings.speed
+        volume = settings.volume
+        pitch = settings.pitch
+        if emotion and settings.emotion_prosody and emotion in EMOTION_PROSODY:
+            mult_speed, mult_vol, pitch_shift = EMOTION_PROSODY[emotion]
+            speed = _clamp(speed * mult_speed, 0.5, 2.0)
+            volume = _clamp(volume * mult_vol, 0.1, 10.0)
+            pitch = int(_clamp(pitch + pitch_shift, -12, 12))
+
         payload: dict[str, Any] = {
             "model": settings.model,
             "text": text,
             "stream": False,
             "voice_setting": {
                 "voice_id": voice,
-                "speed": settings.speed,
-                "vol": settings.volume,
-                "pitch": settings.pitch,
+                "speed": speed,
+                "vol": volume,
+                "pitch": pitch,
             },
             "audio_setting": {
                 "sample_rate": settings.sample_rate,
@@ -259,6 +288,7 @@ def _cache_signature(settings: MiniMaxTtsSettings, voice_id: str, language: str,
         "channel": settings.channel,
         "language_boost": boost,
         "emotion": emotion or "",
+        "prosody": PROSODY_VERSION if (emotion and settings.emotion_prosody) else "",
     }
 
 

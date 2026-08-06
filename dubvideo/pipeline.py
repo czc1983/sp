@@ -5,6 +5,7 @@ from typing import Any
 
 import re
 import subprocess
+import time
 
 from .asr_client import (
     AsrSettings,
@@ -272,7 +273,9 @@ def run_final_mix_job(job_id: str, payload: dict[str, Any]) -> None:
 
     # 成片只混配音轨，不混背景音乐：BGM 单独导出保留，避免影响后续生成
     progress("正在混流导出成片", 60 if bgm_path else 40)
-    out_path = root / "render" / "final_dub.mp4"
+    # 文件名带时间戳，多次生成不互相覆盖，能分清是哪次出的片
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    out_path = root / "render" / f"final_dub_{stamp}.mp4"
     mix_voice_bgm_to_video(
         video_path,
         voice_path,
@@ -285,7 +288,7 @@ def run_final_mix_job(job_id: str, payload: dict[str, Any]) -> None:
     result: dict[str, Any] = {"output_video_path": str(out_path), "bgm_volume": bgm_volume}
     if bgm_path is not None:
         try:
-            bgm_export = _export_bgm_audio(bgm_path, root / "render" / "final_bgm.mp3", ffmpeg_configured=ffmpeg_configured)
+            bgm_export = _export_bgm_audio(bgm_path, root / "render" / f"final_bgm_{stamp}.mp3", ffmpeg_configured=ffmpeg_configured)
             outputs["bgm_audio"] = str(bgm_export)
             result["bgm_audio"] = str(bgm_export)
             append_log(job_id, f"> 背景音乐已单独保留：{bgm_export.name}")
