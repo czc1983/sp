@@ -31,11 +31,22 @@ _EMOTION_ALIASES: dict[str, str] = {
 }
 
 _PROMPT = (
-    "听这段语音，只根据说话者的语气、音高、音量和能量判断情绪，不要根据台词的文字内容判断。"
-    "只能从以下词中选一个回答，不要解释："
-    "happy(开心)、sad(伤心)、angry(愤怒/大喊)、fearful(害怕)、disgusted(厌恶)、surprise(惊讶)、neutral(平静)。"
-    "判断依据：音量大、音高拉高、爆发力强 → angry 或 sad；哭腔、颤抖 → sad；语速平稳、音量正常 → neutral。"
+    "听这段语音，只根据说话者的语气、音高、音量和能量判断情绪与强度，不要根据台词的文字内容判断。"
+    "严格用「情绪:强度」的格式回答，不要解释。"
+    "情绪只能选一个：happy(开心)、sad(伤心)、angry(愤怒/大喊)、fearful(害怕)、disgusted(厌恶)、surprise(惊讶)、neutral(平静)。"
+    "强度只能选一个：low(轻声/压抑/克制)、medium(正常说话)、high(大喊/吼叫/爆发/哭喊)。"
+    "示例：angry:high、sad:low、neutral:medium。"
+    "判断依据：音量很大、音高拉高、爆发力强、吼叫或哭喊 → high；音量正常、语速平稳 → medium；轻声细语、压低声音 → low。"
 )
+
+_INTENSITY_ALIASES: dict[str, str] = {
+    "low": "low", "weak": "low", "mild": "low", "soft": "low", "quiet": "low",
+    "medium": "medium", "moderate": "medium", "normal": "medium",
+    "high": "high", "strong": "high", "intense": "high", "extreme": "high",
+    "轻": "low", "弱": "low", "低": "low", "轻声": "low",
+    "中": "medium", "中等": "medium",
+    "强": "high", "高": "high", "爆发": "high",
+}
 
 
 @dataclass
@@ -63,6 +74,10 @@ class QwenAudioEmotionClient:
 
     def analyze(self, audio_path: str | Path, settings: EmotionSettings) -> str:
         """返回 MiniMax 情绪标签；识别不出时返回空串。"""
+        return self.analyze_detailed(audio_path, settings)[0]
+
+    def analyze_detailed(self, audio_path: str | Path, settings: EmotionSettings) -> tuple[str, str]:
+        """返回 (情绪标签, 强度 low/medium/high)；识别不出时强度为空串。"""
         path = Path(audio_path)
         if not path.is_file() or path.stat().st_size <= 0:
             raise FileNotFoundError(f"emotion_audio_missing: {path}")
@@ -79,7 +94,7 @@ class QwenAudioEmotionClient:
                     {"type": "text", "text": _PROMPT},
                 ],
             }],
-            "max_tokens": 16,
+            "max_tokens": 24,
             "temperature": 0.0,
         }
         base = settings.base_url.rstrip("/")
@@ -102,7 +117,26 @@ class QwenAudioEmotionClient:
         content = str((((data.get("choices") or [{}])[0]).get("message") or {}).get("content") or "")
         if isinstance(content, list):
             content = " ".join(str(part.get("text") or "") for part in content if isinstance(part, dict))
-        return normalize_emotion(content)
+        return normalize_emotion_with_intensity(content)
+
+
+def normalize_emotion_with_intensity(text: str) -> tuple[str, str]:
+    """解析「情绪:强度」格式的回答，返回 (情绪标签, 强度)。"""
+    emotion = normalize_emotion(text)
+    cleaned = re.sub(r"[^a-zA-Z一-鿿]+", " ", str(text or "")).strip().lower()
+    intensity = ""
+    if cleaned:
+        for token in cleaned.split():
+            alias = _INTENSITY_ALIASES.get(token)
+            if alias:
+                intensity = alias
+                break
+        if not intensity:
+            for key, alias in _INTENSITY_ALIASES.items():
+                if len(key) >= 2 and key in cleaned:
+                    intensity = alias
+                    break
+    return emotion, intensity
 
 
 def normalize_emotion(text: str) -> str:

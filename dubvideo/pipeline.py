@@ -402,10 +402,13 @@ def _apply_auto_emotion(
                 root / "audio" / "emotion_clips" / f"{segment.segment_id}.mp3",
                 ffmpeg_configured=ffmpeg_configured,
             )
-            segment.emotion = client.analyze(clip, emotion_settings)
+            segment.emotion, segment.emotion_intensity = client.analyze_detailed(clip, emotion_settings)
             if segment.emotion:
                 detected += 1
-            log(f"情绪 {index}/{total}：{segment.segment_id} → {segment.emotion or '未识别'}")
+            label = segment.emotion or "未识别"
+            if segment.emotion and segment.emotion_intensity and segment.emotion != "neutral":
+                label += f"·{segment.emotion_intensity}"
+            log(f"情绪 {index}/{total}：{segment.segment_id} → {label}")
         except Exception as exc:  # noqa: BLE001 - 单句失败不影响整体
             segment.emotion = ""
             log(f"情绪 {index}/{total}：{segment.segment_id} 识别失败（不影响配音）: {exc}")
@@ -920,6 +923,7 @@ def _segment_from_dict(item: dict[str, Any], default_language: str) -> TtsSegmen
         language=str(item.get("language") or default_language or "en"),
         role=str(item.get("role") or item.get("segment_type") or "dialogue"),
         emotion=str(item.get("emotion") or ""),
+        emotion_intensity=str(item.get("emotion_intensity") or ""),
     )
 
 

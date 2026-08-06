@@ -76,7 +76,7 @@ LANGUAGE_BOOST = {
 # 情绪 → 韵律微调（语速倍率、音量倍率、音高偏移）。
 # MiniMax 的 emotion 参数只是轻度倾向，强情绪需要韵律参数配合才能顶上去。
 # 改动映射后 bump PROSODY_VERSION，让旧缓存自动失效重合成。
-PROSODY_VERSION = "v1_20260806"
+PROSODY_VERSION = "v2_20260806"
 EMOTION_PROSODY: dict[str, tuple[float, float, int]] = {
     "happy":     (1.05, 1.10, 1),
     "sad":       (0.92, 0.92, -1),
@@ -92,14 +92,19 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-def _apply_emotion_prosody(settings: MiniMaxTtsSettings, emotion: str) -> tuple[float, float, int]:
-    """按情绪映射微调语速/音量/音高，返回实际生效的三参数。"""
+# 情绪强度 → 韵律缩放系数：轻 = 映射效果 60%，中 = 100%，强 = 200%（爆发级）
+INTENSITY_SCALE: dict[str, float] = {"low": 0.6, "medium": 1.0, "high": 2.0}
+
+
+def _apply_emotion_prosody(settings: MiniMaxTtsSettings, emotion: str, intensity: str = "") -> tuple[float, float, int]:
+    """按情绪+强度微调语速/音量/音高，返回实际生效的三参数。"""
     speed, volume, pitch = settings.speed, settings.volume, settings.pitch
     if emotion and settings.emotion_prosody and emotion in EMOTION_PROSODY:
         mult_speed, mult_vol, pitch_shift = EMOTION_PROSODY[emotion]
-        speed = _clamp(speed * mult_speed, 0.5, 2.0)
-        volume = _clamp(volume * mult_vol, 0.1, 10.0)
-        pitch = int(_clamp(pitch + pitch_shift, -12, 12))
+        scale = INTENSITY_SCALE.get(intensity or "medium", 1.0)
+        speed = _clamp(speed * (1.0 + (mult_speed - 1.0) * scale), 0.5, 2.0)
+        volume = _clamp(volume * (1.0 + (mult_vol - 1.0) * scale), 0.1, 10.0)
+        pitch = int(_clamp(pitch + round(pitch_shift * scale), -12, 12))
     return speed, volume, pitch
 
 
@@ -121,6 +126,7 @@ class MiniMaxTtsClient:
         language: str = "en",
         voice_id: str = "",
         emotion: str = "",
+        intensity: str = "",
     ) -> bytes:
         text = text.strip()
         if not text:
@@ -134,7 +140,7 @@ class MiniMaxTtsClient:
         if language_boost.lower() == "auto":
             language_boost = LANGUAGE_BOOST.get(language.lower(), "")
 
-        speed, volume, pitch = _apply_emotion_prosody(settings, emotion)
+        speed, volume, pitch = _apply_emotion_prosody(settings, emotion, intensity)
 
         payload: dict[str, Any] = {
             "model": settings.model,
@@ -216,7 +222,7 @@ class MiniMaxTtsClient:
             voice_id = (settings.speaker_voice_map or {}).get(segment.speaker) or settings.voice_id
             filename = f"{sid}.{settings.audio_format}"
             audio_path = output_dir / filename
-            signature = _cache_signature(settings, voice_id, segment.language, segment.emotion)
+            signature = _cache_signature(settings, voice_id, segment.language, segment.emotion, segment.emotion_intensity)
             cached = existing.get(sid)
             if not force_refresh and _can_reuse(cached, segment.text, audio_path, signature):
                 if progress:
@@ -229,8 +235,9 @@ class MiniMaxTtsClient:
                 if progress:
                     label = f"生成 TTS: {sid} ({index}/{total})"
                     if segment.emotion and settings.emotion_prosody and segment.emotion in EMOTION_PROSODY and segment.emotion != "neutral":
-                        p_speed, p_vol, p_pitch = _apply_emotion_prosody(settings, segment.emotion)
-                        label += f" [{segment.emotion} → 语速{p_speed:.2f} 音量{p_vol:.2f} 音高{p_pitch:+d}]"
+                        p_speed, p_vol, p_pitch = _apply_emotion_prosody(settings, segment.emotion, segment.emotion_intensity)
+                        emo_label = segment.emotion + (f"·{segment.emotion_intensity}" if segment.emotion_intensity else "")
+                        label += f" [{emo_label} → 语速{p_speed:.2f} 音量{p_vol:.2f} 音高{p_pitch:+d}]"
                     progress(label, int((index - 1) / max(total, 1) * 100))
                 last_request_started = time.monotonic()
                 audio = self._with_retry(segment, settings, voice_id)
@@ -247,11 +254,12 @@ class MiniMaxTtsClient:
                 "audio_file": filename,
                 "bytes": audio_path.stat().st_size if audio_path.exists() else 0,
                 "emotion": segment.emotion or "",
-                "prosody_applied": {
-                    "speed": round(_apply_emotion_prosody(settings, segment.emotion)[0], 3),
-                    "volume": round(_apply_emotion_prosody(settings, segment.emotion)[1], 3),
-                    "pitch": _apply_emotion_prosody(settings, segment.emotion)[2],
-                },
+                "emotion_intensity": segment.emotion_intensity or "",
+                "prosody_applied": (lambda applied: {
+                    "speed": round(applied[0], 3),
+                    "volume": round(applied[1], 3),
+                    "pitch": applied[2],
+                })(_apply_emotion_prosody(settings, segment.emotion, segment.emotion_intensity)),
                 "cache_signature": signature,
             }
             manifest["segments"] = [existing[key] for key in sorted(existing)]
@@ -262,7 +270,7 @@ class MiniMaxTtsClient:
         last_error: Exception | None = None
         for attempt in range(1, max(1, settings.max_retries) + 1):
             try:
-                return self.synthesize_text(segment.text, settings, language=segment.language, voice_id=voice_id, emotion=segment.emotion)
+                return self.synthesize_text(segment.text, settings, language=segment.language, voice_id=voice_id, emotion=segment.emotion, intensity=segment.emotion_intensity)
             except Exception as exc:
                 last_error = exc
                 # 模型可能不支持 emotion 参数：带情绪失败时先降级为不带情绪再试一次
@@ -287,7 +295,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         return {"segments": []}
 
 
-def _cache_signature(settings: MiniMaxTtsSettings, voice_id: str, language: str, emotion: str = "") -> dict[str, Any]:
+def _cache_signature(settings: MiniMaxTtsSettings, voice_id: str, language: str, emotion: str = "", intensity: str = "") -> dict[str, Any]:
     boost = settings.language_boost
     if boost.lower() == "auto":
         boost = LANGUAGE_BOOST.get(language.lower(), "")
@@ -303,6 +311,7 @@ def _cache_signature(settings: MiniMaxTtsSettings, voice_id: str, language: str,
         "channel": settings.channel,
         "language_boost": boost,
         "emotion": emotion or "",
+        "intensity": intensity or "",
         "prosody": PROSODY_VERSION if (emotion and settings.emotion_prosody) else "",
     }
 

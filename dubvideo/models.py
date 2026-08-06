@@ -15,6 +15,7 @@ class TtsSegment:
     language: str = "en"
     role: str = "dialogue"
     emotion: str = ""
+    emotion_intensity: str = ""  # low / medium / high，空串按 medium 处理
 
     @property
     def target_seconds(self) -> float:
