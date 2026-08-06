@@ -9,6 +9,7 @@ from typing import Any
 
 FFMPEG_CANDIDATES = [
     "ffmpeg",
+    str(Path(__file__).resolve().parent.parent / "assets" / "ffmpeg-full" / "ffmpeg.exe"),
     r"C:\Users\Administrator\Desktop\生成视频ppt\camel-milk-tech-video\node_modules\@remotion\compositor-win32-x64-msvc\ffmpeg.exe",
     r"C:\Program Files\lindong\resources\tools\ffmpeg\ffmpeg.exe",
     r"C:\Program Files\lindong\resources\app.asar.unpacked\node_modules\@ffmpeg-installer\win32-x64\ffmpeg.exe",
@@ -16,6 +17,7 @@ FFMPEG_CANDIDATES = [
 
 FFPROBE_CANDIDATES = [
     "ffprobe",
+    str(Path(__file__).resolve().parent.parent / "assets" / "ffmpeg-full" / "ffprobe.exe"),
     r"C:\Users\Administrator\Desktop\生成视频ppt\camel-milk-tech-video\node_modules\@remotion\compositor-win32-x64-msvc\ffprobe.exe",
 ]
 

@@ -16,7 +16,7 @@ from .asr_client import (
 from .comfy_provider import ComfyLipSyncProvider
 import json
 
-from .ffmpeg_tools import extract_audio_for_asr, extract_speaker_sample, extract_video_frame_crop, find_binary, mask_burned_subtitles, merge_manifest_audio, mix_voice_bgm_to_video, replace_video_audio
+from .ffmpeg_tools import FFMPEG_CANDIDATES, extract_audio_for_asr, extract_speaker_sample, extract_video_frame_crop, find_binary, mask_burned_subtitles, merge_manifest_audio, mix_voice_bgm_to_video, replace_video_audio
 from .jobs import append_log, should_cancel, update_job
 from .models import TtsSegment
 from .emotion_client import EmotionSettings, QwenAudioEmotionClient
@@ -285,7 +285,7 @@ def run_final_mix_job(job_id: str, payload: dict[str, Any]) -> None:
     result: dict[str, Any] = {"output_video_path": str(out_path), "bgm_volume": bgm_volume}
     if bgm_path is not None:
         try:
-            bgm_export = _export_bgm_audio(bgm_path, root / "render" / "final_bgm.mp3", ffmpeg_configured)
+            bgm_export = _export_bgm_audio(bgm_path, root / "render" / "final_bgm.mp3", ffmpeg_configured=ffmpeg_configured)
             outputs["bgm_audio"] = str(bgm_export)
             result["bgm_audio"] = str(bgm_export)
             append_log(job_id, f"> 背景音乐已单独保留：{bgm_export.name}")
@@ -302,7 +302,7 @@ def run_final_mix_job(job_id: str, payload: dict[str, Any]) -> None:
 def _export_bgm_audio(source: Path, output: Path, *, ffmpeg_configured: str = "") -> Path:
     """把分离出的背景音乐轨转成独立 mp3 文件单独保留，供后续使用。"""
     output.parent.mkdir(parents=True, exist_ok=True)
-    ffmpeg = find_binary(ffmpeg_configured)
+    ffmpeg = find_binary(ffmpeg_configured, FFMPEG_CANDIDATES)
     command = [
         ffmpeg, "-y", "-loglevel", "error",
         "-i", str(source),
@@ -328,7 +328,7 @@ def _export_bgm_audio(source: Path, output: Path, *, ffmpeg_configured: str = ""
 
 def _cut_audio_clip(source: Path, start: float, end: float, output: Path, *, ffmpeg_configured: str = "") -> Path:
     output.parent.mkdir(parents=True, exist_ok=True)
-    ffmpeg = find_binary(ffmpeg_configured)
+    ffmpeg = find_binary(ffmpeg_configured, FFMPEG_CANDIDATES)
     command = [
         ffmpeg, "-y", "-loglevel", "error",
         "-ss", f"{max(0.0, start):.3f}",
