@@ -92,6 +92,17 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
+def _apply_emotion_prosody(settings: MiniMaxTtsSettings, emotion: str) -> tuple[float, float, int]:
+    """按情绪映射微调语速/音量/音高，返回实际生效的三参数。"""
+    speed, volume, pitch = settings.speed, settings.volume, settings.pitch
+    if emotion and settings.emotion_prosody and emotion in EMOTION_PROSODY:
+        mult_speed, mult_vol, pitch_shift = EMOTION_PROSODY[emotion]
+        speed = _clamp(speed * mult_speed, 0.5, 2.0)
+        volume = _clamp(volume * mult_vol, 0.1, 10.0)
+        pitch = int(_clamp(pitch + pitch_shift, -12, 12))
+    return speed, volume, pitch
+
+
 class MiniMaxTtsClient:
     def test_connection(self, settings: MiniMaxTtsSettings) -> dict[str, Any]:
         return {
@@ -123,14 +134,7 @@ class MiniMaxTtsClient:
         if language_boost.lower() == "auto":
             language_boost = LANGUAGE_BOOST.get(language.lower(), "")
 
-        speed = settings.speed
-        volume = settings.volume
-        pitch = settings.pitch
-        if emotion and settings.emotion_prosody and emotion in EMOTION_PROSODY:
-            mult_speed, mult_vol, pitch_shift = EMOTION_PROSODY[emotion]
-            speed = _clamp(speed * mult_speed, 0.5, 2.0)
-            volume = _clamp(volume * mult_vol, 0.1, 10.0)
-            pitch = int(_clamp(pitch + pitch_shift, -12, 12))
+        speed, volume, pitch = _apply_emotion_prosody(settings, emotion)
 
         payload: dict[str, Any] = {
             "model": settings.model,
@@ -222,7 +226,11 @@ class MiniMaxTtsClient:
                     if wait_ms > 0:
                         time.sleep(wait_ms / 1000)
                 if progress:
-                    progress(f"生成 TTS: {sid} ({index}/{total})", int((index - 1) / max(total, 1) * 100))
+                    label = f"生成 TTS: {sid} ({index}/{total})"
+                    if segment.emotion and settings.emotion_prosody and segment.emotion in EMOTION_PROSODY and segment.emotion != "neutral":
+                        p_speed, p_vol, p_pitch = _apply_emotion_prosody(settings, segment.emotion)
+                        label += f" [{segment.emotion} → 语速{p_speed:.2f} 音量{p_vol:.2f} 音高{p_pitch:+d}]"
+                    progress(label, int((index - 1) / max(total, 1) * 100))
                 last_request_started = time.monotonic()
                 audio = self._with_retry(segment, settings, voice_id)
                 audio_path.write_bytes(audio)
@@ -237,6 +245,12 @@ class MiniMaxTtsClient:
                 "role": segment.role,
                 "audio_file": filename,
                 "bytes": audio_path.stat().st_size if audio_path.exists() else 0,
+                "emotion": segment.emotion or "",
+                "prosody_applied": {
+                    "speed": round(_apply_emotion_prosody(settings, segment.emotion)[0], 3),
+                    "volume": round(_apply_emotion_prosody(settings, segment.emotion)[1], 3),
+                    "pitch": _apply_emotion_prosody(settings, segment.emotion)[2],
+                },
                 "cache_signature": signature,
             }
             manifest["segments"] = [existing[key] for key in sorted(existing)]
