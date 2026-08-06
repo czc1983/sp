@@ -37,6 +37,10 @@ NODE_UNET = "127"
 NODE_NOISE = "129"
 NODE_SAVE_VIDEO = "92"
 NODE_BLOCKCACHE = "202"
+NODE_SAMPLER = "125"
+NODE_KSAMPLER_SELECT = "123"
+NODE_LORA_TURBO = "203"
+NODE_DUALCLOCK = "204"
 LOAD_IMAGE_BASE_ID = 150  # 150/151/152...
 
 # BlockCache（T8）跨步缓存加速：5090 实测 20 步 124 帧从 131.6s 降到 72.3s（1.8x），
@@ -44,6 +48,19 @@ LOAD_IMAGE_BASE_ID = 150  # 150/151/152...
 # 导致场景漂移，均不进生产。可用 H3_BLOCKCACHE=off 关闭、H3_BLOCKCACHE_THRESHOLD 调阈值。
 BLOCKCACHE_CLASS = "MiniMaxH3BlockCacheT8"
 BLOCKCACHE_DEFAULT_THRESHOLD = 0.12
+
+# Turbo 4 步加速（T8 turbo LoRA + 双时钟采样器）：20 步链路整体替换为
+# LoraLoaderBypassModelOnly(INT8 量化模型不能走普通 LoRA 合并链) + DualClockSampler
+# (视频 shift12/音频 shift3 双时钟，修 4 步爆音)。LoRA 必须配全量非裁剪模型。
+# 与 BlockCache 互斥（4 步下缓存命中率低，叠了没意义）。H3_TURBO=on 开启。
+TURBO_LORA_CLASS = "LoraLoaderBypassModelOnly"
+DUALCLOCK_CLASS = "MiniMaxH3DualClockSamplerT8"
+TURBO_LORA_NAME = "minimax_h3_turbo_4step_comfyui.safetensors"
+TURBO_UNET_NAME = "minimax_h3_ref2va_int8_convrot.safetensors"  # 全量非裁剪版
+PRUNED_UNET_NAME = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+TURBO_STEPS = 4
+TURBO_SHIFT_VIDEO = 12.0
+TURBO_SHIFT_AUDIO = 3.0
 
 MAX_CHAR_IMAGES = 3
 
@@ -284,6 +301,67 @@ def strip_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
     return workflow
 
 
+def _turbo_enabled() -> bool:
+    return os.environ.get("H3_TURBO", "off").strip().lower() in ("1", "on", "true", "yes")
+
+
+def _apply_turbo(workflow: dict[str, Any]) -> dict[str, Any]:
+    """把 20 步链路替换为 turbo 4 步链路：全量模型 + turbo LoRA + 双时钟采样器。
+
+    127 换全量非裁剪模型（裁剪版无法完整应用 turbo LoRA）→ 203 LoRA(Bypass) →
+    204 DualClock(替代 123 KSamplerSelect + 124 BasicScheduler 的组合)，
+    126 guider 与 125 sampler 改从 204 取 model/sampler/sigmas。
+    """
+    if NODE_UNET not in workflow or NODE_H3 not in workflow:
+        return workflow
+    workflow[NODE_UNET]["inputs"]["unet_name"] = TURBO_UNET_NAME
+    workflow[NODE_LORA_TURBO] = {
+        "class_type": TURBO_LORA_CLASS,
+        "inputs": {
+            "lora_name": TURBO_LORA_NAME,
+            "strength_model": 1.0,
+            "model": [NODE_UNET, 0],
+        },
+    }
+    workflow[NODE_DUALCLOCK] = {
+        "class_type": DUALCLOCK_CLASS,
+        "inputs": {
+            "model": [NODE_LORA_TURBO, 0],
+            "av_latent": [NODE_H3, 1],
+            "steps": TURBO_STEPS,
+            "shift_video": TURBO_SHIFT_VIDEO,
+            "shift_audio": TURBO_SHIFT_AUDIO,
+        },
+    }
+    guider = workflow.get(NODE_GUIDER)
+    if isinstance(guider, dict):
+        guider["inputs"]["model"] = [NODE_DUALCLOCK, 0]
+    sampler = workflow.get(NODE_SAMPLER)
+    if isinstance(sampler, dict):
+        sampler["inputs"]["sampler"] = [NODE_DUALCLOCK, 1]
+        sampler["inputs"]["sigmas"] = [NODE_DUALCLOCK, 2]
+    return workflow
+
+
+def strip_turbo(workflow: dict[str, Any]) -> dict[str, Any]:
+    """移除 turbo 节点并把链路接回 20 步原样（远程无插件/无全量模型时降级用）。"""
+    had = workflow.pop(NODE_LORA_TURBO, None) is not None
+    had = (workflow.pop(NODE_DUALCLOCK, None) is not None) or had
+    if not had:
+        return workflow
+    unet = workflow.get(NODE_UNET)
+    if isinstance(unet, dict) and unet.get("inputs", {}).get("unet_name") == TURBO_UNET_NAME:
+        unet["inputs"]["unet_name"] = PRUNED_UNET_NAME
+    guider = workflow.get(NODE_GUIDER)
+    if isinstance(guider, dict):
+        guider["inputs"]["model"] = [NODE_UNET, 0]
+    sampler = workflow.get(NODE_SAMPLER)
+    if isinstance(sampler, dict):
+        sampler["inputs"]["sampler"] = [NODE_KSAMPLER_SELECT, 0]
+        sampler["inputs"]["sigmas"] = [NODE_SCHEDULER, 0]
+    return workflow
+
+
 def _apply_common_overrides(
     workflow: dict[str, Any],
     *,
@@ -308,7 +386,9 @@ def _apply_common_overrides(
     workflow[NODE_NOISE]["inputs"]["noise_seed"] = int(seed) if seed is not None else _random_seed()
     if filename_prefix:
         workflow[NODE_SAVE_VIDEO]["inputs"]["filename_prefix"] = filename_prefix
-    if _blockcache_enabled():
+    if _turbo_enabled():
+        _apply_turbo(workflow)  # turbo 与 BlockCache 互斥，4 步下缓存无意义
+    elif _blockcache_enabled():
         _apply_blockcache(workflow)
     return workflow
 
@@ -406,7 +486,14 @@ class MiniMaxH3Client:
         return class_type in self._remote_classes
 
     def _ensure_workflow_compat(self, workflow: dict[str, Any], log: Callable[[str], None]) -> dict[str, Any]:
-        """远程没有 BlockCache 插件时降级为无缓存链路，避免整单校验失败。"""
+        """远程缺插件/模型时降级：turbo → BlockCache → 无缓存，避免整单校验失败。"""
+        if NODE_DUALCLOCK in workflow and not (
+            self._remote_has_node(DUALCLOCK_CLASS) and self._remote_has_node(TURBO_LORA_CLASS)
+        ):
+            log("> H3 加速: 远程未装 turbo 双时钟插件，本次降级为 BlockCache 20 步运行")
+            strip_turbo(workflow)
+            if _blockcache_enabled():
+                _apply_blockcache(workflow)
         if NODE_BLOCKCACHE in workflow and not self._remote_has_node(BLOCKCACHE_CLASS):
             log("> H3 加速: 远程未安装 BlockCache 插件，本次降级为无缓存运行")
             strip_blockcache(workflow)
@@ -451,7 +538,9 @@ class MiniMaxH3Client:
             seed=seed,
             filename_prefix=f"h3_whitemask_{uuid.uuid4().hex[:8]}",
         )
-        if NODE_BLOCKCACHE in workflow:
+        if NODE_DUALCLOCK in workflow:
+            logger(f"> H3 加速: turbo {TURBO_STEPS} 步 + 双时钟采样 (LoRA {TURBO_LORA_NAME})")
+        elif NODE_BLOCKCACHE in workflow:
             logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
         self._ensure_workflow_compat(workflow, logger)
         prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
@@ -508,7 +597,9 @@ class MiniMaxH3Client:
             seed=seed,
             filename_prefix=f"h3_charswap_{uuid.uuid4().hex[:8]}",
         )
-        if NODE_BLOCKCACHE in workflow:
+        if NODE_DUALCLOCK in workflow:
+            logger(f"> H3 加速: turbo {TURBO_STEPS} 步 + 双时钟采样 (LoRA {TURBO_LORA_NAME})")
+        elif NODE_BLOCKCACHE in workflow:
             logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
         self._ensure_workflow_compat(workflow, logger)
         prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
