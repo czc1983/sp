@@ -1605,6 +1605,13 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=400)
             return
 
+        if parsed.path == "/api/mode2/split-video-by-shots":
+            try:
+                self._send_json(_split_video_by_shots(self._read_json()))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json({"error": str(exc)}, status=400)
+            return
+
         if parsed.path == "/api/mode2/h3-charswap":
             try:
                 payload = self._read_json()
@@ -11077,6 +11084,57 @@ def _run_h3_white_mask_job(
         for line in trace_tail:
             add_log("> traceback: " + line)
         finish("failed", error=error_message)
+
+
+def _split_video_by_shots(payload: dict[str, Any]) -> dict[str, Any]:
+    """把整包合并生成的 H3 白膜按镜头时长切回每段一条（Mode 2 专用）。
+
+    H3 输出与源同速（仅帧数对齐 17k+5 网格、尾部可能多一段定格 padding），
+    所以按源包各镜头时长顺序切：累计偏移 + 原始时长，尾部 padding 丢弃。
+    输入 seeking + 重编码保证切口帧级准确。
+    """
+    video = Path(str(payload.get("video_path") or "").strip()).resolve()
+    if not video.is_file():
+        raise ValueError("video_not_found")
+    segments: list[dict[str, Any]] = []
+    for item in payload.get("segments") or []:
+        if not isinstance(item, dict):
+            continue
+        shot_id = str(item.get("shot_id") or "").strip()
+        try:
+            duration = float(item.get("duration") or 0)
+        except (TypeError, ValueError):
+            duration = 0.0
+        if shot_id and duration > 0.05:
+            segments.append({"shot_id": shot_id, "duration": duration})
+    if not segments:
+        raise ValueError("segments_empty")
+    from spvideo.minimax_h3_client import _full_ffmpeg
+    from spvideo.ffmpeg_tools import run_command
+
+    out_dir = video.parent / "split"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    safe_video = json.dumps(str(video))
+    clips: list[dict[str, Any]] = []
+    offset = 0.0
+    for segment in segments:
+        shot_id = segment["shot_id"]
+        duration = segment["duration"]
+        target = out_dir / f"{video.stem}_{shot_id}.mp4"
+        run_command([
+            _full_ffmpeg(), "-y",
+            "-ss", f"{offset:.3f}", "-t", f"{duration:.3f}",
+            "-i", str(video),
+            "-map", "0:v:0", "-map", "0:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+            "-pix_fmt", "yuv420p", "-c:a", "aac",
+            str(target),
+        ])
+        if not target.is_file() or target.stat().st_size <= 0:
+            raise RuntimeError(f"split_failed: {shot_id} src={safe_video}")
+        clips.append({"shot_id": shot_id, "path": str(target), "duration": duration})
+        offset += duration
+    return {"video_path": str(video), "clips": clips, "clip_count": len(clips)}
 
 
 def _run_h3_charswap_job(

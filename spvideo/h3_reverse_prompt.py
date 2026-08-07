@@ -115,8 +115,23 @@ def read_cached_prompt(clip_path: str | Path, prompt_format: str | None = None) 
 
 
 def _frame_times(duration: float) -> list[float]:
-    """按时长自适应取 6 个抽帧点：开头 0.2s + 均布 + 结尾前 0.3s。"""
-    d = max(0.6, float(duration))
+    """按时长自适应取抽帧点：开头 0.2s + 均布 + 结尾前 0.3s。
+
+    超短片段（< 0.6s）不能用 0.6s 下限硬套：抽帧点会超出真实时长，
+    ffmpeg 在最后一帧之后抽不到帧直接报"抽帧失败"（0.28s 镜头的教训）。
+    短片段改为在 [d*0.2, d-0.05] 内按内容量取 1~N 个点。
+    """
+    d = float(duration)
+    if d <= 0:
+        d = 0.6
+    if d < 0.6:
+        lo = max(0.0, min(0.1, d * 0.2))
+        hi = max(lo, d - 0.05)
+        count = max(1, min(FRAME_COUNT, int(round(d * 4))))
+        if count <= 1:
+            return [round((lo + hi) / 2, 2)]
+        step = (hi - lo) / (count - 1)
+        return sorted({round(lo + step * i, 2) for i in range(count)})
     times = {0.2, d * 0.25, d * 0.45, d * 0.65, d * 0.82, max(d - 0.3, 0.2)}
     return sorted(round(min(max(t, 0.1), d - 0.05), 2) for t in times)[:FRAME_COUNT]
 
@@ -135,6 +150,19 @@ def _extract_frames(clip: Path, times: list[float], frames_dir: Path, log: Calla
                  "-q:v", "3", str(target)],
                 capture_output=True, check=False,
             )
+        if not target.is_file() or target.stat().st_size <= 0:
+            # 兜底：seek 越过最后一帧时（短片段尾部），往前退 0.1s 再抽一次，仍不行就抽首帧
+            for fallback in (max(0.0, t - 0.1), 0.0):
+                if fallback == t:
+                    continue
+                log(f"> 反推抽帧: t={t}s 抽不到，退回 t={fallback:.2f}s")
+                subprocess.run(
+                    [ffmpeg, "-y", "-ss", f"{fallback:.2f}", "-i", str(clip), "-vframes", "1",
+                     "-q:v", "3", str(target)],
+                    capture_output=True, check=False,
+                )
+                if target.is_file() and target.stat().st_size > 0:
+                    break
         if not target.is_file() or target.stat().st_size <= 0:
             raise ReversePromptError(f"h3_reverse_frame: 抽帧失败 t={t}s clip={json.dumps(str(clip))}")
         out[t] = target

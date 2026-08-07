@@ -49,16 +49,18 @@ LOAD_IMAGE_BASE_ID = 150  # 150/151/152...
 BLOCKCACHE_CLASS = "MiniMaxH3BlockCacheT8"
 BLOCKCACHE_DEFAULT_THRESHOLD = 0.12
 
-# Turbo 4 步加速（T8 turbo LoRA + 双时钟采样器）：20 步链路整体替换为
+# Turbo 加速（T8 turbo LoRA + 双时钟采样器）：20 步链路整体替换为
 # LoraLoaderBypassModelOnly(INT8 量化模型不能走普通 LoRA 合并链) + DualClockSampler
-# (视频 shift12/音频 shift3 双时钟，修 4 步爆音)。LoRA 必须配全量非裁剪模型。
-# 与 BlockCache 互斥（4 步下缓存命中率低，叠了没意义）。H3_TURBO=on 开启。
+# (视频 shift12/音频 shift3 双时钟，修低步数爆音)。LoRA 必须配全量非裁剪模型。
+# 与 BlockCache 互斥（低步数下缓存命中率低，叠了没意义）。
+# 2026-08-07 起对齐 5090 服务器 lora-ref 工作流：默认开、8 步（服务器实测 widgets [8,12,3]），
+# H3_TURBO=off 可退回 20 步 + BlockCache。
 TURBO_LORA_CLASS = "LoraLoaderBypassModelOnly"
 DUALCLOCK_CLASS = "MiniMaxH3DualClockSamplerT8"
 TURBO_LORA_NAME = "minimax_h3_turbo_4step_comfyui.safetensors"
 TURBO_UNET_NAME = "minimax_h3_ref2va_int8_convrot.safetensors"  # 全量非裁剪版
 PRUNED_UNET_NAME = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
-TURBO_STEPS = 4
+TURBO_STEPS = 8
 TURBO_SHIFT_VIDEO = 12.0
 TURBO_SHIFT_AUDIO = 3.0
 
@@ -302,7 +304,8 @@ def strip_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
 
 
 def _turbo_enabled() -> bool:
-    return os.environ.get("H3_TURBO", "off").strip().lower() in ("1", "on", "true", "yes")
+    """turbo LoRA 默认开（对齐 5090 lora-ref 工作流），H3_TURBO=off 退回 20 步链路。"""
+    return os.environ.get("H3_TURBO", "on").strip().lower() not in ("0", "off", "false", "no")
 
 
 def _apply_turbo(workflow: dict[str, Any]) -> dict[str, Any]:

@@ -10178,7 +10178,7 @@
                 <div class="generation-route-switch" id="generationRouteSwitch" role="group" aria-label="生成路线">
                   <button type="button" data-generation-route="scail2" title="按单人 Scail2 生成">单人</button>
                   <button type="button" data-generation-route="seedance" title="按多人接口生成">多人</button>
-                  <button type="button" data-generation-route="minimax_h3" title="按 MiniMax H3（远程4090）逐片段生成，单段约 15-25 分钟">H3</button>
+                  <button type="button" data-generation-route="minimax_h3" title="按 MiniMax H3（远程5090）整包合并生成，整包约 15-30 分钟">H3</button>
                 </div>
               </div>
               <div class="generation-pipeline-body">
@@ -10564,9 +10564,9 @@
       },
       {
         value: "minimax_h3",
-        label: "MiniMax H3（远程4090）",
+        label: "MiniMax H3（远程5090）",
         button: "H3",
-        note: "逐片段提交到远程 4090 的 MiniMax H3 生成，单段约 15-25 分钟。",
+        note: "整包合并提交到远程 5090 的 MiniMax H3 生成，整包约 15-30 分钟。",
       },
     ];
     const STORY_RATIO_OPTIONS = ["9:16", "16:9"];
@@ -21036,7 +21036,7 @@
     function generationBackendLabel(pack = {}) {
       const backend = generationPackBackend(pack);
       if (backend === "scail2") return "单人 Scail2";
-      if (backend === "minimax_h3") return "MiniMax H3（远程4090）";
+      if (backend === "minimax_h3") return "MiniMax H3（远程5090）";
       return "多人接口";
     }
 
@@ -22492,6 +22492,7 @@
         syncing = true;
         const time = Math.max(0, Number(source.currentTime || 0) - baseTime(source));
         peers(source).forEach((video) => {
+          if (video.ended) return;
           const target = baseTime(video) + time;
           if (Math.abs(Number(video.currentTime || 0) - target) > 0.12) {
             try { video.currentTime = Math.max(0, Math.min(Number(video.duration || target), target)); } catch (_) {}
@@ -22504,21 +22505,33 @@
           if (syncing) return;
           syncing = true;
           syncTime(video);
-          peers(video).forEach((peer) => {
+          // 不看 readyState：元数据未加载完的播放器也要叫 play()，浏览器会在就绪后自动开播，
+          // 否则后加载完的短卡永远不会开始播放（旧逻辑在这里漏掉了它们）。
+          videos.filter((peer) => peer !== video).forEach((peer) => {
             try { peer.play?.(); } catch (_) {}
           });
           syncing = false;
         });
         video.addEventListener("pause", () => {
           if (syncing) return;
+          // 自然播完不联动暂停：白膜/结果可能是逐段短卡，播完不该掐停整包原视频
+          if (video.ended) return;
           syncing = true;
           peers(video).forEach((peer) => {
             try { peer.pause?.(); } catch (_) {}
           });
           syncing = false;
         });
-        video.addEventListener("seeking", () => syncTime(video));
-        video.addEventListener("timeupdate", () => syncTime(video));
+        // 暂停/播完的视频不能当主时钟：短卡停在片尾时，它的 seeking/timeupdate 会把
+        // 长视频反复拽回短卡长度，造成互相 seek 死锁（长视频卡在短卡片尾不动）。
+        video.addEventListener("seeking", () => {
+          if (video.paused || video.ended) return;
+          syncTime(video);
+        });
+        video.addEventListener("timeupdate", () => {
+          if (video.paused || video.ended) return;
+          syncTime(video);
+        });
       });
     }
 
@@ -22656,7 +22669,7 @@
         ? `
           <div class="generation-step${whiteDone ? " done" : (runtime.status === "mask_running" ? " active" : "")}">
             <div class="generation-step-title"><span>第一步：H3 逐段生成白膜</span><b>${whiteDone ? "完成" : (runtime.status === "mask_running" ? "运行中" : "待生成")}</b></div>
-            <div class="generation-step-detail">远程 4090 对每个片段单独生成白膜（提示词用服务端定稿模板），单段约 15-25 分钟，完成一段出一张卡。</div>
+            <div class="generation-step-detail">远程 5090 整包合并生成白膜（提示词对整包反推），整包约 15-30 分钟，完成后按镜头拆回每段一张卡。</div>
           </div>
           <div class="generation-step${resultDone ? " done" : (runtime.status === "result_running" ? " active" : "")}">
             <div class="generation-step-title"><span>第二步：H3 逐段换人</span><b>${resultDone ? "完成" : (runtime.status === "result_running" ? "运行中" : "待生成")}</b></div>
@@ -23106,9 +23119,9 @@
       await startMode2ServerTransfer({ packageId: pack.id });
     }
 
-    // ---------------------------------------------------------------- MiniMax H3（远程4090）逐片段后端
-    // 与整片拆分路线不同：H3 对每个片段独立提交 /api/mode2/h3-white-mask 或 /api/mode2/h3-charswap，
-    // 远程 4090 单段约 15-25 分钟，前端按 /api/jobs/{job_id} 轮询，完成一段就把卡挂到对应片段上。
+    // ---------------------------------------------------------------- MiniMax H3（远程5090）整包合并后端
+    // H3 白膜整包合并提交 /api/mode2/h3-white-mask（合包经人工审核），完成后按镜头时长拆回每段一张卡；换人仍逐段提交 /api/mode2/h3-charswap，
+    // 远程 5090 整包约 15-30 分钟，前端按 /api/jobs/{job_id} 轮询，白膜拆分后把卡挂到对应片段上。
     const generationH3PollTimers = {};
 
     // ---------------------------------------------------------------- H3 白膜提示词反推（每段专属提示词）
@@ -23294,7 +23307,7 @@
         const confirmed = await appConfirm({
           title: `${pack.id} 的 H3 白膜还在生成中`,
           lines: [
-            "远程 4090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
+            "远程 5090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
             "确定要重新提交缺失片段吗？",
           ],
           confirmText: "强制重跑",
@@ -23332,27 +23345,36 @@
         return;
       }
       const size = generationH3VideoSize();
-      const entries = progress.missingShots.map((shot) => ({
+      const shots = progress.shots;
+      // 整包合并模式：合包本身经过人工审核，直接把整包合并成一条视频提交一次，
+      // 生成完再按镜头时长拆回每段一张卡（避免逐段提交时超短碎镜头反推/对齐炸掉）。
+      const entry = {
         jobId: "",
-        shotId: shot.shot_id,
-        sourcePath: shot.video_path,
-        duration: Number(shot.duration || 0),
+        shotId: `${pack.id}（整包）`,
+        merged: true,
+        mergedShots: shots.map((shot) => ({
+          shot_id: String(shot.shot_id || "").trim(),
+          duration: Number(shot.duration || 0),
+        })),
+        sourcePath: "",
+        duration: Number(composePackDuration(pack) || 0),
         status: "running",
         outputPath: "",
         error: "",
         logsTail: [],
-      }));
+      };
       const jobs = {
         role: "mask",
+        merged: true,
         autoGenerateResult: options.autoGenerateResult === true,
         startedAt: Date.now(),
-        entries,
+        entries: [entry],
       };
       const introLines = [
-        "> 已收到 MiniMax H3 白膜请求",
-        `> 生成包: ${pack.id}，逐段提交 ${entries.length} 段${progress.keptShots.length ? `（${progress.keptShots.length} 段已有卡，自动跳过）` : ""}`,
-        `> 画幅: ${size.width}x${size.height}，时长自动对齐源片段，提示词逐段反推（缺段先自动反推，约2分钟/段）`,
-        "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常",
+        "> 已收到 MiniMax H3 白膜请求（整包合并模式）",
+        `> 生成包: ${pack.id}，${shots.length} 段合并为一条整包视频，单次提交`,
+        `> 画幅: ${size.width}x${size.height}，完成后按镜头时长自动拆回每段一张卡`,
+        "> 远程 5090 整包生成约 15-30 分钟，长时间不更新属正常",
       ];
       setSeedanceSubmitStatus(introLines, "warn");
       assistantSetStatus(introLines, "warn");
@@ -23367,49 +23389,44 @@
         lastTone: "warn",
         errorMessage: "",
       });
-      let reversePrompts = {};
       try {
-        reversePrompts = await generationH3EnsureReversePrompts(pack, entries, (line) => {
-          setSeedanceSubmitStatus([line], "warn");
-          addLogs([line]);
+        const prepared = await prepareGenerationPackageSource(pack);
+        entry.sourcePath = String(prepared.output_path || prepared.source_path || "").trim();
+        if (!entry.sourcePath) throw new Error("整包源视频合成为空");
+        // 提示词：手改框内容优先，否则对整包视频现场反推一次（整包时间轴，不会撞超短镜头）
+        let prompt = generationPromptOverride(pack, "mask").trim();
+        if (!prompt) {
+          const reversingLines = [`> ${pack.id}: 整包提示词反推中（约2分钟）...`];
+          setSeedanceSubmitStatus(reversingLines, "warn");
+          addLogs(reversingLines);
+          const reverseJobId = await generationH3RequestReverse(entry.sourcePath);
+          prompt = await generationH3WaitReverseJob(reverseJobId);
+          if (!prompt) throw new Error("整包反推结果为空");
+        }
+        entry.jobId = await submitGenerationH3Job("/api/mode2/h3-white-mask", {
+          clip_path: entry.sourcePath,
+          project_dir: projectDir,
+          width: size.width,
+          height: size.height,
+          prompt,
         });
       } catch (error) {
-        const failLines = [`x 反推失败，已停止提交: ${error.message || error}`, "> 修复反推接口后重试，或在提示词框手动填写后再生成"];
-        setSeedanceSubmitStatus(failLines, "bad");
-        addLogs(failLines);
-        patchGenerationPackRuntime(pack.id, { status: "failed", lastMessage: failLines[0], lastTone: "bad" });
-        return;
+        entry.status = "failed";
+        entry.error = error.message || String(error);
       }
-      await Promise.all(entries.map(async (entry) => {
-        try {
-          entry.jobId = await submitGenerationH3Job("/api/mode2/h3-white-mask", {
-            clip_path: entry.sourcePath,
-            project_dir: projectDir,
-            width: size.width,
-            height: size.height,
-            prompt: reversePrompts[entry.shotId] || "",
-          });
-        } catch (error) {
-          entry.status = "failed";
-          entry.error = error.message || String(error);
-        }
-      }));
-      const submitFailed = entries.filter((entry) => entry.status === "failed");
-      const submitOk = entries.length - submitFailed.length;
-      const submitLines = [
-        submitOk ? `> H3 白膜已提交 ${submitOk} 段` : "x H3 白膜全部提交失败",
-        ...submitFailed.slice(0, 3).map((entry) => `> ${entry.shotId}: ${entry.error}`),
-      ];
-      setSeedanceSubmitStatus(submitLines, submitOk ? "good" : "bad");
+      const submitLines = entry.jobId
+        ? [`> H3 白膜整包已提交 job:${entry.jobId}`]
+        : [`x H3 白膜整包提交失败: ${entry.error}`];
+      setSeedanceSubmitStatus(submitLines, entry.jobId ? "good" : "bad");
       addLogs(submitLines);
       patchGenerationPackRuntime(pack.id, {
-        status: submitOk ? "mask_running" : "failed",
+        status: entry.jobId ? "mask_running" : "failed",
         h3Jobs: jobs,
         lastMessage: seedanceStatusVisibleText(submitLines),
-        lastTone: submitOk ? "warn" : "bad",
-        errorMessage: submitOk ? "" : seedanceStatusVisibleText(submitLines),
+        lastTone: entry.jobId ? "warn" : "bad",
+        errorMessage: entry.jobId ? "" : seedanceStatusVisibleText(submitLines),
       });
-      if (!submitOk) return;
+      if (!entry.jobId) return;
       pollGenerationH3Jobs(pack.id, "mask");
     }
 
@@ -23422,7 +23439,7 @@
         const confirmed = await appConfirm({
           title: `${pack.id} 的 H3 换人还在生成中`,
           lines: [
-            "远程 4090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
+            "远程 5090 上的任务仍在运行，强制重跑会丢弃前端对这些任务的跟踪（远端任务本身不会被取消）。",
             "确定要重新提交吗？",
           ],
           confirmText: "强制重跑",
@@ -23486,7 +23503,7 @@
         `> 生成包: ${pack.id}，逐段提交 ${entries.length} 段${resultShotIds.size ? `（${resultShotIds.size} 段已有结果卡，自动跳过）` : ""}`,
         `> 人物参考图: ${charImages.map((path, index) => `${generationReferenceLabelForPath(path, index)} / ${fileName(path)}`).join(", ")}`,
         `> 画幅: ${size.width}x${size.height}，时长自动对齐白膜片段`,
-        "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常",
+        "> 远程 5090 单段约 15-25 分钟，长时间不更新属正常",
       ];
       setSeedanceSubmitStatus(introLines, "warn");
       assistantSetStatus(introLines, "warn");
@@ -23551,9 +23568,13 @@
         const fresh = (Array.isArray(runtime.maskSegments) ? runtime.maskSegments : [])
           .filter((clip) => !entries.some((entry) => String(entry.shotId) === String(clip?.shot_id || "").trim()));
         const next = generationH3OrderedClips(pack, [...fresh, ...added]);
+        // 整包合并模式：白膜播放器放整包白膜（与原视频等长，三屏联动才不会被短卡掐停），逐段卡只进卡条和换人链路
+        const mergedMask = runtime.h3Jobs?.merged === true
+          ? String(runtime.h3Jobs?.entries?.find((entry) => entry.merged && entry.outputPath)?.outputPath || "").trim()
+          : "";
         patchGenerationPackRuntime(pack.id, {
           maskSegments: next,
-          whiteMaskPath: next.length ? String(next[0].path || "") : String(runtime.whiteMaskPath || ""),
+          whiteMaskPath: mergedMask || (next.length ? String(next[0].path || "") : String(runtime.whiteMaskPath || "")),
           maskPackageIdentityId: identityId,
           packageIdentityId: identityId,
           packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
@@ -23600,10 +23621,14 @@
           created_at: Date.now() / 1000,
         } : null;
         if (run) appendWhiteMaskShelfRun(pack.id, run);
+        // 整包合并模式：白膜播放器放整包白膜（与原视频等长），逐段卡只进卡条和换人链路
+        const mergedMask = jobs.merged === true
+          ? String(jobs.entries?.find((entry) => entry.merged && entry.outputPath)?.outputPath || "").trim()
+          : "";
         patchGenerationPackRuntime(pack.id, {
           status: doneEntries.length ? "mask_done" : "failed",
           maskSegments: clips,
-          whiteMaskPath: clips.length ? String(clips[0].path || "") : String(runtime.whiteMaskPath || ""),
+          whiteMaskPath: mergedMask || (clips.length ? String(clips[0].path || "") : String(runtime.whiteMaskPath || "")),
           maskPackageIdentityId: identityId,
           packageIdentityId: identityId,
           packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
@@ -23675,10 +23700,40 @@
               const outputPath = role === "mask"
                 ? String(job.result?.whitemask_path || job.result?.output_path || "").trim()
                 : String(job.result?.charswap_path || job.result?.output_path || "").trim();
-              entry.status = outputPath ? "done" : "failed";
-              entry.outputPath = outputPath;
-              entry.error = outputPath ? "" : "任务完成但没有返回输出路径";
-              if (outputPath) doneNow.push(entry);
+              if (outputPath && role === "mask" && entry.merged === true && Array.isArray(entry.mergedShots)) {
+                // 整包合并模式：先把整包白膜按镜头时长拆回每段一条，再逐段挂卡
+                try {
+                  entry.logsTail = ["> 整包白膜已生成，正在按镜头拆回每段一张卡..."];
+                  const splitResp = await fetch("/api/mode2/split-video-by-shots", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ video_path: outputPath, segments: entry.mergedShots }),
+                  });
+                  const splitData = await splitResp.json().catch(() => ({}));
+                  if (!splitResp.ok || splitData.error || !Array.isArray(splitData.clips) || !splitData.clips.length) {
+                    throw new Error(splitData.error || "整包白膜拆分失败");
+                  }
+                  entry.status = "done";
+                  entry.outputPath = outputPath;
+                  entry.error = "";
+                  splitData.clips.forEach((clip) => {
+                    doneNow.push({
+                      shotId: String(clip.shot_id || "").trim(),
+                      sourcePath: entry.sourcePath,
+                      outputPath: String(clip.path || "").trim(),
+                      duration: Number(clip.duration || 0),
+                    });
+                  });
+                } catch (error) {
+                  entry.status = "failed";
+                  entry.error = error.message || String(error);
+                }
+              } else {
+                entry.status = outputPath ? "done" : "failed";
+                entry.outputPath = outputPath;
+                entry.error = outputPath ? "" : "任务完成但没有返回输出路径";
+                if (outputPath) doneNow.push(entry);
+              }
             } else if (job.status === "failed" || job.status === "cancelled") {
               entry.status = "failed";
               entry.error = String(job.error || job.status || "未知错误");
@@ -23697,7 +23752,7 @@
           || jobs.entries.find((entry) => entry.status === "running");
         const lines = [
           `> MiniMax H3 ${label}运行中: ${doneCount}/${total} 段完成${failedCount ? `，${failedCount} 段失败` : ""}`,
-          "> 远程 4090 单段约 15-25 分钟，长时间不更新属正常，完成一段出一张卡",
+          "> 远程 5090 约 15-30 分钟，长时间不更新属正常，完成后出卡",
           ...(activeEntry ? [
             `> ${activeEntry.shotId}${activeEntry.jobId ? ` job:${activeEntry.jobId}` : ""}`,
             ...((Array.isArray(activeEntry.logsTail) ? activeEntry.logsTail : []).map((line) => `> ${line}`)),
