@@ -8337,6 +8337,50 @@
       font-weight: 800;
     }
 
+    .compose-shot-search-btn {
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .compose-shot-search-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+    }
+
+    .compose-shot-search-btn.active {
+      color: #9fd4ff;
+      border-color: #3a5a78;
+    }
+
+    .compose-shot-search-input {
+      height: 24px;
+      width: 132px;
+      background: #0f0f0f;
+      border: 1px solid #3a5a78;
+      border-radius: 6px;
+      color: #e8eef2;
+      font-size: 12px;
+      padding: 0 8px;
+      outline: none;
+    }
+
+    .compose-search-hit {
+      outline: 2px solid #ffd166;
+      outline-offset: 2px;
+      border-radius: 8px;
+      animation: composeSearchPulse 0.9s ease 2;
+    }
+
+    @keyframes composeSearchPulse {
+      50% {
+        outline-color: rgba(255, 209, 102, 0.2);
+      }
+    }
+
     .compose-add-pack-btn:hover {
       border-color: #f2f2f2;
       background: #202020;
@@ -10058,6 +10102,13 @@
                 <div class="compose-section-head">
                   <strong id="composePackShelfTitle">卡包架</strong>
                   <div class="compose-pack-tools">
+                    <button class="compose-add-pack-btn compose-shot-search-btn" id="composeShotSearchBtn" type="button" title="搜索镜头卡（如 21 / S021）" aria-label="搜索镜头卡">
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="6.5"></circle>
+                        <path d="M15.8 15.8L20 20"></path>
+                      </svg>
+                    </button>
+                    <input class="compose-shot-search-input" id="composeShotSearchInput" type="text" placeholder="卡号 如 21 / S021" hidden>
                     <button class="compose-add-pack-btn" id="composeRemovePackBtn" type="button" title="删除当前卡包" aria-label="删除当前卡包">-</button>
                     <button class="compose-add-pack-btn" id="composeAddPackBtn" type="button" title="新增卡包" aria-label="新增卡包">+</button>
                     <span id="composePackSummary">0 个卡包 · 单人2-15秒 · 多人5-15秒</span>
@@ -20255,6 +20306,74 @@
       bindComposeMaskVideoPlayback(list);
     }
 
+    function composeNormalizeShotQuery(query) {
+      const q = String(query || "").trim().toUpperCase().replace(/^#/, "");
+      if (!q) return "";
+      const ids = timelineSegments.map((seg, index) => composeShotKey(seg, index));
+      const exact = ids.find((id) => id.toUpperCase() === q);
+      if (exact) return exact;
+      const match = q.match(/^S?0*(\d+)$/);
+      if (match) {
+        const num = Number(match[1]);
+        const hit = ids.find((id) => {
+          const idMatch = id.toUpperCase().match(/^S?0*(\d+)$/);
+          return idMatch && Number(idMatch[1]) === num;
+        });
+        if (hit) return hit;
+      }
+      return "";
+    }
+
+    function composeClearSearchHits() {
+      document.querySelectorAll(".compose-search-hit").forEach((el) => el.classList.remove("compose-search-hit"));
+    }
+
+    function composeShotSearch() {
+      const input = $("#composeShotSearchInput");
+      const query = String(input?.value || "").trim();
+      if (!query) {
+        assistantSetStatus(["> 输入卡号，比如 21 或 S021"], "warn");
+        return;
+      }
+      if (!timelineSegments.length) {
+        assistantSetStatus(["x 当前还没有分镜", "> 请先保存分镜再搜索卡号。"], "bad");
+        return;
+      }
+      const shotId = composeNormalizeShotQuery(query);
+      if (!shotId) {
+        assistantSetStatus([`x 没有找到镜头卡 ${query}`, "> 检查卡号是否在当前分镜里。"], "bad");
+        return;
+      }
+      if (composeBoardMode === "mask") composeBoardMode = "all";
+      const pack = composePackContainingShot(shotId);
+      if (pack) {
+        composePlan.selectedPackId = pack.id;
+        saveComposePlanDraft();
+        renderComposePage();
+        composeClearSearchHits();
+        const packEl = document.querySelector(`[data-compose-pack="${pack.id}"]`);
+        if (packEl) {
+          packEl.classList.add("compose-search-hit");
+          packEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        }
+        const miniEl = document.querySelector(`.compose-detail-hand [data-compose-mini="${shotId}"]`);
+        if (miniEl) miniEl.classList.add("compose-search-hit");
+        assistantSetStatus([`> ${shotId} 在卡包 ${pack.id}，已打开该卡包`], "good");
+      } else {
+        composeHidePackedCards = false;
+        renderComposePage();
+        composeClearSearchHits();
+        const cardEl = document.querySelector(`#composeShotGrid [data-compose-shot="${shotId}"]`);
+        if (cardEl) {
+          cardEl.classList.add("compose-search-hit");
+          cardEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+          assistantSetStatus([`> ${shotId} 未入包，已在卡牌区高亮`], "warn");
+        } else {
+          assistantSetStatus([`> ${shotId} 未入包，但卡牌区没有显示它，请检查看板模式`], "warn");
+        }
+      }
+    }
+
     function renderComposePacks() {
       const list = $("#composePackList");
       if (!list) return;
@@ -27527,6 +27646,28 @@
       bindClick("#composeAutoPackBtn", () => composeCreateSmartPlan());
       bindClick("#composeAddPackBtn", () => composeAddPack());
       bindClick("#composeRemovePackBtn", () => composeRemoveSelectedPack());
+      bindClick("#composeShotSearchBtn", () => {
+        const input = $("#composeShotSearchInput");
+        if (!input) return;
+        const willShow = input.hidden;
+        input.hidden = !willShow;
+        $("#composeShotSearchBtn")?.classList.toggle("active", willShow);
+        if (willShow) {
+          input.focus();
+          input.select();
+        }
+      });
+      $("#composeShotSearchInput")?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          composeShotSearch();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          const input = $("#composeShotSearchInput");
+          if (input) input.hidden = true;
+          $("#composeShotSearchBtn")?.classList.remove("active");
+        }
+      });
       bindClick("#composeClearMaskBtn", () => {
         const items = composeWhiteMaskShelfItems();
         const selected = composeSelectedWhiteMaskShelfItem(items);
