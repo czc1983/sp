@@ -103,12 +103,32 @@ class ComfyClient:
         workflow: dict[str, Any],
         *,
         log: Callable[[str], None] | None = None,
+        on_submitted: Callable[[str, str], None] | None = None,
     ) -> tuple[str, dict[str, Any]]:
         logger = log or (lambda _message: None)
         prompt_id, client_id = self.submit_workflow(workflow)
+        if on_submitted is not None:
+            try:
+                on_submitted(prompt_id, client_id)
+            except Exception as exc:  # noqa: BLE001
+                logger(f"ComfyUI 提交回调失败，当前任务继续运行: {exc}")
         history = self.wait_for_completion(prompt_id, client_id, workflow, logger)
         self.raise_for_history_error(prompt_id, history)
         return prompt_id, history
+
+    def resume_workflow(
+        self,
+        prompt_id: str,
+        *,
+        log: Callable[[str], None] | None = None,
+    ) -> dict[str, Any]:
+        logger = log or (lambda _message: None)
+        history = self.fetch_history(prompt_id)
+        if prompt_id not in history:
+            logger(f"继续等待 ComfyUI 任务: {prompt_id}")
+            history = self._poll_history_until_done(prompt_id, logger)
+        self.raise_for_history_error(prompt_id, history)
+        return history
 
     def wait_for_completion(
         self,

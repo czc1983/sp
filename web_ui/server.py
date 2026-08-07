@@ -65,12 +65,6 @@ JOBS_LOCK = threading.Lock()
 SERVER_STARTED_AT = time.time()
 RVM_MODEL_LOCK = threading.Lock()
 SAM3_TRACK_LOCK = threading.Lock()
-MODE2_SCAIL2_TRANSFER_LOCK = threading.Lock()
-MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = ""
-SEEDANCE_A_TASKS: dict[str, dict[str, Any]] = {}
-SEEDANCE_A_TASKS_LOCK = threading.Lock()
-NUKO_CHANNEL1_TASKS: dict[str, dict[str, Any]] = {}
-NUKO_CHANNEL1_TASKS_LOCK = threading.Lock()
 SAM3_PROTECTION_FPS = 15.0
 SAM3_PROTECTION_MAX_FRAMES = 180
 SAM3_SHAPE_MIN_OVERLAP = 0.12
@@ -79,49 +73,11 @@ SAM3_SHAPE_OBJECT_MATCH_THRESHOLD = 0.35
 SAM3_REMOTE_MAX_SPARSE_RATIO = 0.10
 SCAIL2_COLOR_NAMES = ("蓝色", "红色", "绿色", "紫色", "青色", "黄色")
 WAN22_MASK_COLOR_KEYS = ("blue", "red", "green", "magenta", "cyan", "yellow")
-DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000"
-DEFAULT_SEEDANCE_A_UPLOAD_BASE_URL = "https://img.lindong.vip"
-DEFAULT_NUKO_CHANNEL1_BASE_URL = "https://www.nukoai.com/api/ext/v1"
-DEFAULT_NUKO_CHANNEL1_API_KEY = "sk_aa827CgwCAxqNQzTq47S5UVrUvZxjRMf4HPLksMp"
 GENERATION_PACKAGE_SOURCE_VERSION = "stable_concat_audio_v4_desub_stroke"
-NUKO_CHANNEL1_KNOWN_MODELS = {
-    "SD 2.0 720P_官转": {
-        "durations": list(range(4, 16)),
-        "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
-        "video_ref": True,
-    },
-    "SD 2.0 480P": {
-        "durations": list(range(4, 16)),
-        "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
-        "video_ref": True,
-    },
-    "SD 2.0 720P": {
-        "durations": list(range(4, 16)),
-        "ratios": ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
-        "video_ref": True,
-    },
-    "SD 2.0 Fast 480P": {
-        "durations": list(range(4, 16)),
-        "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
-        "video_ref": True,
-    },
-    "SD 2.0 Fast 720P": {
-        "durations": list(range(4, 16)),
-        "ratios": ["16:9", "4:3", "1:1", "3:4", "9:16"],
-        "video_ref": True,
-    },
-    "Hailuo H3": {
-        "durations": list(range(4, 16)),
-        "ratios": ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"],
-        "video_ref": True,
-    },
-}
-# 历史错误写法（SD 与 2.0 之间漏了空格），提交前统一纠正为精准模型名
-NUKO_CHANNEL1_MODEL_ALIASES = {
-    "SD2.0 480P": "SD 2.0 480P",
-    "SD2.0 720P": "SD 2.0 720P",
-    "SD2.0 Fast 480P": "SD 2.0 Fast 480P",
-    "SD2.0 Fast 720P": "SD 2.0 Fast 720P",
+H3_PRODUCTION_STEPS = 20
+H3_REMOTE_OUTPUT_NAMES = {
+    "mode2_h3_white_mask": "whitemask.mp4",
+    "mode2_h3_charswap": "charswap.mp4",
 }
 DEFAULT_WAN22_API_KEY = ""
 DEFAULT_WAN22_MULTI_ROLE_LIMIT = 0
@@ -139,10 +95,6 @@ DEFAULT_SINGLE_ROLE_TRANSFER_BACKEND = "wan22"
 DEFAULT_MULTI_ROLE_TRANSFER_BACKEND = "scail2"
 TRANSFER_BACKENDS = {"wan22", "scail2", "scail2_colored", "scail2_masked", "bernini", "runninghub_bernini"}
 MODE2_MIN_SHOT_CUT_SECONDS = 1.0
-
-
-def _backend_uses_scail2_worker(transfer_backend: Any) -> bool:
-    return _normalize_transfer_backend(transfer_backend) in {"scail2", "scail2_colored", "scail2_masked", "bernini"}
 
 
 STORYBOARD_STYLE_PRESETS: dict[str, dict[str, str]] = {
@@ -229,12 +181,12 @@ STORYBOARD_REFERENCE_STRATEGIES: dict[str, dict[str, str]] = {
         "prompt": "当前阶段仍按软参考处理：旧项目提供故事和角色提示，新视频决定实际切法。",
     },
 }
-STORYBOARD_RATIO_OPTIONS = ("9:16", "16:9")
+STORYBOARD_RATIO_OPTIONS = ("source", "9:16", "16:9")
 DEFAULT_STORYBOARD_PROJECT_CONFIG = {
     "rebuild_goal": "english_europe_foreign_cast",
     "style_preset": "short_drama_realism",
     "target_language": "en",
-    "output_ratio": "9:16",
+    "output_ratio": "source",
     "motion_constraint": "strict",
     "mask_source": "remote_sam3_color",
 }
@@ -289,6 +241,15 @@ def _bool_value(value: Any, default: bool = False) -> bool:
     if text in {"0", "false", "no", "off", "disabled", "disable"}:
         return False
     return default
+
+
+def _required_h3_identity(value: Any, field_name: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"h3_{field_name}_required")
+    if len(text) > 128 or any(ord(char) < 32 for char in text):
+        raise ValueError(f"h3_{field_name}_invalid")
+    return text
 
 
 def _normalize_identity_shape(value: Any) -> dict[str, Any] | None:
@@ -511,7 +472,8 @@ def _storyboard_project_config_summary(config: dict[str, str]) -> str:
     language = STORYBOARD_LANGUAGE_PRESETS[config["target_language"]]["label"]
     motion = STORYBOARD_MOTION_PRESETS[config["motion_constraint"]]["label"]
     mask_source = STORYBOARD_MASK_SOURCE_PRESETS[config["mask_source"]]["label"]
-    return f"{rebuild_goal} / {style} / {language} / {config['output_ratio']} / {motion} / {mask_source}"
+    ratio = "跟随原视频" if config["output_ratio"] == "source" else config["output_ratio"]
+    return f"{rebuild_goal} / {style} / {language} / {ratio} / {motion} / {mask_source}"
 
 
 class JobLogHandler(logging.Handler):
@@ -573,13 +535,99 @@ def _load_storyboard_job_snapshot(job_id: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         return {}
     data.setdefault("id", job_id)
+    if data.get("status") == "running" and _h3_snapshot_has_resume_metadata(data):
+        if _h3_snapshot_was_cleared(data):
+            data["status"] = "cancelled"
+            data["error"] = "任务所属白膜包已清空，旧远程任务不会恢复。"
+            data.setdefault("logs", []).append("> 任务已清空：忽略旧远程 H3 提交")
+            _write_storyboard_job_snapshot(data)
     data["restored_from_snapshot"] = True
     data["snapshot_path"] = str(path)
-    if data.get("status") == "running":
+    if data.get("status") == "running" and not _h3_snapshot_has_resume_metadata(data):
         data["status"] = "failed"
         data["error"] = data.get("error") or "任务在后端重启后中断，请重新提交。"
         data.setdefault("logs", []).append("> 任务已中断：后端重启后后台线程不存在，请重新提交")
     return data
+
+
+def _h3_snapshot_has_resume_metadata(job: dict[str, Any]) -> bool:
+    job_type = str(job.get("type") or "")
+    return bool(
+        job_type in H3_REMOTE_OUTPUT_NAMES
+        and str(job.get("comfy_prompt_id") or "").strip()
+        and str(job.get("comfy_url") or "").strip()
+        and str(job.get("project_dir") or "").strip()
+        and str(job.get("package_id") or "").strip()
+        and str(job.get("out_dir") or "").strip()
+        and str(job.get("out_name") or "").strip()
+    )
+
+
+def _h3_snapshot_was_cleared(job: dict[str, Any]) -> bool:
+    project_dir = str(job.get("project_dir") or "").strip()
+    package_id = str(job.get("package_id") or "").strip()
+    if not project_dir or not package_id:
+        return False
+    try:
+        state = _read_generation_package_state(Path(project_dir), package_id)
+        cleared_at = float(state.get("h3ClearedAt") or 0.0)
+        created_at = float(job.get("created_at") or 0.0)
+    except (OSError, TypeError, ValueError):
+        return False
+    return bool(cleared_at and created_at <= cleared_at)
+
+
+def _cancel_h3_job_if_cleared(job: dict[str, Any]) -> dict[str, Any]:
+    if str(job.get("type") or "") not in H3_REMOTE_OUTPUT_NAMES:
+        return job
+    if not _h3_snapshot_was_cleared(job):
+        return job
+    job_id = str(job.get("id") or "").strip()
+    error = "任务所属白膜包已清空，忽略旧远程输出。"
+    log_message = "> 任务已清空：旧 H3 输出不会恢复"
+    snapshot = None
+    with JOBS_LOCK:
+        current = JOBS.get(job_id)
+        target = current if current is not None else dict(job)
+        target["_cancel"] = True
+        target["status"] = "cancelled"
+        target["result"] = None
+        target["error"] = error
+        logs = target.setdefault("logs", [])
+        if log_message not in logs:
+            logs.append(log_message)
+        if current is not None:
+            snapshot = dict(current)
+        result = dict(target)
+        if "logs" in result:
+            result["logs"] = list(result["logs"])
+    if snapshot is not None:
+        _write_storyboard_job_snapshot(snapshot)
+    return result
+
+
+def _adopt_and_resume_h3_snapshot(job: dict[str, Any]) -> dict[str, Any]:
+    if str(job.get("status") or "") != "running" or not _h3_snapshot_has_resume_metadata(job):
+        return job
+    job_id = str(job.get("id") or "").strip()
+    if not job_id:
+        return job
+    adopted = dict(job)
+    adopted.pop("restored_from_snapshot", None)
+    adopted.pop("snapshot_path", None)
+    should_start = False
+    with JOBS_LOCK:
+        current = JOBS.get(job_id)
+        if current is None:
+            JOBS[job_id] = adopted
+            current = adopted
+            should_start = True
+        result = dict(current)
+        if "logs" in result:
+            result["logs"] = list(result["logs"])
+    if should_start:
+        threading.Thread(target=_resume_h3_snapshot_job, args=(job_id,), daemon=True).start()
+    return result
 
 
 class SplitterHandler(BaseHTTPRequestHandler):
@@ -651,9 +699,11 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     job["logs"] = list(job["logs"])
             if not job:
                 job = _load_storyboard_job_snapshot(job_id)
+                job = _adopt_and_resume_h3_snapshot(job)
             if not job:
                 self._send_json({"error": "job_not_found"}, status=404)
                 return
+            job = _cancel_h3_job_if_cleared(job)
             self._send_json(job)
             return
         if parsed.path.startswith("/api/jobs/") and parsed.path.endswith("/cancel"):
@@ -760,6 +810,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
 
         legacy_mode1_paths = {
             "/api/split",
+            "/api/storyboard-server-transfer",
             "/api/transfer-segment",
             "/api/scail2-mask-check",
             "/api/assets/sam3-track",
@@ -774,7 +825,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "error": "legacy_mode1_removed",
-                    "message": "Mode1/SAM3/local white-mask/color-mask generation has been removed from the fixed Mode2 workflow.",
+                    "message": "旧视频 provider 已删除；视频生成仅支持 MiniMax H3。",
                 },
                 status=410,
             )
@@ -839,60 +890,6 @@ class SplitterHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/upload-source-video":
             try:
                 self._send_json(_save_uploaded_source_video(self))
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/seedance-a-submit":
-            try:
-                payload = self._read_json()
-                result = _submit_seedance_a_task(payload)
-                self._send_json(result)
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/seedance-a-status":
-            try:
-                payload = self._read_json()
-                result = _query_seedance_a_task(payload)
-                self._send_json(result)
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/nuko-channel1-submit":
-            try:
-                payload = self._read_json()
-                result = _submit_nuko_channel1_task(payload)
-                self._send_json(result)
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/nuko-channel1-status":
-            try:
-                payload = self._read_json()
-                result = _query_nuko_channel1_task(payload)
-                self._send_json(result)
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/whitematte-shot-submit":
-            try:
-                payload = self._read_json()
-                result = _whitematte_shot_submit(payload)
-                self._send_json(result)
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/whitematte-shot-status":
-            try:
-                payload = self._read_json()
-                result = _whitematte_shot_status(payload)
-                self._send_json(result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json({"error": str(exc)}, status=400)
             return
@@ -1545,6 +1542,18 @@ class SplitterHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/mode2/h3-white-mask":
             try:
                 payload = self._read_json()
+                package_id = _required_h3_identity(
+                    payload.get("package_id") or payload.get("packageId"),
+                    "package_id",
+                )
+                shot_id = _required_h3_identity(
+                    payload.get("shot_id") or payload.get("shotId"),
+                    "shot_id",
+                )
+                auto_generate_result = _bool_value(
+                    payload.get("auto_generate_result", payload.get("autoGenerateResult")),
+                    False,
+                )
                 clip_path = str(payload.get("clip_path") or "").strip()
                 clip = Path(clip_path).resolve() if clip_path else None
                 if clip is None or not clip.exists():
@@ -1577,8 +1586,9 @@ class SplitterHandler(BaseHTTPRequestHandler):
                             raise ValueError(
                                 f"最终提示词超过长度上限（当前 {len(prompt)} 字符）: {exc}"
                             ) from exc
-                width = int(payload.get("width") or 480)
-                height = int(payload.get("height") or 864)
+                # 0 表示按源视频元数据推导约 0.4MP 的 H3 基础尺寸并保持原始宽高比。
+                width = int(payload.get("width") or 0)
+                height = int(payload.get("height") or 0)
                 length_raw = payload.get("length")
                 length = int(length_raw) if length_raw not in (None, "", "auto", 0, "0") else None
                 if length is not None:
@@ -1587,7 +1597,11 @@ class SplitterHandler(BaseHTTPRequestHandler):
                         logging.warning(
                             "H3 白膜 length=%s 帧（%.2f 秒）超出 4-15 秒建议区间", length, seconds
                         )
-                steps = int(payload.get("steps") or 20)
+                steps = int(payload.get("steps") or H3_PRODUCTION_STEPS)
+                if steps != H3_PRODUCTION_STEPS:
+                    raise ValueError(
+                        f"h3_production_steps_must_be_{H3_PRODUCTION_STEPS}: received {steps}"
+                    )
                 seed = payload.get("seed")
                 seed = int(seed) if seed not in (None, "") else None
                 audio_path = str(payload.get("audio_path") or "").strip()
@@ -1604,11 +1618,15 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     "status": "running",
                     "created_at": time.time(),
                     "project_dir": project_dir,
+                    "package_id": package_id,
+                    "shot_id": shot_id,
+                    "auto_generate_result": auto_generate_result,
                     "clip_path": str(clip),
                     "logs": [
                         f"> MiniMax H3 白膜生成: {clip.name}",
                         f"> clip: {escaped_clip}",
-                        f"> size: {width}x{height} length={length if length else 'auto按时长对齐'} steps={steps}",
+                        f"> size: {f'{width}x{height}' if width > 0 and height > 0 else 'auto跟随原视频'} "
+                        f"length={length if length else 'auto按时长对齐'} steps={steps}",
                     ],
                     "result": None,
                     "error": None,
@@ -1638,6 +1656,14 @@ class SplitterHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/mode2/h3-charswap":
             try:
                 payload = self._read_json()
+                package_id = _required_h3_identity(
+                    payload.get("package_id") or payload.get("packageId"),
+                    "package_id",
+                )
+                shot_id = _required_h3_identity(
+                    payload.get("shot_id") or payload.get("shotId"),
+                    "shot_id",
+                )
                 mask_video_path = str(payload.get("mask_video_path") or "").strip()
                 mask_video = Path(mask_video_path).resolve() if mask_video_path else None
                 if mask_video is None or not mask_video.exists():
@@ -1664,11 +1690,16 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 out_dir = base_dir / "04_AI输出成片" / "h3_jobs" / job_id
                 out_dir.mkdir(parents=True, exist_ok=True)
                 prompt = str(payload.get("prompt") or "").strip() or None
-                width = int(payload.get("width") or 480)
-                height = int(payload.get("height") or 864)
+                # 0 表示按白膜视频元数据推导尺寸；白膜与原片保持同一宽高比。
+                width = int(payload.get("width") or 0)
+                height = int(payload.get("height") or 0)
                 length_raw = payload.get("length")
                 length = int(length_raw) if length_raw not in (None, "", "auto", 0, "0") else None
-                steps = int(payload.get("steps") or 20)
+                steps = int(payload.get("steps") or H3_PRODUCTION_STEPS)
+                if steps != H3_PRODUCTION_STEPS:
+                    raise ValueError(
+                        f"h3_production_steps_must_be_{H3_PRODUCTION_STEPS}: received {steps}"
+                    )
                 seed = payload.get("seed")
                 seed = int(seed) if seed not in (None, "") else None
                 audio_path = str(payload.get("audio_path") or "").strip()
@@ -1685,12 +1716,15 @@ class SplitterHandler(BaseHTTPRequestHandler):
                     "status": "running",
                     "created_at": time.time(),
                     "project_dir": project_dir,
+                    "package_id": package_id,
+                    "shot_id": shot_id,
                     "mask_video_path": str(mask_video),
                     "char_image_paths": char_images,
                     "logs": [
                         f"> MiniMax H3 白膜换人: {mask_video.name} + {len(char_images)} 张人物参考图",
                         f"> mask video: {escaped_mask}",
-                        f"> size: {width}x{height} length={length if length else 'auto按时长对齐'} steps={steps}",
+                        f"> size: {f'{width}x{height}' if width > 0 and height > 0 else 'auto跟随原视频'} "
+                        f"length={length if length else 'auto按时长对齐'} steps={steps}",
                     ],
                     "result": None,
                     "error": None,
@@ -2166,463 +2200,6 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json(result)
             except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/storyboard-server-transfer":
-            try:
-                payload = self._read_json()
-                project_dir = str(payload.get("project_dir") or "").strip()
-                video_path = str(payload.get("video_path") or "").strip()
-                segment_id = str(payload.get("segment_id") or "").strip()
-                sampler_preset = str(payload.get("sampler_preset") or "balanced")
-                video_window = payload.get("video_window") or {}
-                normalize_size = bool(payload.get("normalize_size", True))
-                scail2_upload_audio = _bool_value(
-                    payload.get("scail2_upload_audio", payload.get("scail2UploadAudio")),
-                    True,
-                )
-                raw_transfer_backend = payload.get("transfer_backend") or "scail2"
-                transfer_backend = _normalize_transfer_backend(raw_transfer_backend)
-                if transfer_backend is None:
-                    self._send_json({"error": "invalid_transfer_backend"}, status=400)
-                    return
-                if transfer_backend == "wan22":
-                    self._send_json({"error": "mode2_server_transfer_prefers_scail2"}, status=400)
-                    return
-                if not project_dir:
-                    self._send_json({"error": "project_dir_required"}, status=400)
-                    return
-                if not video_path:
-                    self._send_json({"error": "video_path_required"}, status=400)
-                    return
-                root = _resolve_storyboard_mode2_project_dir(project_dir)
-                store_path = _storyboard_mode2_asset_store_path(root)
-                data = json.loads(store_path.read_text(encoding="utf-8-sig"))
-                if not segment_id:
-                    shot = next((item for item in (data.get("shots") or []) if isinstance(item, dict)), None)
-                    segment_id = str((shot or {}).get("segment_id") or "").strip()
-                role_ids = _string_list(payload.get("role_ids"))
-                manual_ref_images = _string_list(
-                    payload.get("manual_reference_images")
-                    or payload.get("reference_images")
-                    or payload.get("ref_images")
-                )
-                manual_scail2_override = bool(payload.get("manual_scail2_override") or payload.get("force_single_role_scail2"))
-                role_pairs, pair_warnings = _mode2_reference_mask_role_pairs_from_store(
-                    str(root),
-                    segment_id,
-                    [],
-                    prefer_current_shot_roles=True,
-                )
-                assets = [asset for asset in (data.get("assets") or []) if isinstance(asset, dict)]
-                shots = [shot for shot in (data.get("shots") or []) if isinstance(shot, dict)]
-                current_shot = next(
-                    (shot for shot in shots if str(shot.get("segment_id") or "").strip() == segment_id),
-                    None,
-                )
-                original_role_pairs = list(role_pairs)
-                if role_ids:
-                    role_id_set = set(role_ids)
-                    role_pairs = [
-                        pair for pair in role_pairs
-                        if str(pair.get("asset_id") or "") in role_id_set
-                    ]
-                if manual_ref_images:
-                    manual_ref_keys = {str(Path(value)).lower() for value in manual_ref_images if str(value or "").strip()}
-
-                    def _pair_uses_manual_ref(pair: dict[str, Any]) -> bool:
-                        values = [
-                            str(pair.get("ref_image") or ""),
-                            *_string_list(pair.get("extra_ref_images")),
-                        ]
-                        return any(str(Path(value)).lower() in manual_ref_keys for value in values if value)
-
-                    manual_ref_pairs = [pair for pair in role_pairs if _pair_uses_manual_ref(pair)]
-                    if not manual_ref_pairs:
-                        manual_ref_pairs = [pair for pair in original_role_pairs if _pair_uses_manual_ref(pair)]
-                    if manual_ref_pairs:
-                        role_pairs = manual_ref_pairs
-                    elif manual_scail2_override:
-                        matched_asset = next(
-                            (
-                                asset for asset in assets
-                                if str(asset.get("kind") or "") == "role"
-                                and any(
-                                    str(Path(option)).lower() in manual_ref_keys
-                                    for option in _mode2_role_reference_options(asset)
-                                    if str(option or "").strip()
-                                )
-                            ),
-                            None,
-                        )
-                        manual_ref = manual_ref_images[0]
-                        role_pairs = [{
-                            "name": str((matched_asset or {}).get("name") or "参考图1").strip() or "参考图1",
-                            "ref_image": manual_ref,
-                            "extra_ref_images": [],
-                            "asset_id": str((matched_asset or {}).get("id") or (role_ids[0] if role_ids else "manual_reference")),
-                            "source_point": None,
-                            "source_shape": None,
-                            "source_time": None,
-                        }]
-                        pair_warnings.append("单人 Scail2 已按手动参考图强制绑定，未再回退到当前镜头角色。")
-                        if len(manual_ref_images) > 1:
-                            pair_warnings.append("单人 Scail2 只使用“会上传的参考图”里的第 1 张。")
-                if manual_scail2_override and not role_pairs and manual_ref_images:
-                    role_pairs = [{
-                        "name": "手动参考图",
-                        "ref_image": manual_ref_images[0],
-                        "extra_ref_images": [],
-                        "asset_id": role_ids[0] if role_ids else "manual_reference",
-                        "source_point": None,
-                        "source_shape": None,
-                        "source_time": None,
-                    }]
-                if not role_pairs:
-                    self._send_json({"error": "mode2_role_pairs_required"}, status=400)
-                    return
-                if _backend_uses_scail2_worker(transfer_backend) and len(role_pairs) != 1:
-                    if manual_scail2_override:
-                        pair_warnings.append("手动单人 Scail2 已按人工选择收窄为 1 个参考图。")
-                        role_pairs = role_pairs[:1]
-                    else:
-                        self._send_json(
-                            {
-                                "error": "multi_person_seedance_required",
-                                "message": "Mode2 Scail2 only accepts one clean role. Multi-person or contact shots must use Seedance.",
-                                "role_count": len(role_pairs),
-                            },
-                            status=400,
-                        )
-                        return
-                if _backend_uses_scail2_worker(transfer_backend):
-                    if manual_scail2_override:
-                        route_ok = True
-                        route_reason = "manual_scail2_override"
-                        route_meta = {
-                            "role_count": len(role_pairs),
-                            "person_count": _safe_int((current_shot or {}).get("person_count"), -1),
-                            "contact_risk": bool(_MODE2_SEEDANCE_RISK_RE.search(_mode2_shot_route_text(current_shot or {}))),
-                        }
-                    else:
-                        route_ok, route_reason, route_meta = _mode2_scail2_route_check(current_shot, assets)
-                    if not route_ok:
-                        self._send_json(
-                            {
-                                "error": "multi_person_seedance_required",
-                                "message": route_reason,
-                                **route_meta,
-                            },
-                            status=400,
-                        )
-                        return
-                from spvideo.ffmpeg_tools import probe_video
-                meta = probe_video(Path(video_path)) if Path(video_path).exists() else None
-                if meta and meta.duration and meta.duration > 120:
-                    self._send_json({"error": f"segment_too_long: {meta.duration:.1f}s"}, status=400)
-                    return
-                if _backend_uses_scail2_worker(transfer_backend) and MODE2_SCAIL2_TRANSFER_LOCK.locked():
-                    self._send_json(
-                        {
-                            "error": "scail2_busy",
-                            "message": "Scail2 is already running. Wait for the current job to finish before submitting again.",
-                            "active_job_id": MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID,
-                        },
-                        status=409,
-                    )
-                    return
-                assets_by_id = {
-                    str(asset.get("id") or ""): asset
-                    for asset in assets
-                }
-                status_warnings: list[str] = []
-                for pair in role_pairs:
-                    asset = assets_by_id.get(str(pair.get("asset_id") or ""))
-                    if not asset:
-                        continue
-                    track_status = str(asset.get("track_status") or asset.get("identity_status") or "").strip()
-                    if track_status and track_status not in {"ready", "tracked"}:
-                        status_warnings.append(f"{pair.get('name')}: track_status={track_status}")
-                if status_warnings and not bool(payload.get("allow_unreviewed_tracks")):
-                    self._send_json({
-                        "error": "mode2_track_needs_review",
-                        "message": "分轨还没通过，已阻止 Scail2 生成。请先查看分轨或重画锚点。",
-                        "warnings": status_warnings,
-                    }, status=400)
-                    return
-                job_id = uuid.uuid4().hex[:8]
-                public_mapping = [
-                    {
-                        "order": index + 1,
-                        "color": SCAIL2_COLOR_NAMES[index],
-                        "role": pair.get("name"),
-                        "target_ref": Path(str(pair.get("ref_image") or "")).name,
-                        "source_x": (
-                            float(pair["source_point"][0])
-                            if isinstance(pair.get("source_point"), (list, tuple)) and pair.get("source_point")
-                            else None
-                        ),
-                        "mark_time": pair.get("source_time"),
-                        "asset_id": pair.get("asset_id"),
-                        "source_anchor_id": pair.get("source_anchor_id") or pair.get("annotation_id") or "",
-                    }
-                    for index, pair in enumerate(role_pairs)
-                ]
-                saved_subshot_ranges = _mode2_saved_subshot_ranges(str(root), segment_id)
-                with JOBS_LOCK:
-                    JOBS[job_id] = {
-                        "id": job_id,
-                        "type": "mode2_server_transfer",
-                        "status": "running",
-                        "video_path": video_path,
-                        "project_dir": str(root),
-                        "segment_id": segment_id,
-                        "mapping": public_mapping,
-                        "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
-                        "transfer_backend": transfer_backend,
-                        "scail2_upload_audio": scail2_upload_audio,
-                        "logs": [
-                            f"> Scail2 生成: {Path(video_path).name}",
-                            f"> 当前后端: {transfer_backend}",
-                            (
-                                f"> 将按已保存子镜头逐段生成: {len(saved_subshot_ranges)} 段"
-                                if saved_subshot_ranges
-                                else "> 未找到已保存子镜头，将按当前镜头整段生成"
-                            ),
-                            f"> 角色: {', '.join(str(pair.get('name') or '') for pair in role_pairs)}",
-                            *[f"> 提醒: {line}" for line in pair_warnings],
-                            *[f"> 分轨需复查: {line}" for line in status_warnings],
-                        ],
-                        "result": None,
-                        "error": None,
-                    }
-                    job_snapshot = dict(JOBS[job_id])
-                _write_storyboard_job_snapshot(job_snapshot)
-                thread = threading.Thread(
-                    target=_run_transfer_job,
-                    args=(
-                        job_id,
-                        video_path,
-                        role_pairs,
-                        str(root),
-                        "",
-                        segment_id,
-                        False,
-                        sampler_preset,
-                        video_window,
-                        normalize_size,
-                        str(payload.get("positive_prompt") or ""),
-                        str(payload.get("sam_text") or ""),
-                        transfer_backend,
-                        scail2_upload_audio,
-                    ),
-                    daemon=True,
-                )
-                thread.start()
-                self._send_json({
-                    "job_id": job_id,
-                    "backend": transfer_backend,
-                    "mapping": public_mapping,
-                    "subshot_count": len(saved_subshot_ranges),
-                    "mapping_warning": "；".join([*pair_warnings, *status_warnings]),
-                })
-            except Exception as exc:  # noqa: BLE001
-                self._send_json({"error": str(exc)}, status=400)
-            return
-
-        if parsed.path == "/api/transfer-segment":
-            try:
-                payload = self._read_json()
-                video_path = str(payload.get("video_path") or "").strip()
-                project_dir = str(payload.get("project_dir") or "").strip()
-                seg_id = str(payload.get("segment_id") or "").strip()
-                protection_annotation_id = str(payload.get("protection_annotation_id") or "").strip()
-                use_background = bool(payload.get("use_background_postprocess", False))
-                sampler_preset = str(payload.get("sampler_preset") or "balanced")
-                video_window = payload.get("video_window") or {}
-                normalize_size = bool(payload.get("normalize_size", True))
-                raw_transfer_backend = payload.get("transfer_backend")
-                transfer_backend = _normalize_transfer_backend(raw_transfer_backend)
-                if str(raw_transfer_backend or "").strip() and transfer_backend is None:
-                    self._send_json({"error": "invalid_transfer_backend"}, status=400)
-                    return
-
-                # 检查视频时长
-                from spvideo.ffmpeg_tools import probe_video
-                meta = probe_video(Path(video_path)) if Path(video_path).exists() else None
-                if meta and meta.duration:
-                    dur = meta.duration
-                    if dur > 120:
-                        self._send_json({"error": f"分段时长 {dur:.1f}s，转绘支持最长 120 秒"}, status=400)
-                        return
-
-                job_id = uuid.uuid4().hex[:8]
-
-                # 从资产库查角色对应的参考图
-                store = load_asset_store(project_dir) if project_dir else {}
-                characters = store.get("characters", {})
-                originals = store.get("originals", [])
-                annotations = store.get("annotations", [])
-                director_plan = get_director_plan(
-                    project_dir,
-                    segment_id=seg_id,
-                    video_path=video_path,
-                ) if project_dir else None
-                char_name = str(payload.get("character") or "").strip()
-                raw_char_names = payload.get("characters") or []
-                if isinstance(raw_char_names, str):
-                    char_names = [name.strip() for name in raw_char_names.split(",") if name.strip()]
-                else:
-                    char_names = [str(name).strip() for name in raw_char_names if str(name).strip()]
-
-                if director_plan and director_plan.get("roles"):
-                    if director_plan.get("status") != "ready":
-                        issues = "；".join(director_plan.get("issues") or ["配置不完整"])
-                        self._send_json({"error": "导演计划未完成: " + issues}, status=400)
-                        return
-                    char_names = [
-                        str(role.get("name") or "").strip()
-                        for role in director_plan.get("roles", [])
-                        if str(role.get("name") or "").strip()
-                    ]
-                    char_name = ", ".join(char_names)
-
-                protection_annotation = None
-                if protection_annotation_id:
-                    protection_annotation = next(
-                        (item for item in annotations if item.get("id") == protection_annotation_id),
-                        None,
-                    )
-                    if not protection_annotation or protection_annotation.get("type") != "protection":
-                        self._send_json({"error": "protection_annotation_not_found"}, status=400)
-                        return
-                    if not _same_video_path(protection_annotation.get("video_path"), video_path):
-                        self._send_json({"error": "protection_video_mismatch"}, status=400)
-                        return
-                    track_dir = Path(str(protection_annotation.get("track_dir") or ""))
-                    if protection_annotation.get("track_status") != "ready" or not (track_dir / "track_summary.json").exists():
-                        self._send_json({"error": "protection_track_not_ready"}, status=400)
-                        return
-
-                # 如果前端没传角色名，从当前分段视频的标注中自动匹配
-                if not char_name:
-                    for ann in annotations:
-                        if ann.get("type") == "person" and _same_video_path(ann.get("video_path"), video_path):
-                            ln = str(ann.get("label_name") or "").strip()
-                            if ln:
-                                char_name = ln
-                                char_names = [ln]
-                                break
-                    if not char_name:
-                        for orig in originals:
-                            ln = str(orig.get("label_name") or "").strip()
-                            if ln and any(ch.get("name", "").strip() == ln for ch in characters.values()):
-                                char_name = ln
-                                char_names = [ln]
-                                break
-                if not char_names and char_name:
-                    char_names = [char_name]
-
-                role_pairs, mapping_warning = _resolve_scail2_role_pairs(
-                    char_names=char_names,
-                    characters=characters,
-                    originals=originals,
-                    annotations=annotations,
-                    video_path=video_path,
-                    director_plan=director_plan,
-                )
-                public_mapping = [
-                    {
-                        "order": index + 1,
-                        "color": SCAIL2_COLOR_NAMES[index],
-                        "role": pair["name"],
-                        "target_ref": Path(pair["ref_image"]).name,
-                        "source_x": pair.get("source_x"),
-                        "mark_time": pair.get("source_time"),
-                    }
-                    for index, pair in enumerate(role_pairs)
-                ]
-                effective_transfer_backend = _transfer_backend_for_role_count(
-                    len(role_pairs),
-                    transfer_backend,
-                )
-                background_config = get_background_config(
-                    project_dir,
-                    segment_id=seg_id,
-                    video_path=video_path,
-                ) if project_dir else None
-                if use_background:
-                    if not background_config or background_config.get("mode") == "keep_original":
-                        self._send_json({"error": "background_config_required"}, status=400)
-                        return
-                    ready_person_tracks = [
-                        item
-                        for item in annotations
-                        if item.get("type") == "person"
-                        and _same_video_path(item.get("video_path"), video_path)
-                        and item.get("track_status") == "ready"
-                        and (Path(str(item.get("track_dir") or "")) / "track_summary.json").exists()
-                    ]
-                    if not ready_person_tracks:
-                        self._send_json({"error": "background_foreground_track_not_ready"}, status=400)
-                        return
-
-                with JOBS_LOCK:
-                    JOBS[job_id] = {
-                        "id": job_id,
-                        "type": "transfer",
-                        "status": "running",
-                        "video_path": video_path,
-                        "mapping": public_mapping,
-                        "mapping_warning": mapping_warning,
-                        "protection_annotation_id": protection_annotation_id,
-                        "background_enabled": use_background,
-                        "transfer_backend": effective_transfer_backend,
-                        "director_plan_id": str((director_plan or {}).get("id") or ""),
-                        "logs": [
-                            f"> 开始转绘: {Path(video_path).name}",
-                            (
-                                "> 当前转绘后端: Wan2.2（直接使用云端回传视频）"
-                                if effective_transfer_backend == "wan22"
-                                else "> 当前转绘后端: SCAIL-2（多人蒙版条件生成）"
-                            ),
-                            *(["> 已加载片段导演计划"] if director_plan else []),
-                            *([f"> 映射提醒: {mapping_warning}"] if mapping_warning else []),
-                            *(["> 已启用保护区域，完成后自动还原"] if protection_annotation_id else []),
-                            *(["> 已启用背景后处理，将在换人完成后串行执行"] if use_background else []),
-                        ],
-                        "result": None,
-                        "error": None,
-                    }
-
-                thread = threading.Thread(
-                    target=_run_transfer_job,
-                    args=(
-                        job_id,
-                        video_path,
-                        role_pairs,
-                        project_dir,
-                        protection_annotation_id,
-                        seg_id,
-                        use_background,
-                        sampler_preset,
-                        video_window,
-                        normalize_size,
-                        str((director_plan or {}).get("positive_prompt") or ""),
-                        str((director_plan or {}).get("sam_text") or ""),
-                        effective_transfer_backend,
-                    ),
-                    daemon=True,
-                )
-                thread.start()
-                self._send_json({
-                    "job_id": job_id,
-                    "backend": effective_transfer_backend,
-                    "mapping": public_mapping,
-                    "mapping_warning": mapping_warning,
-                })
-            except Exception as exc:
                 self._send_json({"error": str(exc)}, status=400)
             return
 
@@ -11051,6 +10628,134 @@ def _run_h3_reverse_prompt_job(
         finish("failed", error=f"{type(exc).__name__}: {exc}")
 
 
+def _record_h3_remote_submission(
+    job_id: str,
+    prompt_id: str,
+    client_id: str,
+    comfy_url: str,
+    out_dir: str,
+    out_name: str,
+) -> None:
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if job is None:
+            return
+        job.update({
+            "comfy_prompt_id": str(prompt_id).strip(),
+            "comfy_client_id": str(client_id).strip(),
+            "comfy_url": str(comfy_url).strip().rstrip("/"),
+            "out_dir": str(Path(out_dir).resolve()),
+            "out_name": str(out_name).strip(),
+            "submitted_at": time.time(),
+        })
+        job.setdefault("logs", []).append(f"> ComfyUI 已提交 prompt:{prompt_id}")
+    try:
+        _snapshot_running_job(job_id, force=True)
+    except Exception as exc:  # noqa: BLE001
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job.setdefault("logs", []).append(f"> 远程任务快照写入失败，当前任务继续: {exc}")
+
+
+def _validated_h3_resume_output(job: dict[str, Any]) -> tuple[Path, str]:
+    job_id = str(job.get("id") or "").strip()
+    project_dir = str(job.get("project_dir") or "").strip()
+    job_type = str(job.get("type") or "").strip()
+    expected_name = H3_REMOTE_OUTPUT_NAMES.get(job_type, "")
+    if not job_id or _storyboard_job_snapshot_path(job_id).stem != job_id:
+        raise ValueError("h3_resume_job_id_invalid")
+    if not project_dir or not expected_name:
+        raise ValueError("h3_resume_metadata_invalid")
+    expected_dir = (Path(project_dir).resolve() / "04_AI输出成片" / "h3_jobs" / job_id).resolve()
+    stored_dir = Path(str(job.get("out_dir") or "")).resolve()
+    stored_name = str(job.get("out_name") or "").strip()
+    if stored_dir != expected_dir or stored_name != expected_name:
+        raise ValueError("h3_resume_output_target_invalid")
+    return expected_dir, expected_name
+
+
+def _resume_h3_snapshot_job(job_id: str) -> None:
+    def add_log(message: str) -> None:
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is not None:
+                job.setdefault("logs", []).append(message)
+                job["updated_at"] = time.time()
+        try:
+            _snapshot_running_job(job_id)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def finish(status: str, *, result: dict[str, Any] | None = None, error: str | None = None) -> None:
+        snapshot = None
+        with JOBS_LOCK:
+            job = JOBS.get(job_id)
+            if job is None:
+                return
+            if job.get("_cancel") or _h3_snapshot_was_cleared(job):
+                status = "cancelled"
+                result = None
+                error = "任务所属白膜包已清空，忽略远程输出。"
+            job["status"] = status
+            job["result"] = result
+            job["error"] = error
+            job["updated_at"] = time.time()
+            if error:
+                job.setdefault("logs", []).append(f"> {status}: {error}")
+            snapshot = dict(job)
+        if snapshot is not None:
+            _write_storyboard_job_snapshot(snapshot)
+
+    with JOBS_LOCK:
+        job = dict(JOBS.get(job_id) or {})
+    if not job:
+        return
+    try:
+        if _h3_snapshot_was_cleared(job):
+            finish("cancelled")
+            return
+        out_dir, out_name = _validated_h3_resume_output(job)
+        comfy_url = str(job.get("comfy_url") or "").strip()
+        parsed_url = urlparse(comfy_url)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("h3_resume_comfy_url_invalid")
+        prompt_id = str(job.get("comfy_prompt_id") or "").strip()
+        if not prompt_id:
+            raise ValueError("h3_resume_prompt_id_required")
+
+        from spvideo.minimax_h3_client import MiniMaxH3Client
+
+        add_log(f"> 后端重启后继续接管 ComfyUI 任务: {prompt_id}")
+        client = MiniMaxH3Client(comfy_url)
+        output = client.resume_result(
+            prompt_id,
+            out_dir=out_dir,
+            out_name=out_name,
+            log=add_log,
+        )
+        job_type = str(job.get("type") or "")
+        if job_type == "mode2_h3_white_mask":
+            result = {
+                "workflow_mode": "minimax_h3_white_mask",
+                "clip_path": str(job.get("clip_path") or ""),
+                "output_path": str(output),
+                "whitemask_path": str(output),
+            }
+        else:
+            result = {
+                "workflow_mode": "minimax_h3_charswap",
+                "mask_video_path": str(job.get("mask_video_path") or ""),
+                "char_image_paths": list(job.get("char_image_paths") or []),
+                "output_path": str(output),
+                "charswap_path": str(output),
+            }
+        add_log(f"> 已恢复并下载 H3 结果: {output}")
+        finish("done", result=result)
+    except Exception as exc:  # noqa: BLE001
+        finish("failed", error=f"{type(exc).__name__}: {exc}")
+
+
 def _run_h3_white_mask_job(
     job_id: str,
     clip_path: str,
@@ -11076,6 +10781,10 @@ def _run_h3_white_mask_job(
         with JOBS_LOCK:
             job = JOBS.get(job_id)
             if job is not None:
+                if job.get("_cancel") or _h3_snapshot_was_cleared(job):
+                    status = "cancelled"
+                    result = None
+                    error = "任务所属白膜包已清空，忽略旧远程输出。"
                 job["status"] = status
                 job["result"] = result
                 job["error"] = error
@@ -11104,6 +10813,14 @@ def _run_h3_white_mask_job(
             background_replace=background_replace,
             background_path=background_path,
             log=add_log,
+            on_submitted=lambda prompt_id, client_id: _record_h3_remote_submission(
+                job_id,
+                prompt_id,
+                client_id,
+                client.base_url,
+                out_dir,
+                "whitemask.mp4",
+            ),
         )
         result = {
             "workflow_mode": "minimax_h3_white_mask",
@@ -11196,6 +10913,10 @@ def _run_h3_charswap_job(
         with JOBS_LOCK:
             job = JOBS.get(job_id)
             if job is not None:
+                if job.get("_cancel") or _h3_snapshot_was_cleared(job):
+                    status = "cancelled"
+                    result = None
+                    error = "任务所属白膜包已清空，忽略旧远程输出。"
                 job["status"] = status
                 job["result"] = result
                 job["error"] = error
@@ -11223,6 +10944,14 @@ def _run_h3_charswap_job(
             out_name="charswap.mp4",
             audio_path=audio_path,
             log=add_log,
+            on_submitted=lambda prompt_id, client_id: _record_h3_remote_submission(
+                job_id,
+                prompt_id,
+                client_id,
+                client.base_url,
+                out_dir,
+                "charswap.mp4",
+            ),
         )
         result = {
             "workflow_mode": "minimax_h3_charswap",
@@ -11578,425 +11307,6 @@ def _mapping_item_x(item: dict[str, Any] | None) -> float | None:
         except (TypeError, ValueError):
             pass
     return None
-
-
-def _is_noisy_scail2_log(message: str) -> bool:
-    text = str(message or "").strip()
-    return (
-        text.startswith("ComfyUI 节点:")
-        or text.startswith("ComfyUI 进度:")
-        or text.startswith("ComfyUI 进度通道")
-        or text.startswith("检查 ComfyUI 节点")
-    )
-
-
-def _run_transfer_job(
-    job_id: str,
-    video_path: str,
-    role_pairs: list[dict[str, Any]],
-    project_dir: str = "",
-    protection_annotation_id: str = "",
-    segment_id: str = "",
-    use_background: bool = False,
-    sampler_preset: str = "balanced",
-    video_window: dict[str, Any] | None = None,
-    normalize_size: bool = True,
-    positive_prompt: str = "",
-    sam_text: str = "",
-    transfer_backend: str | None = None,
-    scail2_upload_audio: bool = True,
-) -> None:
-    """后台执行单人 SCAIL2 或多人 Wan2.2 换人。"""
-    def add_log(message: str) -> None:
-        if _is_noisy_scail2_log(str(message or "")):
-            return
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is not None:
-                job.setdefault("logs", []).append(message)
-                job["updated_at"] = time.time()
-        _snapshot_running_job(job_id)
-
-    def fail(message: str) -> None:
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is not None:
-                job["status"] = "failed"
-                job["error"] = message
-                job.setdefault("logs", []).append(f"> 失败: {message}")
-                job["updated_at"] = time.time()
-        _snapshot_running_job(job_id, force=True)
-
-    if not Path(video_path).exists():
-        fail(f"video_not_found: {video_path}")
-        return
-    ref_images = [str(pair.get("ref_image") or "") for pair in role_pairs]
-    source_identity_points = [
-        pair.get("source_point") if isinstance(pair.get("source_point"), (list, tuple)) else None
-        for pair in role_pairs
-    ]
-    source_identity_shapes = [
-        pair.get("source_shape") if isinstance(pair.get("source_shape"), dict) else None
-        for pair in role_pairs
-    ]
-    subject_extra_ref_images = [
-        _string_list(pair.get("extra_ref_images"))
-        for pair in role_pairs
-    ]
-    if not ref_images:
-        fail("ref_image_not_found: 没有参考图")
-        return
-
-    use_wan22 = _use_wan22_transfer(len(role_pairs), transfer_backend)
-    use_scail2_colored = _use_scail2_colored_transfer(transfer_backend)
-    use_scail2_masked = _use_scail2_masked_transfer(transfer_backend)
-    use_bernini = _use_bernini_transfer(transfer_backend)
-    use_runninghub_bernini = _use_runninghub_bernini_transfer(transfer_backend)
-    uses_scail2_worker = _backend_uses_scail2_worker(transfer_backend)
-    scail2_lock_acquired = False
-    backend_label = "Wan2.2 云端换人" if use_wan22 else "SCAIL-2 ComfyUI 换人"
-    add_log(f"> {backend_label} ({len(ref_images)} 个目标人物)")
-    for i, pair in enumerate(role_pairs):
-        color = SCAIL2_COLOR_NAMES[i]
-        add_log(f"  {color}: {pair['name']} → {Path(pair['ref_image']).name}")
-    _log_role_reference_debug(role_pairs, add_log)
-
-    output_dir = Path(video_path).parent.parent.parent / "04_AI输出成片"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    source_video_path = video_path
-    scail2_input_video_path = video_path
-
-    try:
-        if uses_scail2_worker:
-            global MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID
-            if not MODE2_SCAIL2_TRANSFER_LOCK.acquire(blocking=False):
-                active = MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID or "unknown"
-                fail(f"scail2_busy: another Scail2 job is running ({active})")
-                return
-            scail2_lock_acquired = True
-            MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = job_id
-            add_log("> Scail2 已进入单任务队列：5 段会严格按顺序一段一段跑")
-            if not _bool_value(scail2_upload_audio, True):
-                try:
-                    from spvideo.ffmpeg_tools import strip_audio_from_video
-
-                    silent_dir = output_dir / "_scail2_inputs"
-                    silent_path = silent_dir / f"silent_{Path(video_path).stem}_{job_id}.mp4"
-                    scail2_input_video_path = str(strip_audio_from_video(video_path, silent_path))
-                    add_log("> Scail2 上传声音: 关；已生成静音输入，只把画面送去做动作参考")
-                    add_log("> 生成完成后仍会把原视频音轨补回结果，方便预览对比")
-                    with JOBS_LOCK:
-                        job = JOBS.get(job_id)
-                        if job is not None:
-                            job["scail2_input_video_path"] = scail2_input_video_path
-                            job["scail2_upload_audio"] = False
-                            job["updated_at"] = time.time()
-                except Exception as exc:  # noqa: BLE001
-                    fail(f"scail2_strip_audio_failed: {exc}")
-                    return
-            else:
-                add_log("> Scail2 上传声音: 开；原视频音轨会随输入一起上传")
-        if use_wan22:
-            if len(role_pairs) > 1:
-                add_log("> 正在自动建立每个角色的 SAM3 轨迹")
-                _ensure_wan_role_tracks(
-                    project_dir=project_dir,
-                    video_path=video_path,
-                    role_pairs=role_pairs,
-                    job_id=job_id,
-                    add_log=add_log,
-                )
-            else:
-                add_log("> Wan2.2 单角色模式: 跳过 SAM3，直接上传原始片段")
-            result = _run_wan_multi_role_transfer(
-                video_path=video_path,
-                role_pairs=role_pairs,
-                output_dir=output_dir,
-                api_key=_wan_api_key(),
-                add_log=add_log,
-            )
-            final_output_path = str(result["output_path"])
-            with JOBS_LOCK:
-                job = JOBS.get(job_id)
-                if job is not None:
-                    job["status"] = "done"
-                    job["result"] = result
-                    job["updated_at"] = time.time()
-                    job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
-            _snapshot_running_job(job_id, force=True)
-            return
-
-        saved_subshot_ranges = (
-            _mode2_saved_subshot_ranges(project_dir, segment_id)
-            if transfer_backend == "scail2"
-            and not any([use_scail2_colored, use_scail2_masked, use_bernini, use_runninghub_bernini])
-            else []
-        )
-        if saved_subshot_ranges:
-            from spvideo.scail2_client import Scail2Client
-
-            client = Scail2Client()
-            add_log(f"> 使用已保存镜头切段: {len(saved_subshot_ranges)} 段")
-            result = _run_scail2_hardcut_transfer(
-                client=client,
-                video_path=scail2_input_video_path,
-                role_pairs=role_pairs,
-                project_dir=project_dir,
-                segment_id=segment_id,
-                hard_cuts=saved_subshot_ranges,
-                output_dir=output_dir,
-                video_window=video_window,
-                sampler_preset=sampler_preset,
-                normalize_size=normalize_size,
-                positive_prompt=positive_prompt,
-                sam_text=sam_text,
-                add_log=add_log,
-            )
-            final_output_path = str(result["output_path"])
-            final_output_path = _mode2_copy_source_audio_to_generated(source_video_path, final_output_path, output_dir, add_log)
-            with JOBS_LOCK:
-                job = JOBS.get(job_id)
-                if job is not None:
-                    job["status"] = "done"
-                    job["result"] = {**result, "output_path": final_output_path}
-                    job["updated_at"] = time.time()
-                    job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
-            _snapshot_running_job(job_id, force=True)
-            return
-
-        if use_runninghub_bernini:
-            from spvideo.runninghub_client import RunningHubClient
-
-            add_log("> RunningHub Bernini path: exported API workflow")
-            client = RunningHubClient()
-            result = client.transfer_bernini(
-                video_path=scail2_input_video_path,
-                ref_images=ref_images,
-                role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                video_window=video_window,
-                normalize_size=normalize_size,
-                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                on_progress=add_log,
-            )
-        elif use_bernini:
-            from spvideo.scail2_client import Scail2Client
-
-            client = Scail2Client()
-            add_log("> Bernini test path: WanAnimatePlus Bernini rv2v")
-            result = client.transfer_bernini_test(
-                video_path=scail2_input_video_path,
-                ref_images=ref_images,
-                role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                video_window=video_window,
-                sampler_preset=sampler_preset,
-                normalize_size=normalize_size,
-                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                on_progress=add_log,
-            )
-        elif use_scail2_colored:
-            from spvideo.scail2_client import Scail2Client
-
-            client = Scail2Client()
-            add_log("> SCAIL-2 colored mask path AUTO_SEG_V2: explicit SCAIL2ColoredMask + WanSCAILToVideo")
-            result = client.transfer_colored_mask_test(
-                video_path=scail2_input_video_path,
-                ref_images=ref_images,
-                role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                source_positions=[pair.get("source_x") for pair in role_pairs],
-                video_window=video_window,
-                sampler_preset=sampler_preset,
-                normalize_size=normalize_size,
-                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
-                on_progress=add_log,
-            )
-        elif use_scail2_masked:
-            from spvideo.scail2_client import Scail2Client
-
-            client = Scail2Client()
-            add_log("> SCAIL-2 masked test path: WanAnimatePlus + explicit colored masks")
-            result = client.transfer_wananimate_masked_test(
-                video_path=scail2_input_video_path,
-                ref_images=ref_images,
-                role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                video_window=video_window,
-                sampler_preset=sampler_preset,
-                normalize_size=normalize_size,
-                positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
-                on_progress=add_log,
-            )
-        else:
-            from spvideo.scail2_client import Scail2Client
-
-            client = Scail2Client()
-            if len(role_pairs) > 1:
-                result = _run_scail2_sequential_transfer(
-                    client=client,
-                    video_path=scail2_input_video_path,
-                    role_pairs=role_pairs,
-                    output_dir=output_dir,
-                    video_window=video_window,
-                    sampler_preset=sampler_preset,
-                    normalize_size=normalize_size,
-                    positive_prompt=positive_prompt,
-                    sam_text=sam_text,
-                    add_log=add_log,
-                )
-            else:
-                result = client.transfer(
-                    video_path=scail2_input_video_path,
-                    ref_images=ref_images,
-                    subject_extra_ref_images=subject_extra_ref_images,
-                    role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                    video_window=video_window,
-                    sampler_preset=sampler_preset,
-                    normalize_size=normalize_size,
-                    positive_prompt=_resolve_scail2_positive_prompt(positive_prompt, role_pairs),
-                    sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
-                    save_debug_masks=True,
-                    source_identity_points=source_identity_points,
-                    source_identity_shapes=source_identity_shapes,
-                    output_dir=output_dir,
-                    on_progress=add_log,
-                )
-            if len(ref_images) > 1 and not (result.get("mask_output_paths") or {}):
-                add_log("> SCAIL-2 normal path produced no colored masks; running mask inspection fallback")
-                mask_result = client.inspect_masks(
-                    video_path=scail2_input_video_path,
-                    ref_images=ref_images,
-                    role_names=[str(pair.get("name") or "") for pair in role_pairs],
-                    video_window=video_window,
-                    sampler_preset=sampler_preset,
-                    normalize_size=normalize_size,
-                    sam_text=_resolve_scail2_sam_text(sam_text, len(ref_images)),
-                    on_progress=add_log,
-                )
-                result["mask_output_paths"] = mask_result.get("mask_output_paths") or {}
-        final_output_path = str(result["output_path"])
-        final_output_path = _mode2_copy_source_audio_to_generated(source_video_path, final_output_path, output_dir, add_log)
-
-        protection_track_dir = ""
-        if protection_annotation_id:
-            store = load_asset_store(project_dir)
-            protection = next(
-                (item for item in store.get("annotations", []) if item.get("id") == protection_annotation_id),
-                None,
-            )
-            if not protection:
-                raise ValueError("protection_annotation_not_found")
-            protection_track_dir = str(protection.get("track_dir") or "")
-            protected_path = output_dir / f"protected_{Path(final_output_path).name}"
-            add_log("> SCAIL-2 换人完成，开始保护区域回贴")
-            from spvideo.protection_compositor import composite_protected_region
-
-            composite_protected_region(
-                source_video=source_video_path,
-                generated_video=final_output_path,
-                track_dir=protection_track_dir,
-                output_path=protected_path,
-            )
-            final_output_path = str(protected_path)
-            add_log(f"> 保护区域回贴完成: {final_output_path}")
-
-        background_result = None
-        if use_background:
-            config = get_background_config(
-                project_dir,
-                segment_id=segment_id,
-                video_path=video_path,
-            )
-            if not config or config.get("mode") == "keep_original":
-                raise ValueError("background_config_required")
-            store = load_asset_store(project_dir)
-            foreground_tracks = [
-                str(item.get("track_dir") or "")
-                for item in store.get("annotations", [])
-                if item.get("type") == "person"
-                and _same_video_path(item.get("video_path"), video_path)
-                and item.get("track_status") == "ready"
-                and (Path(str(item.get("track_dir") or "")) / "track_summary.json").exists()
-            ]
-            if protection_track_dir:
-                foreground_tracks.append(protection_track_dir)
-            if not foreground_tracks:
-                raise ValueError("background_foreground_track_not_ready")
-
-            background_path = output_dir / f"background_{Path(final_output_path).name}"
-            update_background_config(
-                project_dir,
-                segment_id=segment_id,
-                video_path=video_path,
-                status="running",
-                error="",
-            )
-            add_log("> 换人结果已完成，开始独立背景后处理")
-            from spvideo.background_compositor import compose_background
-
-            background_result = compose_background(
-                foreground_video=final_output_path,
-                background_asset=str(config.get("asset_path") or ""),
-                track_dirs=foreground_tracks,
-                output_path=background_path,
-                fit_mode=str(config.get("fit_mode") or "cover"),
-                feather_pixels=int(config.get("feather_pixels") or 9),
-                dilate_pixels=int(config.get("dilate_pixels") or 6),
-            )
-            final_output_path = str(background_result["output_path"])
-            update_background_config(
-                project_dir,
-                segment_id=segment_id,
-                video_path=video_path,
-                status="done",
-                output_path=final_output_path,
-                error="",
-            )
-            add_log(f"> 背景后处理完成: {final_output_path}")
-
-        with JOBS_LOCK:
-            job = JOBS.get(job_id)
-            if job is not None:
-                job["status"] = "done"
-                job["result"] = {
-                    "output_path": final_output_path,
-                    "scail2_output_path": str(result["output_path"]),
-                    "prompt_id": result.get("prompt_id"),
-                    "workflow_path": result.get("workflow_path"),
-                    "role_names": result.get("role_names"),
-                    "ref_images": result.get("ref_images"),
-                    "background": background_result,
-                    "video_meta": result.get("video_meta"),
-                    "video_window": result.get("video_window"),
-                    "output_size": result.get("output_size"),
-                    "sampler_preset": result.get("sampler_preset"),
-                    "mask_output_paths": result.get("mask_output_paths"),
-                    "workflow_mode": result.get("workflow_mode"),
-                    "sequential_passes": result.get("sequential_passes"),
-                }
-                job.setdefault("logs", []).append(f"> 完成! {final_output_path}")
-                job["updated_at"] = time.time()
-        _snapshot_running_job(job_id, force=True)
-    except Exception as exc:  # noqa: BLE001
-        error_message = str(exc) or type(exc).__name__
-        trace_tail = traceback.format_exc().strip().splitlines()[-8:]
-        if use_background and project_dir:
-            update_background_config(
-                project_dir,
-                segment_id=segment_id,
-                video_path=video_path,
-                status="failed",
-                error=error_message,
-            )
-        for line in trace_tail:
-            add_log("> traceback: " + line)
-        fail(error_message)
-    finally:
-        if scail2_lock_acquired:
-            MODE2_SCAIL2_TRANSFER_ACTIVE_JOB_ID = ""
-            try:
-                MODE2_SCAIL2_TRANSFER_LOCK.release()
-            except RuntimeError:
-                pass
 
 
 def _ensure_wan_role_tracks(
@@ -13008,199 +12318,6 @@ def _wan_api_key() -> str:
     ).strip()
 
 
-def _plain_secret(value: Any) -> str:
-    text = str(value or "").strip()
-    if not text or text.startswith("***"):
-        return ""
-    return text
-
-
-def _windows_user_env(name: str) -> str:
-    if os.name != "nt":
-        return ""
-    try:
-        import winreg
-
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as key:
-            value, _ = winreg.QueryValueEx(key, name)
-        return str(value or "").strip()
-    except Exception:  # noqa: BLE001
-        return ""
-
-
-def _runtime_or_user_env(name: str) -> str:
-    return str(os.environ.get(name) or _windows_user_env(name) or "").strip()
-
-
-def _seedance_a_api_key() -> str:
-    return (
-        _plain_secret(_runtime_or_user_env("SEEDANCE_A_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("TIANYUE_A_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("TIANYUE_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("SEEDANCE_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("NEWAPI_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("LINDONG_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("ZHENZHEN_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("YUANQI_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("YUANQI_UPLOAD_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("WAN22_API_KEY"))
-    ).strip()
-
-
-def _seedance_a_base_url() -> str:
-    return (
-        _runtime_or_user_env("SEEDANCE_A_BASE_URL")
-        or _runtime_or_user_env("TIANYUE_A_BASE_URL")
-        or _runtime_or_user_env("NEWAPI_BASE_URL")
-        or _runtime_or_user_env("ZHENZHEN_BASE_URL")
-        or DEFAULT_SEEDANCE_A_BASE_URL
-    ).strip().rstrip("/")
-
-
-def _seedance_a_key_source_hint() -> str:
-    env_keys = (
-        "SEEDANCE_A_API_KEY",
-        "TIANYUE_A_API_KEY",
-        "TIANYUE_API_KEY",
-        "SEEDANCE_API_KEY",
-        "NEWAPI_API_KEY",
-        "LINDONG_API_KEY",
-        "ZHENZHEN_API_KEY",
-        "YUANQI_API_KEY",
-        "YUANQI_UPLOAD_API_KEY",
-        "WAN22_API_KEY",
-    )
-    for key in env_keys:
-        if _plain_secret(_runtime_or_user_env(key)):
-            return f"environment variable {key}"
-    return "Mode2 04 视频生成填写的通道A API Key 或环境变量 SEEDANCE_A_API_KEY"
-
-
-def _seedance_a_friendly_error(
-    message: str,
-    status_code: int | None = None,
-    key_source_hint: str = "",
-) -> str:
-    text = str(message or "").strip()
-    if status_code in {401, 403} or "invalid token" in text.lower():
-        hint = str(key_source_hint or _seedance_a_key_source_hint()).strip()
-        return (
-            f"Seedance 通道A鉴权失败：{text or 'Invalid token'}。"
-            f"请检查{hint}，"
-            "保存有效值后刷新本页再试。"
-        )
-    return text
-
-
-def _seedance_a_config_sources(payload: dict[str, Any], request: dict[str, Any]) -> list[dict[str, Any]]:
-    sources: list[dict[str, Any]] = []
-    seen: set[int] = set()
-
-    def add_source(source: Any) -> None:
-        if not isinstance(source, dict):
-            return
-        marker = id(source)
-        if marker in seen:
-            return
-        seen.add(marker)
-        sources.append(source)
-
-    for source in (request, payload):
-        add_source(source)
-        if not isinstance(source, dict):
-            continue
-        for key in ("relay", "relay_config", "relayConfig", "seedance_relay", "seedanceRelay", "channel_a", "channelA"):
-            add_source(source.get(key))
-    return sources
-
-
-def _seedance_a_request_config_value(
-    payload: dict[str, Any],
-    request: dict[str, Any],
-    keys: tuple[str, ...],
-) -> Any:
-    sources = _seedance_a_config_sources(payload, request)
-    for key in keys:
-        for source in sources:
-            value = source.get(key)
-            if value is not None:
-                return value
-    return ""
-
-
-def _seedance_a_request_api_key(payload: dict[str, Any], request: dict[str, Any]) -> tuple[str, str]:
-    api_key = _plain_secret(
-        _seedance_a_request_config_value(
-            payload,
-            request,
-            (
-                "relay_api_key",
-                "relayApiKey",
-                "seedance_api_key",
-                "seedanceApiKey",
-                "api_key",
-                "apiKey",
-            ),
-        )
-    )
-    if api_key:
-        return api_key, "Mode2 04 视频生成填写的通道A API Key"
-    return _seedance_a_api_key(), _seedance_a_key_source_hint()
-
-
-def _seedance_a_request_base_url(payload: dict[str, Any], request: dict[str, Any]) -> str:
-    base_url = _plain_secret(
-        _seedance_a_request_config_value(
-            payload,
-            request,
-            (
-                "relay_base_url",
-                "relayBaseUrl",
-                "seedance_base_url",
-                "seedanceBaseUrl",
-                "base_url",
-                "baseUrl",
-            ),
-        )
-    )
-    return (base_url or _seedance_a_base_url()).strip().rstrip("/")
-
-
-def _seedance_a_upload_base_url() -> str:
-    return (
-        os.environ.get("SEEDANCE_A_UPLOAD_BASE_URL")
-        or os.environ.get("YUANQI_UPLOAD_BASE_URL")
-        or os.environ.get("PUBLIC_UPLOAD_URL")
-        or DEFAULT_SEEDANCE_A_UPLOAD_BASE_URL
-    ).strip().rstrip("/")
-
-
-def _seedance_a_ref_to_data_url(ref: Any) -> str:
-    text = str(ref or "").strip()
-    if not text:
-        return ""
-    if text.startswith("data:"):
-        return text
-    try:
-        if text.startswith(("http://", "https://")):
-            response = requests.get(text, timeout=60)
-            if not response.ok:
-                return ""
-            mime = response.headers.get("content-type") or "application/octet-stream"
-            import base64
-
-            return f"data:{mime};base64,{base64.b64encode(response.content).decode('ascii')}"
-        local_path = Path(_decode_media_ref_path(text))
-        if not local_path.exists() or not local_path.is_file():
-            return ""
-        mime = mimetypes.guess_type(local_path.name)[0] or "application/octet-stream"
-        import base64
-
-        return f"data:{mime};base64,{base64.b64encode(local_path.read_bytes()).decode('ascii')}"
-    except Exception:  # noqa: BLE001
-        return ""
-
-
 def _decode_media_ref_path(ref: str) -> str:
     text = str(ref or "").strip()
     if not text:
@@ -13212,1626 +12329,6 @@ def _decode_media_ref_path(ref: str) -> str:
     if text.lower().startswith("file://"):
         return unquote(urlparse(text).path).lstrip("/") if os.name == "nt" else unquote(urlparse(text).path)
     return text
-
-
-def _seedance_a_response_error_message(data: dict[str, Any], fallback: str, status_code: int) -> str:
-    error = data.get("error")
-    if isinstance(error, dict):
-        return str(error.get("message") or error.get("code") or fallback or f"天悦A HTTP {status_code}")
-    return str(error or data.get("message") or fallback or f"天悦A HTTP {status_code}")
-
-
-def _seedance_a_is_sensitive_image_error(data: dict[str, Any], text: str) -> bool:
-    error = data.get("error") if isinstance(data, dict) else {}
-    code = str(error.get("code") if isinstance(error, dict) else "").strip()
-    message = str(error.get("message") if isinstance(error, dict) else "").strip()
-    haystack = " ".join([code, message, str(text or "")]).lower()
-    return (
-        "inputimagesensitivecontentdetected" in haystack
-        or "input image may contain real person" in haystack
-        or "privacyinformation" in haystack
-    )
-
-
-def _seedance_a_upload_ref(ref: Any, api_key: str) -> str:
-    text = str(ref or "").strip()
-    if not text:
-        return ""
-    if text.startswith(("http://", "https://")):
-        return text
-
-    from spvideo.yuanqi_upload import upload_file_for_url
-
-    upload_base = _seedance_a_upload_base_url()
-    if text.startswith("data:"):
-        import base64
-
-        header, _, encoded = text.partition(",")
-        if not encoded:
-            return ""
-        content_type = header.split(";", 1)[0].replace("data:", "") or "application/octet-stream"
-        ext = mimetypes.guess_extension(content_type) or ".bin"
-        temp_dir = ROOT.parent / ".seedance_upload_cache"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        temp_path = temp_dir / f"seedance_ref_{uuid.uuid4().hex}{ext}"
-        temp_path.write_bytes(base64.b64decode(encoded))
-        try:
-            return str(upload_file_for_url(temp_path, api_key=api_key, base_url=upload_base).get("url") or "")
-        finally:
-            temp_path.unlink(missing_ok=True)
-
-    local_path = Path(_decode_media_ref_path(text))
-    if not local_path.exists() or not local_path.is_file():
-        return ""
-    return str(upload_file_for_url(local_path, api_key=api_key, base_url=upload_base).get("url") or "")
-
-
-def _seedance_a_output_dir(project_dir: str, source_video_path: str) -> Path:
-    project_text = str(project_dir or "").strip()
-    if project_text:
-        base = Path(project_text)
-    else:
-        source = Path(str(source_video_path or "")).expanduser()
-        base = source.parent if source.name else ROOT.parent
-    output_dir = base / "04_AI输出成片"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
-
-
-def _seedance_a_debug_dir(project_dir: str, source_video_path: str, package_id: str = "") -> Path:
-    output_dir = _seedance_a_output_dir(project_dir, source_video_path)
-    safe_package = _safe_output_name(str(package_id or ""))
-    if safe_package:
-        debug_dir = output_dir / "generation_packages" / safe_package / "debug"
-    else:
-        debug_dir = output_dir / "seedance_a_debug"
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    return debug_dir
-
-
-def _seedance_a_redacted(value: Any) -> Any:
-    if isinstance(value, dict):
-        redacted: dict[str, Any] = {}
-        for key, item in value.items():
-            lower = str(key).lower()
-            if any(token in lower for token in ("api_key", "apikey", "authorization", "bearer", "token", "secret")):
-                redacted[str(key)] = "***"
-            else:
-                redacted[str(key)] = _seedance_a_redacted(item)
-        return redacted
-    if isinstance(value, list):
-        return [_seedance_a_redacted(item) for item in value]
-    return value
-
-
-def _seedance_a_write_debug_json(debug_dir: Path, prefix: str, data: dict[str, Any]) -> str:
-    safe_prefix = _safe_output_name(prefix or "seedance")
-    path = debug_dir / f"{safe_prefix}_{time.strftime('%Y%m%d_%H%M%S')}.json"
-    path.write_text(
-        json.dumps(_seedance_a_redacted(data), ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-    return str(path)
-
-
-def _normalize_seedance_a_model(model: str) -> str:
-    raw = str(model or "").strip()
-    lower = raw.lower()
-    channel2_models = {
-        "grok_video3_pro",
-        "grok_video3",
-        "openAiSora2Pro",
-        "videos",
-        "videos-mini",
-        "sd-2.0-r3",
-        "xinghe-2.0",
-        "videos_stable_fast",
-        "videos_stable",
-    }
-    if raw in channel2_models:
-        return raw
-    if "stable_fast" in lower or "480p-fast" in lower or "720p-fast" in lower or "fast" in lower:
-        return "videos_stable_fast"
-    if "stable" in lower or raw.startswith("A-seedance") or raw.startswith("doubao-seedance"):
-        return "videos_stable"
-    if "sora" in lower:
-        return "openAiSora2Pro"
-    if "mini" in lower:
-        return "videos-mini"
-    if "grok" in lower:
-        return "grok_video3_pro"
-    return "videos_stable_fast"
-
-
-def _seedance_a_size_for_channel2(ratio: str, resolution: str) -> str:
-    raw_resolution = str(resolution or "").strip()
-    if re.fullmatch(r"\d+x\d+", raw_resolution):
-        return raw_resolution
-    ratio_text = str(ratio or "").strip() or "9:16"
-    is_480 = "480" in raw_resolution
-    if ratio_text == "16:9":
-        return "854x480" if is_480 else "1280x720"
-    if ratio_text == "1:1":
-        return "768x768" if is_480 else "1024x1024"
-    if ratio_text == "21:9":
-        return "1024x438" if is_480 else "1792x768"
-    if ratio_text == "9:21":
-        return "438x1024" if is_480 else "768x1792"
-    if ratio_text in {"4:3", "3:4"}:
-        return "640x480" if ratio_text == "4:3" else "480x640"
-    return "480x854" if is_480 else "720x1280"
-
-
-def _seedance_a_build_content(
-    prompt: str,
-    *,
-    first_frame: str = "",
-    last_frame: str = "",
-    ref_images: list[str] | None = None,
-    videos: list[str] | None = None,
-    audios: list[str] | None = None,
-    api_key: str,
-    logic_variant: str = "",
-) -> list[dict[str, Any]]:
-    content: list[dict[str, Any]] = [{"type": "text", "text": str(prompt)}]
-    has_first = bool(str(first_frame or "").strip())
-    has_last = bool(str(last_frame or "").strip())
-    use_data_urls = str(logic_variant or "").strip() == "video-v2"
-
-    if has_first:
-        url = _seedance_a_ref_to_data_url(first_frame) if use_data_urls else _seedance_a_upload_ref(first_frame, api_key)
-        if not url:
-            raise RuntimeError("Seedance first_frame 处理失败")
-        entry: dict[str, Any] = {"type": "image_url", "image_url": {"url": url}}
-        if has_last:
-            entry["role"] = "first_frame"
-        content.append(entry)
-
-    if has_first and has_last:
-        url = _seedance_a_ref_to_data_url(last_frame) if use_data_urls else _seedance_a_upload_ref(last_frame, api_key)
-        if not url:
-            raise RuntimeError("Seedance last_frame 处理失败")
-        content.append({"type": "image_url", "image_url": {"url": url}, "role": "last_frame"})
-
-    for ref in _string_list(ref_images or []):
-        url = _seedance_a_ref_to_data_url(ref) if use_data_urls else _seedance_a_upload_ref(ref, api_key)
-        if url:
-            content.append({"type": "image_url", "image_url": {"url": url}, "role": "reference_image"})
-
-    for index, ref in enumerate(_string_list(videos or []), 1):
-        if not ref:
-            continue
-        url = _seedance_a_upload_ref(ref, api_key)
-        if not url:
-            raise RuntimeError(f"Seedance reference_video {index} 处理失败")
-        content.append({"type": "video_url", "video_url": {"url": url}, "role": "reference_video"})
-
-    for index, ref in enumerate(_string_list(audios or []), 1):
-        if not ref:
-            continue
-        url = _seedance_a_upload_ref(ref, api_key)
-        if not url:
-            raise RuntimeError(f"Seedance reference_audio {index} 处理失败")
-        content.append({"type": "audio_url", "audio_url": {"url": url}, "role": "reference_audio"})
-
-    return content
-
-
-def _submit_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
-    request = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
-    model = _normalize_seedance_a_model(str(request.get("model") or "").strip())
-    prompt = str(request.get("prompt") or "").strip()
-    logic_variant = str(request.get("__logicVariant") or request.get("logicVariant") or "").strip()
-    if not model:
-        raise ValueError("model 必填")
-    if not prompt:
-        raise ValueError("prompt 不得为空")
-
-    api_key, api_key_hint = _seedance_a_request_api_key(payload, request)
-    if not api_key:
-        raise ValueError("缺少 Seedance 通道A API Key，请在 Mode2 04 视频生成填写通道A API Key，或设置本项目环境变量 SEEDANCE_A_API_KEY。")
-
-    warnings: list[str] = []
-    duration = round(_mode2_float(request.get("duration") or request.get("seconds"), 5.0), 3)
-    if duration < 5 or duration > 15:
-        raise ValueError(f"Seedance 时长必须在 5-15 秒内，当前 {duration:g} 秒")
-    duration_payload: int | float = int(duration) if float(duration).is_integer() else duration
-    raw_size = str(request.get("size") or "").strip()
-    ratio = str(request.get("ratio") or request.get("aspect_ratio") or "").strip()
-    if not ratio and re.fullmatch(r"\d+:\d+", raw_size):
-        ratio = raw_size
-    ratio = ratio or "9:16"
-    resolution = str(request.get("resolution") or "").strip()
-    if not resolution and re.fullmatch(r"\d+x\d+", raw_size):
-        resolution = raw_size
-    if not resolution:
-        resolution = "1280x720" if ratio == "16:9" else "720x1280"
-    if model == "sd-2.0-r3" and re.fullmatch(r"\d+p", resolution, flags=re.IGNORECASE):
-        resolution = "1280x720" if ratio == "16:9" else "720x1280"
-    try:
-        seed = int(request.get("seed") or 0)
-    except (TypeError, ValueError):
-        seed = 0
-    generate_audio = request.get("generate_audio", request.get("generateAudio", True))
-    return_last_frame = request.get("return_last_frame", request.get("returnLastFrame", False))
-    watermark = request.get("watermark", False)
-    web_search = request.get("web_search", request.get("webSearch", False))
-    first_frame = str(request.get("first_frame") or request.get("firstFrame") or "").strip()
-    last_frame = str(request.get("last_frame") or request.get("lastFrame") or "").strip()
-    def collect_refs(*values: Any) -> list[str]:
-        refs: list[str] = []
-        seen: set[str] = set()
-        for value in values:
-            for item in _string_list(value):
-                key = item.lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                refs.append(item)
-        return refs
-
-    ref_images = collect_refs(
-        request.get("images"),
-        request.get("refImages"),
-        request.get("image_urls"),
-        request.get("imageUrls"),
-        request.get("reference_images"),
-        request.get("referenceImages"),
-        request.get("reference_image_urls"),
-        request.get("referenceImageUrls"),
-    )
-    videos = collect_refs(
-        request.get("videos"),
-        request.get("video_urls"),
-        request.get("videoUrls"),
-        request.get("video_url"),
-        request.get("videoUrl"),
-        request.get("referenceVideos"),
-        request.get("reference_videos"),
-        request.get("referenceVideoUrls"),
-        request.get("reference_video_urls"),
-    )
-    audios = collect_refs(
-        request.get("audios"),
-        request.get("audio_urls"),
-        request.get("audioUrls"),
-        request.get("audio_url"),
-        request.get("audioUrl"),
-        request.get("referenceAudios"),
-        request.get("reference_audios"),
-    )
-    project_dir = str(payload.get("project_dir") or payload.get("projectDir") or "").strip()
-    image_deny_keys = _mode2_seedance_generation_image_deny_keys(project_dir)
-    first_candidates = _mode2_filter_seedance_generation_images(
-        [first_frame] if first_frame else [],
-        warnings,
-        field="first_frame",
-        deny_keys=image_deny_keys,
-    )
-    last_candidates = _mode2_filter_seedance_generation_images(
-        [last_frame] if last_frame else [],
-        warnings,
-        field="last_frame",
-        deny_keys=image_deny_keys,
-    )
-    first_frame = first_candidates[0] if first_candidates else ""
-    last_frame = last_candidates[0] if last_candidates else ""
-    ref_images = _mode2_filter_seedance_generation_images(
-        ref_images,
-        warnings,
-        field="images/refImages",
-        deny_keys=image_deny_keys,
-    )
-    ignored_mask_fields = [
-        key for key in ("mask", "mask_path", "maskPath", "mask_image", "maskImage", "candidate_mask_path")
-        if str(request.get(key) or "").strip()
-    ]
-    if ignored_mask_fields:
-        warnings.append(
-            "Mode2 safety: ignored mask field(s) "
-            + ", ".join(ignored_mask_fields)
-            + "; Seedance receives no masks."
-        )
-
-    uploaded_images: list[str] = []
-    for ref in [first_frame, *ref_images, last_frame]:
-        if not ref:
-            continue
-        url = _seedance_a_upload_ref(ref, api_key)
-        if url:
-            uploaded_images.append(url)
-    uploaded_images = uploaded_images[:4]
-
-    uploaded_videos: list[str] = []
-    for index, ref in enumerate(videos[:3], 1):
-        url = _seedance_a_upload_ref(ref, api_key)
-        if not url:
-            raise RuntimeError(f"Channel 2 reference_video {index} processing failed")
-        uploaded_videos.append(url)
-
-    uploaded_audios: list[str] = []
-    for ref in audios[:1]:
-        url = _seedance_a_upload_ref(ref, api_key)
-        if url:
-            uploaded_audios.append(url)
-
-    non_text_content: list[dict[str, Any]] = []
-    for url in uploaded_images:
-        non_text_content.append({"type": "image_url", "image_url": {"url": url}, "role": "reference_image"})
-    for url in uploaded_videos:
-        non_text_content.append({"type": "video_url", "video_url": {"url": url}, "role": "reference_video"})
-    for url in uploaded_audios:
-        non_text_content.append({"type": "audio_url", "audio_url": {"url": url}, "role": "reference_audio"})
-    metadata: dict[str, Any] = {
-        "content": non_text_content,
-        "ratio": ratio,
-        "resolution": resolution,
-        "generate_audio": generate_audio is not False,
-        "return_last_frame": return_last_frame is True,
-        "watermark": watermark is True,
-    }
-    if web_search is True:
-        metadata["tools"] = [{"type": "web_search"}]
-    if seed > 0:
-        metadata["seed"] = seed
-
-    use_video_v2_payload = logic_variant == "video-v2" or model == "sd-2.0-r3"
-    upstream_payload: dict[str, Any] = {
-        "model": model,
-        "prompt": prompt,
-        "duration": duration_payload,
-        "aspect_ratio": ratio,
-        "size": _seedance_a_size_for_channel2(ratio, resolution),
-    }
-    if not use_video_v2_payload:
-        upstream_payload["ratio"] = ratio
-        upstream_payload["async"] = True
-        upstream_payload["metadata"] = metadata
-    if uploaded_images:
-        upstream_payload["images"] = uploaded_images
-        upstream_payload["image_urls"] = uploaded_images
-        if not use_video_v2_payload and len(uploaded_images) == 1:
-            upstream_payload["image_url"] = uploaded_images[0]
-    if uploaded_videos:
-        upstream_payload["video_urls"] = uploaded_videos
-        if not use_video_v2_payload:
-            upstream_payload["videos"] = uploaded_videos
-            upstream_payload["referenceVideos"] = uploaded_videos
-            upstream_payload["reference_videos"] = uploaded_videos
-            upstream_payload["video_reference"] = [{"url": url} for url in uploaded_videos]
-        if not use_video_v2_payload and len(uploaded_videos) == 1:
-            upstream_payload["video_url"] = uploaded_videos[0]
-    if uploaded_audios and not use_video_v2_payload:
-        upstream_payload["audio_url"] = uploaded_audios[0]
-        upstream_payload["audio_urls"] = uploaded_audios
-        upstream_payload["referenceAudios"] = uploaded_audios
-        upstream_payload["reference_audios"] = uploaded_audios
-        upstream_payload["audio_reference"] = [{"url": url} for url in uploaded_audios]
-    if generate_audio is not None and not use_video_v2_payload:
-        upstream_payload["generate_audio"] = generate_audio is not False
-    if seed > 0 and not use_video_v2_payload:
-        upstream_payload["seed"] = seed
-
-    base_url = _seedance_a_request_base_url(payload, request)
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    source_video_path = str(payload.get("source_video_path") or payload.get("video_path") or "").strip()
-    package_id = str(payload.get("package_id") or payload.get("packageId") or "").strip()
-    output_role = _mode2_safe_asset_slug(
-        payload.get("output_role")
-        or payload.get("outputRole")
-        or request.get("output_role")
-        or request.get("outputRole")
-        or "result",
-        fallback="result",
-    )
-    if output_role not in {"mask", "result"}:
-        output_role = "result"
-    task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
-    debug_dir = _seedance_a_debug_dir(project_dir, source_video_path, package_id)
-    submit_path = "/v1/videos"
-    debug_prefix = _safe_output_name("_".join(part for part in [task_name, "submit"] if part))
-
-    def post_generation() -> tuple[requests.Response, str, dict[str, Any]]:
-        posted = requests.post(
-            f"{base_url}{submit_path}",
-            headers=headers,
-            json=upstream_payload,
-            timeout=600,
-        )
-        posted_text = posted.text
-        try:
-            posted_data = posted.json()
-        except ValueError:
-            posted_data = {"_raw": posted_text}
-        return posted, posted_text, posted_data
-
-    debug_path = _seedance_a_write_debug_json(debug_dir, debug_prefix, {
-        "stage": "submit_request",
-        "submit_url": f"{base_url}{submit_path}",
-        "task_name": task_name,
-        "package_id": package_id,
-        "project_dir": project_dir,
-        "source_video_path": source_video_path,
-        "local_inputs": {
-            "images": ref_images,
-            "videos": videos,
-            "audios": audios,
-            "first_frame": first_frame,
-            "last_frame": last_frame,
-        },
-        "uploaded": {
-            "images": uploaded_images,
-            "videos": uploaded_videos,
-            "audios": uploaded_audios,
-        },
-        "upstream_payload": upstream_payload,
-    })
-    response, text, data = post_generation()
-    image_content = [item for item in non_text_content if item.get("type") == "image_url"]
-    if (
-        not response.ok
-        and image_content
-        and _seedance_a_is_sensitive_image_error(data, text)
-        and request.get("auto_drop_sensitive_images", request.get("autoDropSensitiveImages", True)) is not False
-    ):
-        image_count = len(image_content)
-        non_text_content = [item for item in non_text_content if item.get("type") != "image_url"]
-        metadata["content"] = non_text_content
-        if "metadata" in upstream_payload:
-            upstream_payload["metadata"] = metadata
-        for key in ("images", "image_urls", "image_url"):
-            upstream_payload.pop(key, None)
-        warnings.append(
-            f"上游拒绝 {image_count} 张参考图：疑似真人隐私图片。已自动移除图片，仅用视频/音频/提示词重试。"
-        )
-        _seedance_a_write_debug_json(debug_dir, f"{debug_prefix}_retry_without_images", {
-            "stage": "submit_retry_without_images",
-            "submit_url": f"{base_url}{submit_path}",
-            "warning": warnings[-1],
-            "upstream_payload": upstream_payload,
-            "previous_response": data,
-        })
-        response, text, data = post_generation()
-    _seedance_a_write_debug_json(debug_dir, f"{debug_prefix}_response", {
-        "stage": "submit_response",
-        "submit_url": f"{base_url}{submit_path}",
-        "http_status": response.status_code,
-        "response_ok": response.ok,
-        "response": data,
-        "debug_request_path": debug_path,
-    })
-    if not response.ok:
-        message = _seedance_a_response_error_message(data, text, response.status_code)
-        friendly = _seedance_a_friendly_error(str(message)[:800], response.status_code, api_key_hint)
-        raise RuntimeError(f"{friendly}\n调试记录: {debug_path}")
-
-    task_id = str(
-        ((data.get("data") or {}).get("task_id") if isinstance(data.get("data"), dict) else "")
-        or data.get("task_id")
-        or data.get("id")
-        or ""
-    ).strip()
-    if not task_id:
-        raise RuntimeError(f"天悦A未返回 task_id: {str(data)[:500]}\n调试记录: {debug_path}")
-
-    with SEEDANCE_A_TASKS_LOCK:
-        SEEDANCE_A_TASKS[task_id] = {
-            "api_key": api_key,
-            "base_url": base_url,
-            "project_dir": project_dir,
-            "source_video_path": source_video_path,
-            "task_name": task_name,
-            "segment_id": str(payload.get("segment_id") or "").strip(),
-            "package_id": package_id,
-            "output_role": output_role,
-            "submitted_at": time.time(),
-            "output_path": "",
-            "raw_submit": data,
-            "debug_path": debug_path,
-            "submit_url": f"{base_url}{submit_path}",
-            "model": model,
-            "route": "channel2",
-        }
-    if package_id and project_dir:
-        try:
-            root = _resolve_storyboard_mode2_project_dir(project_dir)
-            task_field = "maskTaskId" if output_role == "mask" else "resultTaskId"
-            context_field = "maskPollContext" if output_role == "mask" else "resultPollContext"
-            _write_generation_package_state(root, package_id, {
-                "status": "mask_running" if output_role == "mask" else "result_running",
-                task_field: task_id,
-                context_field: {
-                    "packageId": package_id,
-                    "outputRole": output_role,
-                    "sourcePath": source_video_path,
-                    "outputLabel": "白膜视频" if output_role == "mask" else "结果视频",
-                },
-                "sourcePath": source_video_path,
-                "lastMessage": f"通道2任务已提交\ntask_id: {task_id}",
-                "lastTone": "warn",
-                "errorMessage": "",
-            })
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"生成包运行态写入失败：{exc}")
-
-    return {
-        "success": True,
-        "task_id": task_id,
-        "taskId": task_id,
-        "status": "SUBMITTED",
-        "model": model,
-        "uploaded": {
-            "images": uploaded_images,
-            "videos": uploaded_videos,
-            "audios": uploaded_audios,
-        },
-        "debug_path": debug_path,
-        "warnings": warnings,
-        "raw": data,
-    }
-
-
-def _query_seedance_a_task(payload: dict[str, Any]) -> dict[str, Any]:
-    task_id = str(payload.get("task_id") or payload.get("taskId") or "").strip()
-    if not task_id:
-        raise ValueError("缺少 task_id")
-    with SEEDANCE_A_TASKS_LOCK:
-        task_meta = dict(SEEDANCE_A_TASKS.get(task_id) or {})
-    api_key = str(task_meta.get("api_key") or payload.get("relay_api_key") or payload.get("api_key") or _seedance_a_api_key()).strip()
-    if not api_key:
-        raise ValueError("缺少天悦A/Seedance API Key")
-    base_url = str(task_meta.get("base_url") or payload.get("relay_base_url") or payload.get("base_url") or _seedance_a_base_url()).rstrip("/")
-    query_path = f"/v1/videos/{task_id}"
-    project_dir = str(task_meta.get("project_dir") or payload.get("project_dir") or payload.get("projectDir") or "")
-    source_video_path = str(task_meta.get("source_video_path") or payload.get("source_video_path") or payload.get("video_path") or "")
-    package_id = str(task_meta.get("package_id") or payload.get("package_id") or payload.get("packageId") or "")
-    output_role = _mode2_safe_asset_slug(
-        task_meta.get("output_role")
-        or payload.get("output_role")
-        or payload.get("outputRole")
-        or "result",
-        fallback="result",
-    )
-    if output_role not in {"mask", "result"}:
-        output_role = "result"
-    task_meta.update({
-        "api_key": api_key,
-        "base_url": base_url,
-        "project_dir": project_dir,
-        "source_video_path": source_video_path,
-        "package_id": package_id,
-        "output_role": output_role,
-        "task_name": str(task_meta.get("task_name") or payload.get("taskName") or payload.get("task_name") or "shot_retake").strip(),
-        "segment_id": str(task_meta.get("segment_id") or payload.get("segment_id") or "").strip(),
-    })
-    debug_dir = _seedance_a_debug_dir(
-        project_dir,
-        source_video_path,
-        package_id,
-    )
-
-    response = requests.get(
-        f"{base_url}{query_path}",
-        headers={"Authorization": f"Bearer {api_key}"},
-        timeout=60,
-    )
-    text = response.text
-    try:
-        data = response.json()
-    except ValueError:
-        data = {"_raw": text}
-    query_debug_path = _seedance_a_write_debug_json(debug_dir, f"query_{task_id[:8]}", {
-        "stage": "query_response",
-        "query_url": f"{base_url}{query_path}",
-        "task_id": task_id,
-        "http_status": response.status_code,
-        "response_ok": response.ok,
-        "response": data,
-    })
-    if not response.ok:
-        message = (
-            (data.get("error") or {}).get("message")
-            if isinstance(data.get("error"), dict)
-            else data.get("error")
-        ) or data.get("message") or f"天悦A HTTP {response.status_code}"
-        raise RuntimeError(_seedance_a_friendly_error(str(message)[:800], response.status_code))
-
-    status, progress, fail_reason = _parse_seedance_a_status(data)
-    result_url = _extract_seedance_a_result_url(data, base_url)
-    output_path = str(task_meta.get("output_path") or "")
-    if status == "SUCCESS" and result_url and not (output_path and Path(output_path).exists()):
-        output_path = _download_seedance_a_result(result_url, task_id, task_meta, api_key)
-        with SEEDANCE_A_TASKS_LOCK:
-            SEEDANCE_A_TASKS.setdefault(task_id, {}).update({"output_path": output_path, "finished_at": time.time()})
-    if status == "FAILED" and package_id and project_dir:
-        try:
-            root = _resolve_storyboard_mode2_project_dir(project_dir)
-            _write_generation_package_state(root, package_id, {
-                "status": "failed",
-                "lastMessage": f"通道2任务失败\ntask_id: {task_id}",
-                "lastTone": "bad",
-                "errorMessage": fail_reason or "任务失败",
-            })
-        except Exception:  # noqa: BLE001
-            pass
-
-    return {
-        "success": status != "FAILED",
-        "task_id": task_id,
-        "taskId": task_id,
-        "status": status,
-        "progress": progress,
-        "video_url": output_path or result_url,
-        "videoUrl": output_path or result_url,
-        "output_path": output_path,
-        "result_url": result_url,
-        "result_url_found": bool(result_url),
-        "downloaded": bool(output_path),
-        "debug_path": str(task_meta.get("debug_path") or ""),
-        "query_debug_path": query_debug_path,
-        "fail_reason": fail_reason,
-        "raw": data,
-    }
-
-
-def _parse_seedance_a_status(data: dict[str, Any]) -> tuple[str, str, str]:
-    outer = data.get("data") if isinstance(data.get("data"), dict) else data
-    inner = outer.get("data") if isinstance(outer.get("data"), dict) else {}
-    status_objects = [inner, outer, data]
-    candidates = [
-        *(obj.get("task_status") for obj in status_objects if isinstance(obj, dict)),
-        *(obj.get("taskStatus") for obj in status_objects if isinstance(obj, dict)),
-        *(obj.get("statusText") for obj in status_objects if isinstance(obj, dict)),
-        *(obj.get("state") for obj in status_objects if isinstance(obj, dict)),
-        *(obj.get("status") for obj in status_objects if isinstance(obj, dict)),
-    ]
-    raw_status = ""
-    for item in candidates:
-        if isinstance(item, str) and item.strip():
-            raw_status = item.strip().lower()
-            break
-    progress = str(inner.get("progress") or outer.get("progress") or data.get("progress") or "")
-    fail_reason = str(
-        inner.get("fail_reason")
-        or outer.get("fail_reason")
-        or inner.get("error")
-        or outer.get("error")
-        or data.get("error")
-        or ""
-    )
-    if raw_status in {"success", "succeeded", "completed", "done", "finished"}:
-        return "SUCCESS", progress or "100%", ""
-    if raw_status in {"failed", "failure", "error", "cancelled", "canceled"}:
-        return "FAILED", progress or "100%", fail_reason or "任务失败"
-    if raw_status in {"running", "processing", "in_progress", "submitted"}:
-        return "RUNNING", progress, ""
-    if raw_status in {"pending", "queued", "created", "waiting", ""}:
-        if _extract_seedance_a_result_url(data, _seedance_a_base_url()):
-            return "SUCCESS", progress or "100%", ""
-        return "PENDING", progress, ""
-    if _extract_seedance_a_result_url(data, _seedance_a_base_url()):
-        return "SUCCESS", progress or "100%", ""
-    return "RUNNING", progress, ""
-
-
-def _looks_like_video_result_url(value: str) -> bool:
-    text = str(value or "").strip()
-    if not text:
-        return False
-    lower = text.lower()
-    if not (text.startswith(("http://", "https://")) or text.startswith("/")):
-        return False
-    return (
-        ".mp4" in lower
-        or ".mov" in lower
-        or ".webm" in lower
-        or "video" in lower
-        or "download" in lower
-        or "output" in lower
-        or "result" in lower
-    )
-
-
-def _recursive_seedance_a_result_urls(value: Any, *, depth: int = 0) -> list[str]:
-    if depth > 8:
-        return []
-    urls: list[str] = []
-    if isinstance(value, str):
-        if _looks_like_video_result_url(value):
-            urls.append(value.strip())
-        return urls
-    if isinstance(value, list):
-        for item in value:
-            urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
-        return urls
-    if isinstance(value, dict):
-        preferred_keys = (
-            "video_url",
-            "videoUrl",
-            "video_urls",
-            "videoUrls",
-            "result_url",
-            "resultUrl",
-            "result_urls",
-            "content_url",
-            "contentUrl",
-            "media_url",
-            "mediaUrl",
-            "download_url",
-            "downloadUrl",
-            "url",
-        )
-        for key in preferred_keys:
-            if key in value:
-                urls.extend(_recursive_seedance_a_result_urls(value.get(key), depth=depth + 1))
-        for key, item in value.items():
-            if key in preferred_keys:
-                continue
-            key_text = str(key).lower()
-            if any(token in key_text for token in ("video", "result", "output", "download", "media", "content", "url")):
-                urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
-        if not urls:
-            for item in value.values():
-                urls.extend(_recursive_seedance_a_result_urls(item, depth=depth + 1))
-        return urls
-    return urls
-
-
-def _absolute_seedance_a_result_url(value: str, base_url: str) -> str:
-    text = str(value or "").strip()
-    if not text:
-        return ""
-    if text.startswith("/"):
-        return f"{base_url.rstrip('/')}{text}"
-    if text.startswith(("http://", "https://")):
-        return text
-    return ""
-
-
-def _extract_seedance_a_result_url(data: dict[str, Any], base_url: str) -> str:
-    outer = data.get("data") if isinstance(data.get("data"), dict) else data
-    inner = outer.get("data") if isinstance(outer.get("data"), dict) else {}
-    metadata = outer.get("metadata") if isinstance(outer.get("metadata"), dict) else {}
-    candidates = [
-        metadata.get("url"),
-        metadata.get("video_url"),
-        metadata.get("videoUrl"),
-        metadata.get("result_url"),
-        metadata.get("resultUrl"),
-        inner.get("content_url"),
-        inner.get("media_url"),
-        inner.get("video_url"),
-        inner.get("videoUrl"),
-        inner.get("url"),
-        outer.get("result_url"),
-        outer.get("resultUrl"),
-        outer.get("video_url"),
-        outer.get("videoUrl"),
-        outer.get("content_url"),
-        outer.get("contentUrl"),
-        outer.get("url"),
-        data.get("result_url"),
-        data.get("resultUrl"),
-        data.get("video_url"),
-        data.get("videoUrl"),
-        data.get("url"),
-    ]
-    for list_value in (
-        inner.get("video_urls"),
-        inner.get("videoUrls"),
-        outer.get("video_urls"),
-        outer.get("videoUrls"),
-        data.get("video_urls"),
-        data.get("videoUrls"),
-        outer.get("result_urls"),
-        data.get("result_urls"),
-    ):
-        if isinstance(list_value, list):
-            candidates.extend(list_value[:3])
-    for value in candidates:
-        text = str(value or "").strip()
-        if not text:
-            continue
-        resolved = _absolute_seedance_a_result_url(text, base_url)
-        if resolved:
-            return resolved
-    for text in _recursive_seedance_a_result_urls(data):
-        resolved = _absolute_seedance_a_result_url(text, base_url)
-        if resolved:
-            return resolved
-    return ""
-
-
-def _download_seedance_a_result(
-    result_url: str,
-    task_id: str,
-    task_meta: dict[str, Any],
-    api_key: str,
-) -> str:
-    output_dir = _seedance_a_output_dir(
-        str(task_meta.get("project_dir") or ""),
-        str(task_meta.get("source_video_path") or ""),
-    )
-    task_name = _safe_output_name(str(task_meta.get("task_name") or "shot_retake"))
-    segment_id = _safe_output_name(str(task_meta.get("segment_id") or "")) if task_meta.get("segment_id") else ""
-    stem = "_".join(part for part in ["channel2", task_name, segment_id, task_id[:8]] if part)
-    output_path = output_dir / f"{stem}.mp4"
-    if output_path.exists() and output_path.stat().st_size > 0:
-        return str(output_path)
-
-    def fetch(headers: dict[str, str] | None = None) -> requests.Response:
-        return requests.get(result_url, headers=headers or {}, stream=True, timeout=300)
-
-    response = fetch()
-    if response.status_code in {401, 403}:
-        response.close()
-        response = fetch({"Authorization": f"Bearer {api_key}"})
-    response.raise_for_status()
-    try:
-        with output_path.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    handle.write(chunk)
-    finally:
-        response.close()
-    return str(output_path)
-
-
-def _nuko_channel1_api_key() -> str:
-    return (
-        _plain_secret(_runtime_or_user_env("NUKO_CHANNEL1_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("NUKOAI_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("NUKO_API_KEY"))
-        or _plain_secret(_runtime_or_user_env("MA_VIDEO_API_KEY"))
-        or DEFAULT_NUKO_CHANNEL1_API_KEY
-    ).strip()
-
-
-def _nuko_channel1_base_url() -> str:
-    return (
-        _runtime_or_user_env("NUKO_CHANNEL1_BASE_URL")
-        or _runtime_or_user_env("NUKOAI_BASE_URL")
-        or _runtime_or_user_env("NUKO_BASE_URL")
-        or DEFAULT_NUKO_CHANNEL1_BASE_URL
-    ).strip().rstrip("/")
-
-
-def _nuko_channel1_is_known_relay_base_url(value: Any) -> bool:
-    text = str(value or "").strip()
-    if not text:
-        return False
-    try:
-        parsed = urlparse(text)
-        return parsed.hostname == "152.136.38.202" and parsed.port == 3000
-    except Exception:  # noqa: BLE001
-        return "152.136.38.202:3000" in text
-
-
-def _nuko_channel1_key_source_hint() -> str:
-    for key in ("NUKO_CHANNEL1_API_KEY", "NUKOAI_API_KEY", "NUKO_API_KEY", "MA_VIDEO_API_KEY"):
-        if _plain_secret(_runtime_or_user_env(key)):
-            return f"environment variable {key}"
-    if DEFAULT_NUKO_CHANNEL1_API_KEY:
-        return "Mode2 内置通道1默认 API Key"
-    return "Mode2 04 视频生成填写的通道1 API Key 或环境变量 NUKO_CHANNEL1_API_KEY"
-
-
-def _nuko_channel1_config_sources(payload: dict[str, Any], request: dict[str, Any]) -> list[dict[str, Any]]:
-    sources: list[dict[str, Any]] = []
-    seen: set[int] = set()
-
-    def add_source(source: Any) -> None:
-        if not isinstance(source, dict):
-            return
-        marker = id(source)
-        if marker in seen:
-            return
-        seen.add(marker)
-        sources.append(source)
-
-    for source in (request, payload):
-        add_source(source)
-        if not isinstance(source, dict):
-            continue
-        for key in ("channel1", "channel_1", "nuko", "nukoai", "nuko_channel1", "nukoChannel1"):
-            add_source(source.get(key))
-    return sources
-
-
-def _nuko_channel1_request_config_value(
-    payload: dict[str, Any],
-    request: dict[str, Any],
-    keys: tuple[str, ...],
-) -> Any:
-    sources = _nuko_channel1_config_sources(payload, request)
-    for key in keys:
-        for source in sources:
-            value = source.get(key)
-            if value is not None:
-                return value
-    return ""
-
-
-def _nuko_channel1_request_api_key(payload: dict[str, Any], request: dict[str, Any]) -> tuple[str, str]:
-    api_key = _plain_secret(
-        _nuko_channel1_request_config_value(
-            payload,
-            request,
-            (
-                "channel1_api_key",
-                "channel1ApiKey",
-                "nuko_api_key",
-                "nukoApiKey",
-                "nukoai_api_key",
-                "nukoaiApiKey",
-                "api_key",
-                "apiKey",
-            ),
-        )
-    )
-    if api_key:
-        return api_key, "Mode2 04 视频生成填写的通道1 API Key"
-    return _nuko_channel1_api_key(), _nuko_channel1_key_source_hint()
-
-
-def _nuko_channel1_request_base_url(payload: dict[str, Any], request: dict[str, Any]) -> str:
-    base_url = _plain_secret(
-        _nuko_channel1_request_config_value(
-            payload,
-            request,
-            (
-                "channel1_base_url",
-                "channel1BaseUrl",
-                "nuko_base_url",
-                "nukoBaseUrl",
-                "nukoai_base_url",
-                "nukoaiBaseUrl",
-                "base_url",
-                "baseUrl",
-            ),
-        )
-    )
-    picked = (base_url or _nuko_channel1_base_url()).strip().rstrip("/")
-    if _nuko_channel1_is_known_relay_base_url(picked):
-        return DEFAULT_NUKO_CHANNEL1_BASE_URL
-    return picked
-
-
-def _nuko_channel1_friendly_error(
-    message: str,
-    status_code: int | None = None,
-    key_source_hint: str = "",
-) -> str:
-    text = str(message or "").strip()
-    if status_code in {401, 403} or "unauthorized" in text.lower() or "api key" in text.lower():
-        hint = str(key_source_hint or _nuko_channel1_key_source_hint()).strip()
-        return f"通道1鉴权失败：{text or 'API Key 无效'}。请检查{hint}。"
-    return text
-
-
-def _nuko_channel1_response_error_message(data: dict[str, Any], fallback: str, status_code: int) -> str:
-    error = data.get("error")
-    if isinstance(error, dict):
-        return str(error.get("message") or error.get("code") or fallback or f"通道1 HTTP {status_code}")
-    return str(error or data.get("message") or fallback or f"通道1 HTTP {status_code}")
-
-
-def _nuko_channel1_should_treat_query_error_as_pending(status_code: int | None) -> bool:
-    status = int(status_code or 0)
-    return status == 0 or status in {408, 409, 425, 429} or status >= 500
-
-
-def _nuko_channel1_output_dir(project_dir: str, source_video_path: str) -> Path:
-    project_text = str(project_dir or "").strip()
-    if project_text:
-        base = Path(project_text)
-    else:
-        source = Path(str(source_video_path or "")).expanduser()
-        base = source.parent if source.name else ROOT.parent
-    output_dir = base / "04_AI输出成片"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
-
-
-def _nuko_channel1_debug_dir(project_dir: str, source_video_path: str, package_id: str = "") -> Path:
-    output_dir = _nuko_channel1_output_dir(project_dir, source_video_path)
-    safe_package = _safe_output_name(str(package_id or ""))
-    if safe_package:
-        debug_dir = output_dir / "generation_packages" / safe_package / "channel1_debug"
-    else:
-        debug_dir = output_dir / "nuko_channel1_debug"
-    debug_dir.mkdir(parents=True, exist_ok=True)
-    return debug_dir
-
-
-def _nuko_channel1_write_debug_json(debug_dir: Path, prefix: str, data: dict[str, Any]) -> str:
-    safe_prefix = _safe_output_name(prefix or "nuko_channel1")
-    path = debug_dir / f"{safe_prefix}_{time.strftime('%Y%m%d_%H%M%S')}.json"
-    path.write_text(
-        json.dumps(_seedance_a_redacted(data), ensure_ascii=False, indent=2, default=str),
-        encoding="utf-8",
-    )
-    return str(path)
-
-
-def _nuko_channel1_https_url(url: str, label: str) -> str:
-    text = str(url or "").strip()
-    if text.startswith("https://"):
-        return text
-    if text.startswith("http://"):
-        raise RuntimeError(f"通道1 {label} 必须是公网 https URL，当前是 http URL")
-    return ""
-
-
-def _nuko_channel1_public_url(url: str, label: str, *, require_https: bool = False) -> str:
-    text = str(url or "").strip()
-    if text.startswith("https://"):
-        return text
-    if text.startswith("http://") and not require_https:
-        return text
-    if text.startswith("http://"):
-        raise RuntimeError(f"通道1 {label} 必须是公网 https URL，当前是 http URL")
-    return ""
-
-
-def _nuko_channel1_upload_ref(ref: Any, api_key: str, *, require_https: bool = False) -> str:
-    text = str(ref or "").strip()
-    if not text:
-        return ""
-    if text.startswith(("http://", "https://")):
-        return _nuko_channel1_public_url(text, "素材", require_https=require_https)
-
-    from spvideo.yuanqi_upload import upload_file_for_url
-
-    if text.startswith("data:"):
-        import base64
-
-        header, _, encoded = text.partition(",")
-        if not encoded:
-            return ""
-        content_type = header.split(";", 1)[0].replace("data:", "") or "application/octet-stream"
-        ext = mimetypes.guess_extension(content_type) or ".bin"
-        temp_dir = ROOT.parent / ".nuko_channel1_upload_cache"
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        temp_path = temp_dir / f"nuko_channel1_ref_{uuid.uuid4().hex}{ext}"
-        temp_path.write_bytes(base64.b64decode(encoded))
-        try:
-            uploaded = str(upload_file_for_url(temp_path, api_key=api_key, base_url=_seedance_a_upload_base_url()).get("url") or "")
-            return _nuko_channel1_public_url(uploaded, "上传后素材", require_https=require_https)
-        finally:
-            temp_path.unlink(missing_ok=True)
-
-    local_path = Path(_decode_media_ref_path(text))
-    if not local_path.exists() or not local_path.is_file():
-        return ""
-    uploaded = str(upload_file_for_url(local_path, api_key=api_key, base_url=_seedance_a_upload_base_url()).get("url") or "")
-    return _nuko_channel1_public_url(uploaded, "上传后素材", require_https=require_https)
-
-
-def _nuko_channel1_collect_refs(*values: Any) -> list[str]:
-    refs: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        for item in _string_list(value):
-            key = item.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            refs.append(item)
-    return refs
-
-
-def _nuko_channel1_number_list(value: Any) -> list[float]:
-    if isinstance(value, (int, float)):
-        return [round(float(value), 3)]
-    if isinstance(value, str):
-        parts = [part.strip() for part in value.split(",")]
-        values: list[float] = []
-        for part in parts:
-            if not part:
-                continue
-            try:
-                values.append(round(float(part), 3))
-            except ValueError:
-                continue
-        return values
-    if isinstance(value, list):
-        values = []
-        for item in value:
-            try:
-                values.append(round(float(item), 3))
-            except (TypeError, ValueError):
-                continue
-        return values
-    return []
-
-
-def _nuko_channel1_model_spec(model: str) -> dict[str, Any]:
-    return NUKO_CHANNEL1_KNOWN_MODELS.get(str(model or "").strip()) or {}
-
-
-def _nuko_channel1_normalize_duration(value: Any, spec: dict[str, Any]) -> int:
-    allowed = spec.get("durations") if isinstance(spec.get("durations"), list) else list(range(4, 16))
-    allowed = [int(item) for item in allowed if isinstance(item, (int, float))]
-    if not allowed:
-        allowed = list(range(4, 16))
-    try:
-        requested = int(round(float(value)))
-    except (TypeError, ValueError):
-        requested = 4 if 4 in allowed else allowed[0]
-    if requested in allowed:
-        return requested
-    return min(allowed, key=lambda item: abs(item - requested))
-
-
-def _nuko_channel1_normalize_ratio(value: Any, spec: dict[str, Any]) -> str:
-    allowed = spec.get("ratios") if isinstance(spec.get("ratios"), list) else ["16:9"]
-    allowed = [str(item).strip() for item in allowed if str(item or "").strip()]
-    if not allowed:
-        allowed = ["16:9"]
-    requested = str(value or "").strip()
-    if requested in allowed:
-        return requested
-    return "16:9" if "16:9" in allowed else allowed[0]
-
-
-def _nuko_channel1_normalize_video_durations(
-    values: list[float],
-    video_count: int,
-    fallback_duration: int | float,
-) -> list[float]:
-    result: list[float] = []
-    for index in range(max(0, video_count)):
-        value = values[index] if index < len(values) else fallback_duration
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            number = float(fallback_duration or 1)
-        if not math.isfinite(number) or number <= 0:
-            number = float(fallback_duration or 1)
-        result.append(round(number, 3))
-    return result
-
-
-def _submit_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
-    request = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
-    model = str(request.get("model") or "").strip()
-    model = NUKO_CHANNEL1_MODEL_ALIASES.get(model, model)
-    prompt = str(request.get("prompt") or "").strip()
-    if not model:
-        raise ValueError("通道1 model 必填")
-    if not prompt:
-        raise ValueError("通道1 prompt 不得为空")
-
-    api_key, api_key_hint = _nuko_channel1_request_api_key(payload, request)
-    if not api_key:
-        raise ValueError("缺少通道1 API Key，请在 Mode2 04 视频生成填写通道1 API Key，或设置环境变量 NUKO_CHANNEL1_API_KEY。")
-
-    duration = round(_mode2_float(request.get("duration") or request.get("seconds"), 5.0), 3)
-    if duration < 4 or duration > 15:
-        raise ValueError(f"通道1时长必须在 4-15 秒内，当前 {duration:g} 秒")
-    duration_payload: int | float = int(duration) if float(duration).is_integer() else duration
-    ratio = str(request.get("ratio") or request.get("aspect_ratio") or request.get("size") or "").strip()
-    if not re.fullmatch(r"\d+:\d+", ratio):
-        ratio = "9:16"
-    spec = _nuko_channel1_model_spec(model)
-    requested_output_duration = _nuko_channel1_normalize_duration(duration, spec)
-    ratio = _nuko_channel1_normalize_ratio(ratio, spec)
-
-    warnings: list[str] = []
-    project_dir = str(payload.get("project_dir") or payload.get("projectDir") or "").strip()
-    image_deny_keys = _mode2_seedance_generation_image_deny_keys(project_dir)
-    ref_images = _nuko_channel1_collect_refs(
-        request.get("images"),
-        request.get("refImages"),
-        request.get("image_urls"),
-        request.get("imageUrls"),
-        request.get("reference_images"),
-        request.get("referenceImages"),
-        request.get("reference_image_urls"),
-        request.get("referenceImageUrls"),
-    )
-    ref_images = _mode2_filter_seedance_generation_images(
-        ref_images,
-        warnings,
-        field="channel1 image_urls",
-        deny_keys=image_deny_keys,
-    )
-    videos = _nuko_channel1_collect_refs(
-        request.get("videos"),
-        request.get("video_urls"),
-        request.get("videoUrls"),
-        request.get("video_url"),
-        request.get("videoUrl"),
-        request.get("referenceVideos"),
-        request.get("reference_videos"),
-        request.get("referenceVideoUrls"),
-        request.get("reference_video_urls"),
-    )
-    audios = _nuko_channel1_collect_refs(
-        request.get("audios"),
-        request.get("audio_urls"),
-        request.get("audioUrls"),
-        request.get("audio_url"),
-        request.get("audioUrl"),
-        request.get("referenceAudios"),
-        request.get("reference_audios"),
-    )
-
-    uploaded_images: list[str] = []
-    for ref in ref_images[:9]:
-        url = _nuko_channel1_upload_ref(ref, api_key, require_https=True)
-        if url:
-            uploaded_images.append(url)
-
-    uploaded_videos: list[str] = []
-    for index, ref in enumerate(videos[:3], 1):
-        url = _nuko_channel1_upload_ref(ref, api_key)
-        if not url:
-            raise RuntimeError(f"通道1 reference_video {index} 处理失败")
-        uploaded_videos.append(url)
-
-    uploaded_audios: list[str] = []
-    for index, ref in enumerate(audios[:3], 1):
-        url = _nuko_channel1_upload_ref(ref, api_key)
-        if not url:
-            raise RuntimeError(f"通道1 reference_audio {index} 处理失败")
-        uploaded_audios.append(url)
-
-    video_durations = _nuko_channel1_number_list(
-        request.get("video_durations")
-        or request.get("videoDurations")
-        or payload.get("video_durations")
-        or payload.get("videoDurations")
-        or payload.get("package_duration")
-        or payload.get("packageDuration")
-    )
-    if uploaded_videos:
-        video_durations = _nuko_channel1_normalize_video_durations(
-            video_durations,
-            len(uploaded_videos),
-            requested_output_duration,
-        )
-        output_duration = _nuko_channel1_normalize_duration(video_durations[0], spec)
-    else:
-        video_durations = []
-        output_duration = requested_output_duration
-
-    upstream_payload: dict[str, Any] = {
-        "prompt": prompt,
-        "model": model,
-        "duration": output_duration,
-        "ratio": ratio,
-        "image_urls": uploaded_images,
-        "audio_urls": uploaded_audios,
-        "video_urls": uploaded_videos,
-        "video_durations": video_durations,
-    }
-
-    base_url = _nuko_channel1_request_base_url(payload, request)
-    headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
-    source_video_path = str(payload.get("source_video_path") or payload.get("video_path") or "").strip()
-    package_id = str(payload.get("package_id") or payload.get("packageId") or "").strip()
-    output_role = _mode2_safe_asset_slug(
-        payload.get("output_role")
-        or payload.get("outputRole")
-        or request.get("output_role")
-        or request.get("outputRole")
-        or "result",
-        fallback="result",
-    )
-    if output_role not in {"mask", "result"}:
-        output_role = "result"
-    task_name = str(payload.get("taskName") or payload.get("task_name") or "shot_retake").strip()
-    debug_dir = _nuko_channel1_debug_dir(project_dir, source_video_path, package_id)
-    submit_url = f"{base_url}/videos"
-    debug_prefix = _safe_output_name("_".join(part for part in [task_name, "channel1_submit"] if part))
-    debug_path = _nuko_channel1_write_debug_json(debug_dir, debug_prefix, {
-        "stage": "submit_request",
-        "route": "channel1",
-        "submit_url": submit_url,
-        "task_name": task_name,
-        "package_id": package_id,
-        "project_dir": project_dir,
-        "source_video_path": source_video_path,
-        "local_inputs": {
-            "images": ref_images,
-            "videos": videos,
-            "audios": audios,
-        },
-        "uploaded": {
-            "image_urls": uploaded_images,
-            "video_urls": uploaded_videos,
-            "audio_urls": uploaded_audios,
-        },
-        "upstream_payload": upstream_payload,
-    })
-
-    response = requests.post(
-        submit_url,
-        headers=headers,
-        json=upstream_payload,
-        timeout=600,
-    )
-    text = response.text
-    try:
-        data = response.json()
-    except ValueError:
-        data = {"_raw": text}
-    _nuko_channel1_write_debug_json(debug_dir, f"{debug_prefix}_response", {
-        "stage": "submit_response",
-        "route": "channel1",
-        "submit_url": submit_url,
-        "http_status": response.status_code,
-        "response_ok": response.ok,
-        "response": data,
-        "debug_request_path": debug_path,
-    })
-    if not response.ok or data.get("success") is False:
-        message = _nuko_channel1_response_error_message(data, text, response.status_code)
-        friendly = _nuko_channel1_friendly_error(str(message)[:800], response.status_code, api_key_hint)
-        raise RuntimeError(f"{friendly}\n调试记录: {debug_path}")
-
-    response_data = data.get("data") if isinstance(data.get("data"), dict) else data
-    task_id = str(response_data.get("id") or response_data.get("task_id") or data.get("id") or "").strip()
-    if not task_id:
-        raise RuntimeError(f"通道1未返回任务 id: {str(data)[:500]}\n调试记录: {debug_path}")
-
-    with NUKO_CHANNEL1_TASKS_LOCK:
-        NUKO_CHANNEL1_TASKS[task_id] = {
-            "api_key": api_key,
-            "base_url": base_url,
-            "project_dir": project_dir,
-            "source_video_path": source_video_path,
-            "task_name": task_name,
-            "segment_id": str(payload.get("segment_id") or "").strip(),
-            "package_id": package_id,
-            "output_role": output_role,
-            "submitted_at": time.time(),
-            "output_path": "",
-            "raw_submit": data,
-            "debug_path": debug_path,
-            "submit_url": submit_url,
-            "model": model,
-            "route": "channel1",
-        }
-    if package_id and project_dir:
-        try:
-            root = _resolve_storyboard_mode2_project_dir(project_dir)
-            task_field = "maskTaskId" if output_role == "mask" else "resultTaskId"
-            context_field = "maskPollContext" if output_role == "mask" else "resultPollContext"
-            _write_generation_package_state(root, package_id, {
-                "status": "mask_running" if output_role == "mask" else "result_running",
-                task_field: task_id,
-                context_field: {
-                    "packageId": package_id,
-                    "outputRole": output_role,
-                    "sourcePath": source_video_path,
-                    "outputLabel": "白膜视频" if output_role == "mask" else "结果视频",
-                    "apiChannel": "channel1",
-                },
-                "sourcePath": source_video_path,
-                "lastMessage": f"通道1任务已提交\ntask_id: {task_id}",
-                "lastTone": "warn",
-                "errorMessage": "",
-            })
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"生成包运行态写入失败：{exc}")
-
-    return {
-        "success": True,
-        "task_id": task_id,
-        "taskId": task_id,
-        "status": "SUBMITTED",
-        "model": model,
-        "uploaded": {
-            "image_urls": uploaded_images,
-            "video_urls": uploaded_videos,
-            "audio_urls": uploaded_audios,
-        },
-        "debug_path": debug_path,
-        "warnings": warnings,
-        "raw": data,
-    }
-
-
-def _parse_nuko_channel1_status(data: dict[str, Any]) -> tuple[str, str, str]:
-    outer = data.get("data") if isinstance(data.get("data"), dict) else data
-    raw_status = str(outer.get("status") or data.get("status") or "").strip().lower()
-    fail_reason = str(
-        outer.get("error_message")
-        or outer.get("errorMessage")
-        or outer.get("error_code")
-        or data.get("message")
-        or ""
-    ).strip()
-    if raw_status in {"completed", "success", "succeeded", "done", "finished"}:
-        return "SUCCESS", "100%", ""
-    if raw_status in {"failed", "failure", "error", "cancelled", "canceled"}:
-        return "FAILED", "100%", fail_reason or "任务失败"
-    if raw_status in {"processing", "running", "in_progress"}:
-        return "RUNNING", "", ""
-    if raw_status in {"pending", "queued", "created", "waiting", ""}:
-        if _extract_nuko_channel1_result_url(data):
-            return "SUCCESS", "100%", ""
-        return "PENDING", "", ""
-    if _extract_nuko_channel1_result_url(data):
-        return "SUCCESS", "100%", ""
-    return "RUNNING", "", ""
-
-
-def _extract_nuko_channel1_result_url(data: dict[str, Any]) -> str:
-    outer = data.get("data") if isinstance(data.get("data"), dict) else data
-    candidates = [
-        outer.get("video_url"),
-        outer.get("videoUrl"),
-        outer.get("download_url"),
-        outer.get("downloadUrl"),
-        outer.get("url"),
-        data.get("video_url"),
-        data.get("videoUrl"),
-        data.get("download_url"),
-        data.get("downloadUrl"),
-        data.get("url"),
-    ]
-    for value in candidates:
-        text = str(value or "").strip()
-        if text.startswith(("http://", "https://")):
-            return text
-    return ""
-
-
-def _download_nuko_channel1_result(
-    result_url: str,
-    task_id: str,
-    task_meta: dict[str, Any],
-    api_key: str,
-) -> str:
-    output_dir = _nuko_channel1_output_dir(
-        str(task_meta.get("project_dir") or ""),
-        str(task_meta.get("source_video_path") or ""),
-    )
-    task_name = _safe_output_name(str(task_meta.get("task_name") or "shot_retake"))
-    segment_id = _safe_output_name(str(task_meta.get("segment_id") or "")) if task_meta.get("segment_id") else ""
-    stem = "_".join(part for part in ["channel1", task_name, segment_id, task_id[:8]] if part)
-    output_path = output_dir / f"{stem}.mp4"
-    if output_path.exists() and output_path.stat().st_size > 0:
-        return str(output_path)
-
-    def fetch(headers: dict[str, str] | None = None) -> requests.Response:
-        return requests.get(result_url, headers=headers or {}, stream=True, timeout=300)
-
-    response = fetch()
-    if response.status_code in {401, 403}:
-        response.close()
-        response = fetch({"X-API-Key": api_key})
-    response.raise_for_status()
-    try:
-        with output_path.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=1024 * 1024):
-                if chunk:
-                    handle.write(chunk)
-    finally:
-        response.close()
-    return str(output_path)
-
-
-def _query_nuko_channel1_task(payload: dict[str, Any]) -> dict[str, Any]:
-    task_id = str(payload.get("task_id") or payload.get("taskId") or "").strip()
-    if not task_id:
-        raise ValueError("缺少 task_id")
-    with NUKO_CHANNEL1_TASKS_LOCK:
-        task_meta = dict(NUKO_CHANNEL1_TASKS.get(task_id) or {})
-    api_key = str(task_meta.get("api_key") or payload.get("channel1_api_key") or payload.get("nuko_api_key") or payload.get("api_key") or _nuko_channel1_api_key()).strip()
-    if not api_key:
-        raise ValueError("缺少通道1 API Key")
-    base_url = str(task_meta.get("base_url") or payload.get("channel1_base_url") or payload.get("nuko_base_url") or payload.get("base_url") or _nuko_channel1_base_url()).rstrip("/")
-    project_dir = str(task_meta.get("project_dir") or payload.get("project_dir") or payload.get("projectDir") or "")
-    source_video_path = str(task_meta.get("source_video_path") or payload.get("source_video_path") or payload.get("video_path") or "")
-    package_id = str(task_meta.get("package_id") or payload.get("package_id") or payload.get("packageId") or "")
-    output_role = _mode2_safe_asset_slug(
-        task_meta.get("output_role")
-        or payload.get("output_role")
-        or payload.get("outputRole")
-        or "result",
-        fallback="result",
-    )
-    if output_role not in {"mask", "result"}:
-        output_role = "result"
-    task_meta.update({
-        "api_key": api_key,
-        "base_url": base_url,
-        "project_dir": project_dir,
-        "source_video_path": source_video_path,
-        "package_id": package_id,
-        "output_role": output_role,
-        "task_name": str(task_meta.get("task_name") or payload.get("taskName") or payload.get("task_name") or "shot_retake").strip(),
-        "segment_id": str(task_meta.get("segment_id") or payload.get("segment_id") or "").strip(),
-    })
-    debug_dir = _nuko_channel1_debug_dir(project_dir, source_video_path, package_id)
-    query_url = f"{base_url}/videos/{task_id}"
-    try:
-        response = requests.get(
-            query_url,
-            headers={"X-API-Key": api_key},
-            timeout=60,
-        )
-        text = response.text
-        try:
-            data = response.json()
-        except ValueError:
-            data = {"_raw": text}
-        http_status = response.status_code
-        response_ok = response.ok
-    except requests.RequestException as error:
-        text = str(error)
-        data = {"success": True, "data": {"status": "pending", "_transientError": text}}
-        http_status = 0
-        response_ok = False
-    query_debug_path = _nuko_channel1_write_debug_json(debug_dir, f"query_channel1_{task_id[:8]}", {
-        "stage": "query_response",
-        "route": "channel1",
-        "query_url": query_url,
-        "task_id": task_id,
-        "http_status": http_status,
-        "response_ok": response_ok,
-        "response": data,
-    })
-    if (not response_ok or data.get("success") is False) and _nuko_channel1_should_treat_query_error_as_pending(http_status):
-        message = _nuko_channel1_response_error_message(data, text, http_status)
-        data = {"success": True, "data": {"status": "pending", "_transientError": str(message)}}
-    elif not response_ok or data.get("success") is False:
-        message = _nuko_channel1_response_error_message(data, text, http_status)
-        raise RuntimeError(_nuko_channel1_friendly_error(str(message)[:800], http_status))
-
-    status, progress, fail_reason = _parse_nuko_channel1_status(data)
-    result_url = _extract_nuko_channel1_result_url(data)
-    output_path = str(task_meta.get("output_path") or "")
-    if status == "SUCCESS" and result_url and not (output_path and Path(output_path).exists()):
-        output_path = _download_nuko_channel1_result(result_url, task_id, task_meta, api_key)
-        with NUKO_CHANNEL1_TASKS_LOCK:
-            NUKO_CHANNEL1_TASKS.setdefault(task_id, {}).update({"output_path": output_path, "finished_at": time.time()})
-    if status == "FAILED" and package_id and project_dir:
-        try:
-            root = _resolve_storyboard_mode2_project_dir(project_dir)
-            _write_generation_package_state(root, package_id, {
-                "status": "failed",
-                "lastMessage": f"通道1任务失败\ntask_id: {task_id}",
-                "lastTone": "bad",
-                "errorMessage": fail_reason or "任务失败",
-            })
-        except Exception:  # noqa: BLE001
-            pass
-
-    return {
-        "success": status != "FAILED",
-        "task_id": task_id,
-        "taskId": task_id,
-        "status": status,
-        "progress": progress,
-        "video_url": output_path or result_url,
-        "videoUrl": output_path or result_url,
-        "output_path": output_path,
-        "result_url": result_url,
-        "result_url_found": bool(result_url),
-        "downloaded": bool(output_path),
-        "debug_path": str(task_meta.get("debug_path") or ""),
-        "query_debug_path": query_debug_path,
-        "fail_reason": fail_reason,
-        "raw": data,
-    }
-
-
-def _whitematte_shot_submit(payload: dict[str, Any]) -> dict[str, Any]:
-    """白膜人偶重生：慢放凑时长 + 内容/风格锚点 + 人偶提示词 → 通道1。"""
-    from whitematte_recipe import submit_shot_retake
-    return submit_shot_retake(payload, submit_fn=_submit_nuko_channel1_task)
-
-
-def _whitematte_shot_status(payload: dict[str, Any]) -> dict[str, Any]:
-    """轮询通道1结果，成功后自动抽帧还原原节奏。"""
-    from whitematte_recipe import poll_shot_retake
-    return poll_shot_retake(payload, query_fn=_query_nuko_channel1_task)
 
 
 def _single_role_transfer_backend() -> str:
@@ -16640,35 +14137,163 @@ def _restore_generation_package_h3_jobs(
     package_id: str,
     segments: list[dict[str, Any]],
     restored: dict[str, Any],
+    state: dict[str, Any],
 ) -> dict[str, Any]:
+    cleared_at = _mode2_float(state.get("h3ClearedAt"), 0.0)
+    root_key = _generation_package_resolved_path_key(root)
+    snapshots: list[tuple[Path, dict[str, Any], float]] = []
+    for snapshot_path in sorted(
+        STORYBOARD_MODE2_JOB_ROOT.glob("*.json"),
+        key=lambda item: item.stat().st_mtime if item.exists() else 0,
+        reverse=True,
+    ):
+        job = _read_storyboard_job_snapshot_file(snapshot_path)
+        if str(job.get("type") or "") not in {"mode2_h3_white_mask", "mode2_h3_charswap"}:
+            continue
+        project_dir = str(job.get("project_dir") or "").strip()
+        if project_dir and _generation_package_resolved_path_key(project_dir) != root_key:
+            continue
+        snapshot_package_id = str(job.get("package_id") or job.get("packageId") or "").strip()
+        if snapshot_package_id and snapshot_package_id != package_id:
+            continue
+        created_at = _mode2_float(job.get("created_at"), snapshot_path.stat().st_mtime)
+        if created_at <= cleared_at:
+            continue
+        snapshots.append((snapshot_path, job, created_at))
+    snapshots.sort(key=lambda item: item[2], reverse=True)
+
+    segment_duration = {
+        str(item.get("shot_id") or "").strip(): _mode2_float(item.get("duration"), 0.0)
+        for item in segments
+        if isinstance(item, dict) and str(item.get("shot_id") or "").strip()
+    }
+    result_shot_ids: set[str] = set()
+    for clip in restored.get("resultSegments") if isinstance(restored.get("resultSegments"), list) else []:
+        shot_id = str(clip.get("shot_id") or "").strip() if isinstance(clip, dict) else ""
+        if shot_id and str(clip.get("path") or clip.get("video_path") or "").strip():
+            result_shot_ids.add(shot_id)
+    for run in restored.get("resultRuns") if isinstance(restored.get("resultRuns"), list) else []:
+        if not isinstance(run, dict):
+            continue
+        for clip in run.get("clips") if isinstance(run.get("clips"), list) else []:
+            shot_id = str(clip.get("shot_id") or "").strip() if isinstance(clip, dict) else ""
+            if shot_id and str(clip.get("path") or clip.get("video_path") or "").strip():
+                result_shot_ids.add(shot_id)
+
+    mask_by_shot: dict[str, dict[str, Any]] = {}
+    for clip in restored.get("maskSegments") if isinstance(restored.get("maskSegments"), list) else []:
+        if not isinstance(clip, dict):
+            continue
+        shot_id = str(clip.get("shot_id") or "").strip()
+        source_path = str(clip.get("path") or clip.get("video_path") or "").strip()
+        if shot_id and source_path and shot_id not in result_shot_ids:
+            mask_by_shot[shot_id] = clip
+
+    latest_charswap_by_shot: dict[str, tuple[Path, dict[str, Any], float]] = {}
+    latest_legacy_charswap_by_mask: dict[str, tuple[Path, dict[str, Any], float]] = {}
+    for snapshot in snapshots:
+        snapshot_path, job, created_at = snapshot
+        if str(job.get("type") or "") != "mode2_h3_charswap":
+            continue
+        snapshot_package_id = str(job.get("package_id") or job.get("packageId") or "").strip()
+        snapshot_shot_id = str(job.get("shot_id") or job.get("shotId") or "").strip()
+        mask_key = _generation_package_resolved_path_key(job.get("mask_video_path"))
+        if (
+            snapshot_package_id == package_id
+            and snapshot_shot_id in segment_duration
+            and mask_key
+            and snapshot_shot_id not in latest_charswap_by_shot
+        ):
+            latest_charswap_by_shot[snapshot_shot_id] = (snapshot_path, job, created_at)
+        elif (
+            (not snapshot_package_id or not snapshot_shot_id)
+            and mask_key
+            and mask_key not in latest_legacy_charswap_by_mask
+        ):
+            latest_legacy_charswap_by_mask[mask_key] = (snapshot_path, job, created_at)
+
+    result_entries: list[dict[str, Any]] = []
+    result_started_at: list[float] = []
+    for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            continue
+        shot_id = str(segment.get("shot_id") or f"S{index + 1:03d}").strip()
+        if not shot_id or shot_id in result_shot_ids:
+            continue
+        clip = mask_by_shot.get(shot_id)
+        snapshot = latest_charswap_by_shot.get(shot_id)
+        source_path = ""
+        if snapshot is not None:
+            source_path = str(snapshot[1].get("mask_video_path") or "").strip()
+        elif clip is not None:
+            source_path = str(clip.get("path") or clip.get("video_path") or "").strip()
+            snapshot = latest_legacy_charswap_by_mask.get(
+                _generation_package_resolved_path_key(source_path)
+            )
+        if snapshot is None:
+            continue
+        snapshot_path, job, created_at = snapshot
+        job_id = str(job.get("id") or snapshot_path.stem).strip()
+        if not job_id or not source_path:
+            continue
+        result_started_at.append(created_at)
+        result_entries.append({
+            "jobId": job_id,
+            "shotId": shot_id,
+            "sourcePath": source_path,
+            "duration": _mode2_float(
+                clip.get("duration") if clip is not None else None,
+                segment_duration.get(shot_id, 0.0),
+            ),
+            "status": "running",
+            "outputPath": "",
+            "error": "",
+            "logsTail": [
+                str(line)
+                for line in (job.get("logs") if isinstance(job.get("logs"), list) else [])[-3:]
+            ],
+        })
+    if result_entries:
+        return {
+            "status": "result_running",
+            "h3Jobs": {
+                "role": "result",
+                "merged": False,
+                "autoGenerateResult": False,
+                "startedAt": max(result_started_at) * 1000,
+                "entries": result_entries,
+            },
+            "lastTone": "warn",
+            "lastMessage": f"已从服务端快照恢复 MiniMax H3 换人轮询\n任务数:{len(result_entries)}",
+            "errorMessage": "",
+        }
+
     source_path = str(restored.get("packageSourcePath") or restored.get("sourcePath") or "").strip()
     source_key = _generation_package_resolved_path_key(source_path)
     if source_key and not restored.get("whiteMaskPath"):
-        for snapshot_path in sorted(
-            STORYBOARD_MODE2_JOB_ROOT.glob("*.json"),
-            key=lambda item: item.stat().st_mtime if item.exists() else 0,
-            reverse=True,
-        ):
-            job = _read_storyboard_job_snapshot_file(snapshot_path)
+        for snapshot_path, job, created_at in snapshots:
             if str(job.get("type") or "") != "mode2_h3_white_mask":
-                continue
-            if str(job.get("project_dir") or "").strip() and _generation_package_resolved_path_key(job.get("project_dir")) != _generation_package_resolved_path_key(root):
                 continue
             if _generation_package_resolved_path_key(job.get("clip_path")) != source_key:
                 continue
             job_id = str(job.get("id") or snapshot_path.stem).strip()
             if not job_id:
                 continue
+            auto_generate_result = _bool_value(
+                job.get("auto_generate_result", job.get("autoGenerateResult")),
+                False,
+            )
+            snapshot_shot_id = str(job.get("shot_id") or job.get("shotId") or "").strip()
             return {
                 "status": "mask_running",
                 "h3Jobs": {
                     "role": "mask",
                     "merged": True,
-                    "autoGenerateResult": False,
-                    "startedAt": _mode2_float(job.get("created_at"), snapshot_path.stat().st_mtime) * 1000,
+                    "autoGenerateResult": auto_generate_result,
+                    "startedAt": created_at * 1000,
                     "entries": [{
                         "jobId": job_id,
-                        "shotId": f"{package_id}（整包）",
+                        "shotId": snapshot_shot_id or f"{package_id}（整包）",
                         "merged": True,
                         "mergedShots": [
                             {
@@ -16685,6 +14310,7 @@ def _restore_generation_package_h3_jobs(
                         "logsTail": [str(line) for line in (job.get("logs") if isinstance(job.get("logs"), list) else [])[-3:]],
                     }],
                 },
+                "pendingAutoResult": auto_generate_result,
                 "lastTone": "warn",
                 "lastMessage": f"已从服务端快照恢复 MiniMax H3 白膜轮询\njob:{job_id}",
                 "errorMessage": "",
@@ -17060,7 +14686,21 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     restored.update(_restore_generation_package_source(root, package_id, segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "mask", segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "result", segments, state))
-    restored.update(_restore_generation_package_h3_jobs(root, package_id, segments, restored))
+    restored.update(_restore_generation_package_h3_jobs(root, package_id, segments, restored, state))
+    cleared_at = _mode2_float(state.get("h3ClearedAt"), 0.0)
+    h3_mask_cleared = bool(
+        cleared_at
+        and not restored.get("whiteMaskPath")
+        and not restored.get("maskSegments")
+    )
+    restored["h3ClearedAt"] = cleared_at
+    restored["h3MaskStateAuthoritative"] = bool(cleared_at)
+    restored["h3MaskCleared"] = h3_mask_cleared
+    if h3_mask_cleared:
+        restored.setdefault("whiteMaskPath", "")
+        restored.setdefault("maskSegments", [])
+        restored.setdefault("maskSplitManifest", "")
+        restored.setdefault("maskRuns", [])
     for key in (
         "maskTaskId",
         "maskJobId",
@@ -17075,6 +14715,45 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
         "packageSourceVersion",
     ):
         if key in state and state.get(key) not in (None, ""):
+            if key == "pendingAutoResult":
+                restored_h3_jobs = restored.get("h3Jobs") if isinstance(restored.get("h3Jobs"), dict) else {}
+                restored_entries = (
+                    restored_h3_jobs.get("entries")
+                    if isinstance(restored_h3_jobs.get("entries"), list)
+                    else []
+                )
+                if (
+                    str(restored_h3_jobs.get("role") or "") == "mask"
+                    and any(
+                        isinstance(entry, dict)
+                        and str(entry.get("status") or "") == "running"
+                        and str(entry.get("jobId") or "").strip()
+                        for entry in restored_entries
+                    )
+                ):
+                    continue
+            if key == "h3Jobs":
+                restored_h3_jobs = restored.get("h3Jobs") if isinstance(restored.get("h3Jobs"), dict) else {}
+                state_h3_jobs = state.get("h3Jobs") if isinstance(state.get("h3Jobs"), dict) else {}
+
+                def has_pollable_h3_job(value: dict[str, Any]) -> bool:
+                    entries = value.get("entries") if isinstance(value.get("entries"), list) else []
+                    return any(
+                        isinstance(entry, dict)
+                        and str(entry.get("status") or "") == "running"
+                        and bool(str(entry.get("jobId") or "").strip())
+                        for entry in entries
+                    )
+
+                restored_started_at = _mode2_float(restored_h3_jobs.get("startedAt"), 0.0)
+                state_started_at = _mode2_float(state_h3_jobs.get("startedAt"), 0.0)
+                if (
+                    has_pollable_h3_job(restored_h3_jobs)
+                    and restored_started_at > state_started_at
+                ):
+                    # 刷新可能发生在 POST 已到达后端、响应 job_id 尚未回到页面的窗口。
+                    # 服务端快照更新时，即使前端还保存着可轮询的旧任务，也不能反向覆盖。
+                    continue
             restored[key] = state.get(key)
     state_status = str(state.get("status") or "").strip()
     mask_task_id = str(restored.get("maskTaskId") or restored.get("maskJobId") or "").strip()
@@ -17084,15 +14763,14 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     h3_running = any(
         isinstance(entry, dict)
         and str(entry.get("status") or "") == "running"
-        and str(entry.get("jobId") or "").strip()
         for entry in (h3_jobs.get("entries") if isinstance(h3_jobs.get("entries"), list) else [])
     )
-    if restored.get("resultPath"):
+    if h3_running and h3_role == "result":
+        restored["status"] = "result_running"
+    elif restored.get("resultPath"):
         restored["status"] = "result_done"
     elif restored.get("whiteMaskPath"):
         restored["status"] = "mask_done"
-    elif h3_running and h3_role == "result":
-        restored["status"] = "result_running"
     elif h3_running and h3_role == "mask":
         restored["status"] = "mask_running"
     elif state_status == "result_running" and result_task_id:
@@ -17111,6 +14789,7 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
         or restored.get("maskJobId")
         or restored.get("resultTaskId")
         or restored.get("h3Jobs")
+        or restored.get("h3MaskStateAuthoritative")
     )
     if restored["restored"]:
         if restored["status"] == "failed":
@@ -17733,6 +15412,7 @@ def _clear_generation_package_mask(payload: dict[str, Any]) -> dict[str, Any]:
             if sibling_fp != fingerprint:
                 continue
         roots.append(candidate)
+    cleared_at = time.time()
     cleared: list[dict[str, Any]] = []
     for item_root in roots:
         mask_dir = _generation_package_work_dir(item_root, package_id) / "mask"
@@ -17754,6 +15434,14 @@ def _clear_generation_package_mask(payload: dict[str, Any]) -> dict[str, Any]:
         status = "result_done" if _generation_package_file_exists(state.get("resultPath")) else "idle"
         next_state = _write_generation_package_state(item_root, package_id, {
             "status": status,
+            "h3ClearedAt": cleared_at,
+            "h3Jobs": {},
+            "maskTaskId": "",
+            "maskJobId": "",
+            "maskPollContext": {},
+            "resultTaskId": "",
+            "resultPollContext": {},
+            "pendingAutoResult": False,
             "whiteMaskPath": "",
             "maskSourcePath": "",
             "maskPackageIdentityId": "",
@@ -18793,7 +16481,8 @@ def _compile_storyboard_prompt(
         *rebuild_meta["prompt"],
         f"【画面风格】{style_meta['label']}：{style_meta['prompt']}",
         f"【目标语境】{language_meta['label']}：{language_meta['prompt']} 当前镜头先专注画面，不生成任何字幕文字。",
-        f"【输出比例】{config['output_ratio']}；构图需适配该比例，主体不要被裁切出画。",
+        f"【输出比例】{'跟随原视频' if config['output_ratio'] == 'source' else config['output_ratio']}；"
+        "构图需适配该比例，主体不要被裁切出画。",
         f"【蒙版来源】{mask_meta['label']}：{mask_meta['prompt']}",
         f"【参考时段】原视频 {start:.2f}-{end:.2f} 秒，生成约 {duration:.1f} 秒；不要扩写到其他剧情，不要把前后镜头动作混进来。",
         f"【本镜头剧情】{description}",

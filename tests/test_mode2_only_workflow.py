@@ -7,20 +7,22 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from spvideo.comfy_client import ComfyClient
 from web_ui.server import (
-    SEEDANCE_A_TASKS,
-    SEEDANCE_A_TASKS_LOCK,
+    _cancel_h3_job_if_cleared,
     _delete_generation_package_mask_clip,
     _delete_storyboard_mode2_asset,
+    _load_storyboard_job_snapshot,
     _mode2_ensure_shot_preview_clips,
     _mode2_renumber_timeline_shots,
-    _mode2_scail2_route_check,
     _mode2_split_timeline_shot,
+    _required_h3_identity,
+    _restore_generation_package_h3_jobs,
     _restore_generation_package_state,
-    _submit_seedance_a_task,
     _storyboard_mode2_shot_subclips,
     _storyboard_build_class_pure_shots,
     _storyboard_enrich_reference_segments_with_understanding,
+    _validated_h3_resume_output,
 )
 
 
@@ -82,7 +84,9 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn('"/api/storyboard-reference-mask"', legacy_block)
         self.assertIn('"/api/storyboard-reference-white-mask"', legacy_block)
         self.assertIn('"/api/storyboard-reference-expression-mask"', legacy_block)
-        self.assertIn('if parsed.path == "/api/storyboard-reference-white-mask"', server)
+        self.assertIn('"/api/storyboard-server-transfer"', legacy_block)
+        self.assertNotIn('if parsed.path == "/api/storyboard-server-transfer"', server)
+        self.assertNotIn("def _run_transfer_job", server)
         self.assertIn('if parsed.path == "/api/generation-package/prepare"', server)
         self.assertIn('if parsed.path == "/api/generation-package/restore"', server)
         self.assertIn('if parsed.path == "/api/generation-package/split-output"', server)
@@ -134,7 +138,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("compose-pack-shot-list", html)
         self.assertIn("function confirmComposePlan", html)
         self.assertIn('openComposePage({ rebuild: true })', html)
-        self.assertIn("5-15 秒", html)
+        self.assertIn("5-15秒", html)
         self.assertIn("超过 15 秒", html)
         self.assertIn("卡包架", html)
         self.assertIn("compose-pack-shelf", html)
@@ -200,7 +204,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("data-mask-id", html)
         self.assertIn("compose-mask-card", html)
         self.assertIn("mask-pack", html)
-        self.assertIn("appendWhiteMaskShelfRun(packageId, maskRun)", html)
+        self.assertIn("appendWhiteMaskShelfRun(pack.id, run)", html)
         self.assertIn("暂无白膜包。生成白膜后会保存在这里。", html)
         self.assertNotIn('id="composeMaskStoreList"', html)
         self.assertIn("extra-dense", html)
@@ -289,7 +293,6 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn('id="generateResultBtn"', html)
         self.assertIn('id="generateFullPipelineBtn"', html)
         self.assertIn("function renderGenerationPackageWorkbench", html)
-        self.assertIn("function syncGenerationPackageToSeedanceDraft", html)
         self.assertIn("function startGenerationPackageMask", html)
         self.assertIn("function startGenerationPackageResult", html)
         self.assertIn("function generationPackApiWhiteMaskPrompt", html)
@@ -317,6 +320,12 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("function ensureGenerationRuntimeForPacks", html)
         self.assertIn("saveGenerationRuntimeDraft()", html)
         self.assertIn("ensureGenerationRuntimeForPacks(packs)", html)
+        self.assertIn("function generationRuntimeHasActiveH3Job", html)
+        self.assertIn("function generationRuntimeNeedsH3JobRecovery", html)
+        self.assertIn("function resumeGenerationH3Polling", html)
+        self.assertIn("resumeGenerationH3Polling(pack)", html)
+        self.assertIn('const STORY_RATIO_OPTIONS = ["source", "9:16", "16:9"]', html)
+        self.assertIn('if (ratio === "source") return { width: 0, height: 0 };', html)
         self.assertIn("whiteMaskPath", html)
         self.assertIn("maskSegments", html)
         self.assertIn("maskRuns", html)
@@ -325,7 +334,7 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("function appendGenerationRun", html)
         self.assertIn("白膜结果包", html)
         self.assertIn("成片结果包", html)
-        self.assertIn("已保存${isMaskOutput ? \"白膜结果包\" : \"成片结果包\"}", html)
+        self.assertIn("if (run) appendWhiteMaskShelfRun(pack.id, run)", html)
         self.assertIn("generation-output-package", html)
         self.assertIn("resultPath", html)
         self.assertIn("function ensureGenerationPackageSourcePreview", html)
@@ -343,7 +352,8 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         pack_prompt_fn = html.split("function generationPackPrompt", 1)[1].split("function generationPackApiWhiteMaskPrompt", 1)[0]
         self.assertNotIn("buildPromptDraft", pack_prompt_fn)
         self.assertNotIn("promptLines", pack_prompt_fn)
-        self.assertIn("把参考图替换原视频中的人物，并把原视频转绘成白膜视频，人物站位、方向、动作表情保持不变。", html)
+        self.assertIn("把视频里的人物全部转换成彩色树脂关节人偶素体", html)
+        self.assertIn("声音与原视频完全一致", html)
         white_mask_fn = html.split("function generationPackApiWhiteMaskPrompt", 1)[1].split("function generationPackShotPayload", 1)[0]
         self.assertNotIn("人物参考图绑定", white_mask_fn)
         self.assertNotIn("参考图只负责人物身份和外形轮廓", white_mask_fn)
@@ -376,177 +386,63 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         self.assertIn("会上传的参考图", html)
         self.assertIn("可选资产图", html)
         self.assertIn("已清空旧参考图", html)
-        self.assertIn("当前资产缩略图", html)
         self.assertIn("data-generation-add-reference", html)
         self.assertIn("data-generation-remove-reference", html)
         self.assertIn("已选参考图", html)
-        self.assertIn("本项目已关闭自动放图", html)
         self.assertNotIn("function generationPackReferenceImages", html)
         self.assertNotIn("prefer_current_shot_roles: true", html)
         pack_role_fn = html.split("function generationPackRoleAssets", 1)[1].split("function generationManualReferenceImages", 1)[0]
         self.assertNotIn("storyLegacyReferenceSegments", pack_role_fn)
         self.assertNotIn("legacy_reference", pack_role_fn)
-        sync_fn = html.split("function syncGenerationPackageToSeedanceDraft", 1)[1].split("function generationPlayerHtml", 1)[0]
-        self.assertIn("generationManualReferenceImages()", sync_fn)
-        self.assertIn("seedanceDraft.images = normalizeMaterialList(seedanceDraft.images, 1)", sync_fn)
-        self.assertNotIn("generationPackReferenceImages", sync_fn)
-        self.assertNotIn("seedanceDraft.images = normalizeMaterialList(refs, 1)", sync_fn)
-        self.assertIn('outputRole: "mask"', html)
-        self.assertIn('compareOutputLabel: "白膜视频"', html)
         self.assertIn("autoGenerateResult", html)
         self.assertIn("whiteMaskPath", html)
-        self.assertIn("先生成白膜视频", html)
-        self.assertIn("多人接口需要先用原视频生成白膜，再用白膜生成结果。", html)
         source_info_fn = html.split("function generationPackSourceInfo", 1)[1].split("function generationPackSourceVideo", 1)[0]
-        self.assertIn("runtime.packageSourcePath || runtime.sourcePath", source_info_fn)
+        self.assertIn("runtime.packageSourcePath", source_info_fn)
         self.assertIn("shots.length > 1", source_info_fn)
         self.assertIn("整包", source_info_fn)
         render_fn = html.split("function renderGenerationPackageWorkbench", 1)[1].split("function selectGenerationPackage", 1)[0]
         self.assertIn("sourceInfo.emptyText", render_fn)
-        self.assertIn("ensureGenerationPackageSourcePreview(pack)", render_fn)
+        server_restore_fn = html.split("async function restoreGenerationPackageRuntime", 1)[1].split("function ensureGenerationPackageRuntimeRestored", 1)[0]
+        self.assertIn("data.h3MaskStateAuthoritative === true", server_restore_fn)
+        self.assertIn("data.h3MaskCleared === true", server_restore_fn)
+        self.assertIn('clearGenerationH3Poll(id, "mask")', server_restore_fn)
+        restore_fn = html.split("function ensureGenerationPackageRuntimeRestored", 1)[1].split("function applyGenerationResultClipsToTimeline", 1)[0]
+        self.assertIn("generationRuntimeNeedsH3JobRecovery(runtime)", restore_fn)
+        self.assertIn("restoreAttempts < 20", restore_fn)
+        self.assertIn("setTimeout", restore_fn)
+        self.assertNotIn("runtime.whiteMaskPath || runtime.resultPath", restore_fn)
         mask_fn = html.split("async function startGenerationPackageMask", 1)[1].split("async function startGenerationPackageResult", 1)[0]
-        self.assertIn("submitSeedanceATask", mask_fn)
-        self.assertIn('seedanceDraft.prompt = generationEditorPromptText(pack, "mask")', mask_fn)
-        self.assertNotIn("seedanceSubmitting", mask_fn)
-        self.assertNotIn("startSeedanceReferenceWhiteMask", mask_fn)
+        self.assertIn("return startGenerationPackageH3Mask(pack, options)", mask_fn)
+        self.assertNotIn("Seedance", mask_fn)
+        self.assertNotIn("Scail2", mask_fn)
         result_fn = html.split("async function startGenerationPackageResult", 1)[1].split("async function startGenerationPackageFull", 1)[0]
-        self.assertNotIn("seedanceSubmitting", result_fn)
-        self.assertIn("seedancePackagePollTimers", html)
-        self.assertIn("function startSeedancePackageTaskPolling", html)
-        self.assertIn("function pollSeedancePackageTask", html)
+        self.assertIn("return startGenerationPackageH3Result(pack)", result_fn)
+        self.assertNotIn("Seedance", result_fn)
+        self.assertNotIn("Scail2", result_fn)
+        self.assertNotIn("/api/storyboard-server-transfer", html)
+        self.assertNotIn("function startMode2ServerTransfer", html)
+        self.assertNotIn("function pollMode2ServerTransferJob", html)
+        self.assertNotIn("function startSeedancePackageTaskPolling", html)
+        self.assertNotIn("function pollSeedancePackageTask", html)
+        self.assertNotIn("SEEDANCE_A_RELAY_CONFIG_KEY", html)
+        self.assertNotIn("NUKO_CHANNEL1_CONFIG_KEY", html)
+        self.assertNotIn("function syncGenerationPackageToSeedanceDraft", html)
+        self.assertNotIn("function loadSeedanceDraft", html)
+        self.assertNotIn("function buildSeedancePayload", html)
+        self.assertIn('submitGenerationH3Job("/api/mode2/h3-white-mask"', html)
+        self.assertIn('submitGenerationH3Job("/api/mode2/h3-charswap"', html)
+        h3_mask_fn = html.split("async function startGenerationPackageH3Mask", 1)[1].split("async function startGenerationPackageH3Result", 1)[0]
+        self.assertIn("package_id: pack.id", h3_mask_fn)
+        self.assertIn("shot_id: entry.shotId", h3_mask_fn)
+        self.assertIn("auto_generate_result: jobs.autoGenerateResult === true", h3_mask_fn)
+        h3_result_fn = html.split("async function startGenerationPackageH3Result", 1)[1].split("function attachGenerationH3Clips", 1)[0]
+        self.assertIn("package_id: pack.id", h3_result_fn)
+        self.assertIn("shot_id: entry.shotId", h3_result_fn)
+        h3_poll_fn = html.split("function pollGenerationH3Jobs", 1)[1].split("function resumeGenerationH3Polling", 1)[0]
+        self.assertIn("generationH3PollInFlight[key] === pollVersion", h3_poll_fn)
+        self.assertIn("generationH3PollVersions[key] !== pollVersion", h3_poll_fn)
         self.assertLess(html.index('id="generationCompareOriginal"'), html.index('id="generationCompareMask"'))
         self.assertLess(html.index('id="generationCompareMask"'), html.index('id="generationCompareResult"'))
-
-    def test_channel2_submit_uploads_references_and_sends_public_urls(self) -> None:
-        class FakeResponse:
-            ok = True
-            status_code = 200
-            text = '{"data":{"task_id":"task_public_refs"}}'
-
-            def json(self):
-                return {"data": {"task_id": "task_public_refs"}}
-
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            image_a = root / "wife.png"
-            image_b = root / "husband.png"
-            video = root / "P001_source.mp4"
-            image_a.write_bytes(b"image-a")
-            image_b.write_bytes(b"image-b")
-            video.write_bytes(b"video")
-            calls: list[dict] = []
-
-            def fake_upload(ref, _api_key):
-                return "https://public.example/" + Path(str(ref)).name
-
-            def fake_post(url, **kwargs):
-                calls.append({"url": url, "json": kwargs.get("json")})
-                return FakeResponse()
-
-            try:
-                with (
-                    patch("web_ui.server._seedance_a_upload_ref", side_effect=fake_upload),
-                    patch("web_ui.server.requests.post", side_effect=fake_post),
-                ):
-                    result = _submit_seedance_a_task({
-                        "taskName": "api_white_mask_P001",
-                        "project_dir": str(root),
-                        "source_video_path": str(video),
-                        "package_id": "P001",
-                        "relay_api_key": "sk-test",
-                        "relay_base_url": "https://upstream.example",
-                        "payload": {
-                            "model": "sd-2.0-r3",
-                            "prompt": "测试白膜",
-                            "duration": 7,
-                            "ratio": "9:16",
-                            "aspect_ratio": "9:16",
-                            "resolution": "720x1280",
-                            "images": [str(image_a), str(image_b)],
-                            "referenceVideos": [str(video)],
-                        },
-                    })
-            finally:
-                with SEEDANCE_A_TASKS_LOCK:
-                    SEEDANCE_A_TASKS.pop("task_public_refs", None)
-
-            self.assertEqual(result["task_id"], "task_public_refs")
-            self.assertEqual(calls[0]["url"], "https://upstream.example/v1/videos")
-            upstream = calls[0]["json"]
-            upstream_text = json.dumps(upstream, ensure_ascii=False)
-            self.assertNotIn(str(image_a), upstream_text)
-            self.assertNotIn(str(image_b), upstream_text)
-            self.assertNotIn(str(video), upstream_text)
-            self.assertEqual(upstream["images"], [
-                "https://public.example/wife.png",
-                "https://public.example/husband.png",
-            ])
-            self.assertEqual(upstream["image_urls"], upstream["images"])
-            self.assertEqual(upstream["model"], "sd-2.0-r3")
-            self.assertEqual(upstream["duration"], 7)
-            self.assertEqual(upstream["aspect_ratio"], "9:16")
-            self.assertEqual(upstream["size"], "720x1280")
-            self.assertEqual(upstream["video_urls"], ["https://public.example/P001_source.mp4"])
-            self.assertNotIn("metadata", upstream)
-            self.assertNotIn("videos", upstream)
-            self.assertNotIn("referenceVideos", upstream)
-            self.assertNotIn("reference_videos", upstream)
-            self.assertNotIn("video_reference", upstream)
-            self.assertNotIn("video_url", upstream)
-            self.assertNotIn("image_url", upstream)
-            self.assertNotIn("ratio", upstream)
-            self.assertNotIn("async", upstream)
-            self.assertTrue(Path(result["debug_path"]).exists())
-
-    def test_channel2_submit_keeps_fractional_duration(self) -> None:
-        class FakeResponse:
-            ok = True
-            status_code = 200
-            text = '{"data":{"task_id":"task_fractional_duration"}}'
-
-            def json(self):
-                return {"data": {"task_id": "task_fractional_duration"}}
-
-        calls: list[dict] = []
-
-        def fake_post(url, **kwargs):
-            calls.append({"url": url, "json": kwargs.get("json")})
-            return FakeResponse()
-
-        try:
-            with patch("web_ui.server.requests.post", side_effect=fake_post):
-                result = _submit_seedance_a_task({
-                    "taskName": "api_white_mask_P001",
-                    "relay_api_key": "sk-test",
-                    "relay_base_url": "https://upstream.example",
-                    "payload": {
-                        "model": "sd-2.0-r3",
-                        "prompt": "测试白膜",
-                        "duration": 6.6,
-                        "ratio": "9:16",
-                        "resolution": "720x1280",
-                    },
-                })
-        finally:
-            with SEEDANCE_A_TASKS_LOCK:
-                SEEDANCE_A_TASKS.pop("task_fractional_duration", None)
-
-        self.assertEqual(result["task_id"], "task_fractional_duration")
-        self.assertEqual(calls[0]["json"]["duration"], 6.6)
-
-    def test_channel2_submit_rejects_duration_outside_range(self) -> None:
-        with self.assertRaisesRegex(ValueError, "5-15"):
-            _submit_seedance_a_task({
-                "relay_api_key": "sk-test",
-                "relay_base_url": "https://upstream.example",
-                "payload": {
-                    "model": "sd-2.0-r3",
-                    "prompt": "测试白膜",
-                    "duration": 15.1,
-                    "ratio": "9:16",
-                    "resolution": "720x1280",
-                },
-            })
 
     def test_generation_package_restore_keeps_all_mask_runs(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -648,6 +544,390 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
             self.assertEqual(restored["maskTaskId"], "task-mask-001")
             self.assertEqual(restored["maskPollContext"]["outputRole"], "mask")
 
+    def test_generation_package_restore_keeps_pending_h3_without_job_id(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shot = root / "shot.mp4"
+            shot.write_bytes(b"video")
+            state_dir = root / "04_AI输出成片" / "generation_packages" / "P001"
+            state_dir.mkdir(parents=True)
+            (state_dir / "generation_state.json").write_text(json.dumps({
+                "status": "mask_running",
+                "h3Jobs": {
+                    "role": "mask",
+                    "startedAt": 1000,
+                    "entries": [{
+                        "jobId": "",
+                        "shotId": "P001（整包）",
+                        "status": "running",
+                    }],
+                },
+            }), encoding="utf-8")
+
+            with TemporaryDirectory() as jobs_tmp, patch(
+                "web_ui.server.STORYBOARD_MODE2_JOB_ROOT",
+                Path(jobs_tmp),
+            ):
+                restored = _restore_generation_package_state({
+                    "project_dir": str(root),
+                    "package_id": "P001",
+                    "shots": [{"shot_id": "S001", "video_path": str(shot), "duration": 1.0}],
+                })
+
+            self.assertTrue(restored["restored"])
+            self.assertEqual(restored["status"], "mask_running")
+            self.assertEqual(restored["h3Jobs"]["entries"][0]["jobId"], "")
+
+    def test_h3_snapshot_restore_recovers_charswap_jobs(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            mask_a = root / "mask_a.mp4"
+            mask_b = root / "mask_b.mp4"
+            mask_a.write_bytes(b"video")
+            mask_b.write_bytes(b"video")
+            for job_id, mask_path, created_at in (
+                ("result-a", mask_a, 20.0),
+                ("result-b", mask_b, 21.0),
+            ):
+                (jobs_root / f"{job_id}.json").write_text(json.dumps({
+                    "id": job_id,
+                    "type": "mode2_h3_charswap",
+                    "status": "running",
+                    "created_at": created_at,
+                    "project_dir": str(root),
+                    "mask_video_path": str(mask_path),
+                    "logs": ["> submitted"],
+                }), encoding="utf-8")
+
+            restored = {
+                "whiteMaskPath": str(root / "mask_package.mp4"),
+                "maskSegments": [
+                    {"shot_id": "S001", "path": str(mask_a), "duration": 1.0},
+                    {"shot_id": "S002", "path": str(mask_b), "duration": 1.5},
+                ],
+            }
+            segments = [
+                {"shot_id": "S001", "duration": 1.0},
+                {"shot_id": "S002", "duration": 1.5},
+            ]
+            with patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root):
+                recovered = _restore_generation_package_h3_jobs(
+                    root, "P001", segments, restored, {},
+                )
+
+            self.assertEqual(recovered["status"], "result_running")
+            self.assertEqual(recovered["h3Jobs"]["role"], "result")
+            self.assertEqual(
+                [(item["shotId"], item["jobId"]) for item in recovered["h3Jobs"]["entries"]],
+                [("S001", "result-a"), ("S002", "result-b")],
+            )
+
+    def test_h3_snapshot_restore_recovers_identified_charswap_without_mask_segments(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            mask = root / "mask.mp4"
+            mask.write_bytes(b"video")
+            (jobs_root / "result-a.json").write_text(json.dumps({
+                "id": "result-a",
+                "type": "mode2_h3_charswap",
+                "status": "running",
+                "created_at": 20.0,
+                "project_dir": str(root),
+                "package_id": "P001",
+                "shot_id": "S001",
+                "mask_video_path": str(mask),
+            }), encoding="utf-8")
+
+            with patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root):
+                recovered = _restore_generation_package_h3_jobs(
+                    root,
+                    "P001",
+                    [{"shot_id": "S001", "duration": 1.25}],
+                    {},
+                    {},
+                )
+
+            self.assertEqual(recovered["status"], "result_running")
+            self.assertEqual(recovered["h3Jobs"]["entries"], [{
+                "jobId": "result-a",
+                "shotId": "S001",
+                "sourcePath": str(mask),
+                "duration": 1.25,
+                "status": "running",
+                "outputPath": "",
+                "error": "",
+                "logsTail": [],
+            }])
+
+    def test_h3_snapshot_restore_isolates_same_mask_path_by_package(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            mask = root / "shared_mask.mp4"
+            mask.write_bytes(b"video")
+            for package_id, job_id, created_at in (
+                ("P001", "job-p1", 20.0),
+                ("P002", "job-p2", 21.0),
+            ):
+                (jobs_root / f"{job_id}.json").write_text(json.dumps({
+                    "id": job_id,
+                    "type": "mode2_h3_charswap",
+                    "status": "running",
+                    "created_at": created_at,
+                    "project_dir": str(root),
+                    "package_id": package_id,
+                    "shot_id": "S001",
+                    "mask_video_path": str(mask),
+                }), encoding="utf-8")
+
+            with patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root):
+                recovered = _restore_generation_package_h3_jobs(
+                    root,
+                    "P001",
+                    [{"shot_id": "S001", "duration": 1.0}],
+                    {},
+                    {},
+                )
+
+            self.assertEqual(recovered["h3Jobs"]["entries"][0]["jobId"], "job-p1")
+
+    def test_h3_snapshot_restore_keeps_white_mask_auto_result_flag(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            source = root / "package.mp4"
+            source.write_bytes(b"video")
+            (jobs_root / "mask-job.json").write_text(json.dumps({
+                "id": "mask-job",
+                "type": "mode2_h3_white_mask",
+                "status": "running",
+                "created_at": 20.0,
+                "project_dir": str(root),
+                "package_id": "P001",
+                "shot_id": "P001（整包）",
+                "auto_generate_result": True,
+                "clip_path": str(source),
+            }), encoding="utf-8")
+
+            with patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root):
+                recovered = _restore_generation_package_h3_jobs(
+                    root,
+                    "P001",
+                    [{"shot_id": "S001", "duration": 1.0}],
+                    {"packageSourcePath": str(source)},
+                    {},
+                )
+
+            self.assertTrue(recovered["h3Jobs"]["autoGenerateResult"])
+            self.assertTrue(recovered["pendingAutoResult"])
+            self.assertEqual(recovered["h3Jobs"]["entries"][0]["shotId"], "P001（整包）")
+
+    def test_h3_request_identity_is_required_and_trimmed(self) -> None:
+        self.assertEqual(_required_h3_identity(" P001 ", "package_id"), "P001")
+        with self.assertRaisesRegex(ValueError, "h3_shot_id_required"):
+            _required_h3_identity("", "shot_id")
+        with self.assertRaisesRegex(ValueError, "h3_package_id_invalid"):
+            _required_h3_identity("P001\ninvalid", "package_id")
+
+    def test_generation_package_restore_prefers_newer_server_h3_snapshot(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            shot = root / "shot.mp4"
+            source = root / "package.mp4"
+            shot.write_bytes(b"video")
+            source.write_bytes(b"video")
+            segments = [{"shot_id": "S001", "video_path": str(shot), "duration": 1.0}]
+            state_dir = root / "04_AI输出成片" / "generation_packages" / "P001"
+            state_dir.mkdir(parents=True)
+            (state_dir / "generation_state.json").write_text(json.dumps({
+                "status": "mask_running",
+                "packageSourcePath": str(source),
+                "packageSegments": segments,
+                "h3Jobs": {
+                    "role": "mask",
+                    "startedAt": 1000,
+                    "entries": [{"jobId": "old-job", "status": "running"}],
+                },
+            }), encoding="utf-8")
+            (jobs_root / "new-job.json").write_text(json.dumps({
+                "id": "new-job",
+                "type": "mode2_h3_white_mask",
+                "status": "running",
+                "created_at": 2.0,
+                "project_dir": str(root),
+                "clip_path": str(source),
+            }), encoding="utf-8")
+
+            with (
+                patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root),
+                patch("web_ui.server._generation_package_source_duration_valid", return_value=True),
+            ):
+                restored = _restore_generation_package_state({
+                    "project_dir": str(root),
+                    "package_id": "P001",
+                    "shots": segments,
+                })
+
+            self.assertEqual(restored["status"], "mask_running")
+            self.assertEqual(restored["h3Jobs"]["entries"][0]["jobId"], "new-job")
+
+    def test_h3_snapshot_restore_ignores_jobs_before_clear_tombstone(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            jobs_root = root / "jobs"
+            jobs_root.mkdir()
+            source = root / "package.mp4"
+            source.write_bytes(b"video")
+            (jobs_root / "old-mask.json").write_text(json.dumps({
+                "id": "old-mask",
+                "type": "mode2_h3_white_mask",
+                "status": "done",
+                "created_at": 10.0,
+                "project_dir": str(root),
+                "clip_path": str(source),
+            }), encoding="utf-8")
+
+            with patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root):
+                recovered = _restore_generation_package_h3_jobs(
+                    root,
+                    "P001",
+                    [{"shot_id": "S001", "duration": 1.0}],
+                    {"packageSourcePath": str(source)},
+                    {"h3ClearedAt": 11.0},
+                )
+
+            self.assertEqual(recovered, {})
+
+    def test_generation_package_restore_returns_authoritative_h3_clear_state(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shot = root / "shot.mp4"
+            shot.write_bytes(b"video")
+            state_dir = root / "04_AI输出成片" / "generation_packages" / "P001"
+            state_dir.mkdir(parents=True)
+            (state_dir / "generation_state.json").write_text(json.dumps({
+                "status": "idle",
+                "h3ClearedAt": 25.0,
+                "whiteMaskPath": "",
+                "maskSegments": [],
+                "maskRuns": [],
+            }), encoding="utf-8")
+
+            with TemporaryDirectory() as jobs_tmp, patch(
+                "web_ui.server.STORYBOARD_MODE2_JOB_ROOT",
+                Path(jobs_tmp),
+            ):
+                restored = _restore_generation_package_state({
+                    "project_dir": str(root),
+                    "package_id": "P001",
+                    "shots": [{"shot_id": "S001", "video_path": str(shot), "duration": 1.0}],
+                })
+
+            self.assertEqual(restored["h3ClearedAt"], 25.0)
+            self.assertTrue(restored["restored"])
+            self.assertTrue(restored["h3MaskStateAuthoritative"])
+            self.assertTrue(restored["h3MaskCleared"])
+            self.assertEqual(restored["whiteMaskPath"], "")
+            self.assertEqual(restored["maskSegments"], [])
+            self.assertEqual(restored["maskRuns"], [])
+
+    def test_h3_resumable_snapshot_stays_running_after_backend_restart(self) -> None:
+        with TemporaryDirectory() as tmp:
+            jobs_root = Path(tmp)
+            snapshot = {
+                "id": "mask-job",
+                "type": "mode2_h3_white_mask",
+                "status": "running",
+                "created_at": 20.0,
+                "project_dir": str(jobs_root / "project"),
+                "package_id": "P001",
+                "comfy_prompt_id": "prompt-1",
+                "comfy_url": "https://pod.example.com",
+                "out_dir": str(jobs_root / "project" / "04_AI输出成片" / "h3_jobs" / "mask-job"),
+                "out_name": "whitemask.mp4",
+            }
+            (jobs_root / "mask-job.json").write_text(json.dumps(snapshot), encoding="utf-8")
+
+            with (
+                patch("web_ui.server.STORYBOARD_MODE2_JOB_ROOT", jobs_root),
+                patch("web_ui.server._h3_snapshot_was_cleared", return_value=False),
+            ):
+                restored = _load_storyboard_job_snapshot("mask-job")
+
+            self.assertEqual(restored["status"], "running")
+            self.assertTrue(restored["restored_from_snapshot"])
+
+    def test_h3_in_memory_job_is_cancelled_after_clear_tombstone(self) -> None:
+        job = {
+            "id": "mask-job",
+            "type": "mode2_h3_white_mask",
+            "status": "done",
+            "result": {"output_path": "stale.mp4"},
+            "logs": [],
+        }
+        jobs = {"mask-job": dict(job)}
+        with (
+            patch("web_ui.server.JOBS", jobs),
+            patch("web_ui.server._h3_snapshot_was_cleared", return_value=True),
+            patch("web_ui.server._write_storyboard_job_snapshot") as write_snapshot,
+        ):
+            cancelled = _cancel_h3_job_if_cleared(job)
+
+        self.assertEqual(cancelled["status"], "cancelled")
+        self.assertIsNone(cancelled["result"])
+        self.assertTrue(jobs["mask-job"]["_cancel"])
+        self.assertEqual(write_snapshot.call_args.args[0]["status"], "cancelled")
+
+    def test_h3_resume_output_target_must_match_job_directory_and_fixed_name(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            expected_dir = root / "04_AI输出成片" / "h3_jobs" / "mask-job"
+            job = {
+                "id": "mask-job",
+                "type": "mode2_h3_white_mask",
+                "project_dir": str(root),
+                "out_dir": str(expected_dir),
+                "out_name": "whitemask.mp4",
+            }
+            self.assertEqual(_validated_h3_resume_output(job), (expected_dir.resolve(), "whitemask.mp4"))
+            with self.assertRaisesRegex(ValueError, "h3_resume_output_target_invalid"):
+                _validated_h3_resume_output({**job, "out_name": "other.mp4"})
+            with self.assertRaisesRegex(ValueError, "h3_resume_output_target_invalid"):
+                _validated_h3_resume_output({**job, "out_dir": str(root / "other")})
+
+    def test_comfy_submission_callback_runs_once_before_waiting(self) -> None:
+        client = ComfyClient("https://pod.example.com")
+        events: list[tuple[str, str, str]] = []
+        history = {"prompt-1": {"status": {"status_str": "success", "completed": True}}}
+
+        def wait_for_completion(prompt_id, client_id, _workflow, _log):
+            events.append(("wait", prompt_id, client_id))
+            return history
+
+        with (
+            patch.object(client, "submit_workflow", return_value=("prompt-1", "client-1")),
+            patch.object(client, "wait_for_completion", side_effect=wait_for_completion),
+        ):
+            client.run_workflow(
+                {"1": {"class_type": "Example", "inputs": {}}},
+                on_submitted=lambda prompt_id, client_id: events.append(
+                    ("submitted", prompt_id, client_id)
+                ),
+            )
+
+        self.assertEqual(events, [
+            ("submitted", "prompt-1", "client-1"),
+            ("wait", "prompt-1", "client-1"),
+        ])
+
     def test_generation_package_delete_mask_clip_removes_file_manifest_and_state(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -722,42 +1002,6 @@ class Mode2OnlyWorkflowTests(unittest.TestCase):
         ignored_pos = html.index('if (asset.manual_asset_status === "ignored") return true;')
         role_pos = html.index('if (asset.kind === "role") return false;')
         self.assertLess(ignored_pos, role_pos)
-
-    def test_scail2_route_accepts_single_clean_role_only(self) -> None:
-        shot = {
-            "segment_id": "S001",
-            "person_count": 1,
-            "role_asset_ids": ["R001"],
-            "description": "single person close-up",
-        }
-        assets = [{"id": "R001", "kind": "role"}]
-        ok, reason, meta = _mode2_scail2_route_check(shot, assets)
-        self.assertTrue(ok, reason)
-        self.assertEqual(meta["role_count"], 1)
-
-    def test_scail2_route_rejects_multi_or_contact_shots(self) -> None:
-        assets = [{"id": "R001", "kind": "role"}, {"id": "R002", "kind": "role"}]
-        multi_shot = {
-            "segment_id": "S002",
-            "person_count": 2,
-            "role_asset_ids": ["R001", "R002"],
-            "description": "two people in frame",
-        }
-        ok, reason, meta = _mode2_scail2_route_check(multi_shot, assets)
-        self.assertFalse(ok)
-        self.assertEqual(meta["role_count"], 2)
-        self.assertIn("Seedance", reason)
-
-        contact_shot = {
-            "segment_id": "S003",
-            "person_count": 1,
-            "role_asset_ids": ["R001"],
-            "description": "single visible person but another person's hand touches the shoulder",
-        }
-        ok, reason, meta = _mode2_scail2_route_check(contact_shot, assets)
-        self.assertFalse(ok)
-        self.assertTrue(meta["contact_risk"])
-        self.assertIn("Seedance", reason)
 
     def test_manual_empty_shot_cuts_do_not_rerun_hardcut(self) -> None:
         with TemporaryDirectory() as tmp:

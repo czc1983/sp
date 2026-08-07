@@ -6,6 +6,31 @@
       "weight_dtype": "default"
     }
   },
+  "204": {
+    "class_type": "MiniMaxH3MemoryEfficientSageAttentionPatch",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ]
+    }
+  },
+  "205": {
+    "class_type": "MiniMaxH3BlockCacheT8",
+    "inputs": {
+      "model": [
+        "204",
+        0
+      ],
+      "residual_diff_threshold": 0.12,
+      "start_percent": 0.08,
+      "end_percent": 0.95,
+      "max_consecutive_hits": 2,
+      "cache_device": "cpu",
+      "metric_stride": 8,
+      "verbose": false
+    }
+  },
   "128": {
     "class_type": "CLIPLoader",
     "inputs": {
@@ -95,10 +120,10 @@
     "class_type": "BasicScheduler",
     "inputs": {
       "model": [
-        "127",
+        "205",
         0
       ],
-      "scheduler": "beta",
+      "scheduler": "simple",
       "steps": 20,
       "denoise": 1.0
     }
@@ -107,7 +132,7 @@
     "class_type": "BasicGuider",
     "inputs": {
       "model": [
-        "127",
+        "205",
         0
       ],
       "conditioning": [
@@ -154,6 +179,22 @@
       ]
     }
   },
+  "206": {
+    "class_type": "FlashVSRNode",
+    "inputs": {
+      "frames": [
+        "122",
+        0
+      ],
+      "model": "FlashVSR-v1.1",
+      "mode": "tiny",
+      "scale": 2,
+      "tiled_vae": true,
+      "tiled_dit": true,
+      "unload_dit": false,
+      "seed": 0
+    }
+  },
   "121": {
     "class_type": "VAEDecodeAudio",
     "inputs": {
@@ -171,7 +212,7 @@
     "class_type": "CreateVideo",
     "inputs": {
       "images": [
-        "122",
+        "206",
         0
       ],
       "audio": [

@@ -1161,22 +1161,8 @@
 
     .btn,
     .tiny-btn,
-    .seedance-copy-status-btn {
-      border-color: rgba(180, 198, 207, .18);
-      background: #111619;
-      color: #dce5e9;
-      border-radius: 8px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
-    }
-
     .btn:hover:not(:disabled),
     .tiny-btn:hover:not(:disabled),
-    .seedance-copy-status-btn:hover {
-      border-color: rgba(214, 168, 76, .48);
-      color: #f5d99a;
-      filter: none;
-    }
-
     .btn.primary {
       border-color: rgba(65, 135, 204, .7);
       background: linear-gradient(180deg, #183e61, #132e48);
@@ -1473,24 +1459,6 @@
       background: #050607;
     }
 
-    .seedance-key-help,
-    .seedance-relay-grid {
-      border-color: rgba(255, 255, 255, .09);
-      background: #0a0d0f;
-      border-radius: 10px;
-    }
-
-    .seedance-relay-grid {
-      grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 96px;
-      padding: 10px;
-    }
-
-    .seedance-workbench {
-      grid-template-columns: minmax(320px, 450px) minmax(0, 1fr);
-      gap: 14px;
-    }
-
-    .seedance-card,
     .material-group,
     .timeline-main,
     .compare-pane,
@@ -1502,7 +1470,6 @@
       border-radius: 10px;
     }
 
-    .seedance-card-head,
     .material-group-title,
     .compare-head {
       border-bottom-color: rgba(255, 255, 255, .07);
@@ -1548,15 +1515,6 @@
       max-height: 160px;
       color: #7f8d94;
       font-size: 11px;
-    }
-
-    .seedance-draft-card .payload-preview {
-      min-height: 74px;
-      max-height: 112px;
-    }
-
-    .seedance-draft-card .payload-preview {
-      display: none !important;
     }
 
     @media (max-width: 1280px) {
@@ -1694,20 +1652,6 @@
       padding: 10px 12px !important;
     }
 
-    .seedance-workbench {
-      height: 100%;
-      max-height: calc(100vh - 158px);
-      grid-template-columns: minmax(280px, 390px) minmax(0, 1fr) !important;
-      gap: 12px !important;
-      overflow: hidden !important;
-    }
-
-    .seedance-materials {
-      gap: 8px !important;
-      overflow: hidden !important;
-      max-height: none !important;
-    }
-
     .material-group {
       padding: 8px !important;
     }
@@ -1715,11 +1659,6 @@
     .material-group-title {
       min-height: 26px;
       margin-bottom: 6px !important;
-    }
-
-    .seedance-materials [id$="Slots"] {
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-      gap: 6px !important;
     }
 
     .slot-row {
@@ -1744,25 +1683,6 @@
       height: 26px !important;
       padding: 0 8px !important;
       font-size: 11px !important;
-    }
-
-    .seedance-card-head {
-      min-height: 34px !important;
-      padding: 7px 10px !important;
-    }
-
-    .seedance-card-body {
-      padding: 9px !important;
-    }
-
-    .seedance-prompt-field {
-      flex: 1 1 auto !important;
-    }
-
-    #seedancePromptInput {
-      height: clamp(126px, 24vh, 220px) !important;
-      min-height: 0 !important;
-      resize: none !important;
     }
 
     .module-view[data-module-view="storyboard"] .stats {
@@ -3747,57 +3667,6 @@
       }
     }
 
-    .seedance-workbench {
-      display: grid;
-      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-      gap: 12px;
-      height: 100%;
-      min-height: 0;
-    }
-
-    .seedance-card {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #111619;
-      overflow: hidden;
-    }
-
-    .seedance-card-head {
-      min-height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 10px;
-      border-bottom: 1px solid #2a3338;
-      color: #eef4f6;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .seedance-card-body {
-      padding: 10px;
-    }
-
-    .seedance-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .seedance-grid.three {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .seedance-materials {
-      display: grid;
-      gap: 10px;
-      align-content: start;
-      min-height: 0;
-      overflow: visible;
-      padding-right: 0;
-    }
-
     .material-group {
       border: 1px solid #2d3940;
       border-radius: 8px;
@@ -3946,26 +3815,6 @@
     .seedance-status-wrap .seedance-submit-status {
       margin: 0;
       padding-right: 92px;
-    }
-
-    .seedance-copy-status-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      height: 26px;
-      padding: 0 9px;
-      border: 1px solid rgba(216, 229, 236, .22);
-      border-radius: 6px;
-      background: rgba(12, 17, 20, .86);
-      color: #d8e5ec;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .seedance-copy-status-btn:hover {
-      border-color: rgba(234, 184, 95, .5);
-      color: #f3d39d;
     }
 
     .seedance-submit-status.good {
@@ -4550,39 +4399,6 @@
       }
     }
 
-    .seedance-key-help {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 0 0 10px;
-      border: 1px solid rgba(234, 184, 95, .32);
-      border-radius: 8px;
-      background: rgba(234, 184, 95, .07);
-      color: #f0d39e;
-      padding: 9px 12px;
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .seedance-key-help strong {
-      color: #ffe5ad;
-      white-space: nowrap;
-    }
-
-    .seedance-key-help span {
-      min-width: 0;
-      flex: 1 1 auto;
-      overflow-wrap: anywhere;
-    }
-
-    .seedance-relay-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: end;
-      margin: 0 0 10px;
-    }
-
     .module-view[data-module-view="generate"] > .panel-body > .empty,
     .module-view[data-module-view="generate"] > .panel-body > .route {
       display: none;
@@ -4590,50 +4406,6 @@
 
     .module-view[data-module-view="generate"] > .panel-body {
       overflow: auto;
-    }
-
-    .seedance-draft-card {
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .seedance-draft-card .seedance-card-body {
-      min-height: 0;
-      display: flex;
-      flex: 1;
-      flex-direction: column;
-      gap: 10px;
-      overflow: visible;
-    }
-
-    .seedance-prompt-field {
-      min-height: 0;
-      display: flex;
-      flex: 0 0 auto;
-      flex-direction: column;
-    }
-
-    #seedancePromptInput {
-      height: 128px;
-      min-height: 96px;
-      flex: 0 0 auto;
-      resize: vertical;
-    }
-
-    .seedance-draft-card .seedance-subclips {
-      margin-top: 0;
-      flex: 0 0 auto;
-    }
-
-    .seedance-draft-card .seedance-subclip-player {
-      max-height: 220px;
-    }
-
-    .seedance-draft-card .payload-preview {
-      min-height: 92px;
-      max-height: 150px;
-      flex: 0 0 auto;
     }
 
     .shot-prompt-card {
@@ -5245,7 +5017,6 @@
       .compare-stage { grid-template-columns: 1fr; }
       .module-view[data-module-view="storyboard"] .compare-stage { height: auto; }
       .module-view[data-module-view="storyboard"] .compare-pane { min-height: 240px; }
-      .seedance-workbench { grid-template-columns: 1fr; }
       .mode-grid { grid-template-columns: 1fr; }
       .story-config-grid { grid-template-columns: 1fr; }
       .understanding-grid { grid-template-columns: 1fr; }
@@ -5432,13 +5203,6 @@
 
     .btn,
     .tiny-btn,
-    .seedance-copy-status-btn {
-      border-color: rgba(180,198,207,.18);
-      background: #111619;
-      color: #dce5e9;
-      border-radius: 8px;
-    }
-
     .btn.primary { border-color: rgba(65,135,204,.7); background: #173a58; }
     .btn.good { border-color: rgba(63,166,103,.55); background: #123d2a; }
     .btn.warn { border-color: rgba(214,168,76,.55); background: rgba(214,168,76,.13); color: #f4d695; }
@@ -5470,7 +5234,6 @@
     #assetBoard.asset-board > .asset-card,
     .asset-card,
     .asset-binding-preview,
-    .seedance-card,
     .material-group,
     .timeline-main,
     .compare-pane,
@@ -5559,18 +5322,6 @@
       line-height: 1.62;
     }
 
-    .seedance-relay-grid {
-      grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 96px;
-      gap: 8px;
-      padding: 10px;
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 10px;
-      background: #0a0d0f;
-    }
-
-    .module-view[data-module-view="generate"] .seedance-key-help,
-    .module-view[data-module-view="generate"] .seedance-relay-grid,
-    .module-view[data-module-view="generate"] .seedance-status-wrap,
     .module-view[data-module-view="generate"] > .panel-body > .empty,
     .module-view[data-module-view="generate"] > .panel-body > .route {
       display: none !important;
@@ -5819,14 +5570,6 @@
       align-items: stretch;
       gap: 14px;
       padding: 12px 14px;
-    }
-
-    .generation-workbench.route-scail2 .generation-compare-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .generation-workbench.route-scail2 #generationCompareMask {
-      display: none;
     }
 
     .generation-video-pane {
@@ -6394,10 +6137,6 @@
       background: #242424;
     }
 
-    .legacy-generation-shell {
-      display: none !important;
-    }
-
     @media (max-width: 1180px) {
       .generation-workbench {
         grid-template-columns: minmax(128px, 160px) minmax(0, 1fr) minmax(160px, 200px);
@@ -6407,11 +6146,6 @@
         gap: 8px;
         padding: 8px;
       }
-    }
-
-    .seedance-workbench {
-      grid-template-columns: minmax(320px, 450px) minmax(0, 1fr);
-      gap: 14px;
     }
 
     .slot-row {
@@ -6493,20 +6227,9 @@
       max-height: 150px;
     }
 
-    .seedance-draft-card .payload-preview {
-      min-height: 74px;
-      max-height: 112px;
-    }
-
-    .seedance-draft-card .payload-preview,
-    #copySeedancePayloadBtn {
-      display: none !important;
-    }
-
     .source-path-hidden,
     #storyStatus,
     .storyboard-queue-field,
-    .seedance-status-wrap,
     .topbar > .mode-pill,
     .assistant-head > .mode-pill,
     .slot-row .input,
@@ -6517,26 +6240,8 @@
     .story-reference-note,
     .story-config-note,
     .shot-prompt-card,
-    .story-summary-field,
-    .seedance-note,
-    .seedance-task-grid,
-    .seedance-draft-card,
-    .seedance-key-help,
-    .seedance-relay-grid,
-    #previewSeedancePayloadBtn,
-    #saveSeedanceDraftBtn {
+    .story-summary-field {
       display: none !important;
-    }
-
-    .seedance-materials {
-      overflow: visible !important;
-      max-height: none !important;
-    }
-
-    .seedance-materials [id$="Slots"] {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-      gap: 8px;
     }
 
     .slot-row {
@@ -6585,13 +6290,7 @@
       flex-wrap: nowrap !important;
     }
 
-    .seedance-workbench,
     .module-view[data-module-view="generate"] > .panel-body,
-    .seedance-draft-card .seedance-card-body {
-      overflow: visible !important;
-      height: auto !important;
-    }
-
     /* Unified image-card language: image areas read like compact playing cards. */
     #assetBoard .asset-card-body,
     #assetBoard .asset-card-body.has-refined {
@@ -6978,20 +6677,6 @@
       padding: 10px 12px !important;
     }
 
-    .seedance-workbench {
-      height: 100% !important;
-      max-height: calc(100vh - 158px) !important;
-      grid-template-columns: minmax(280px, 390px) minmax(0, 1fr) !important;
-      gap: 12px !important;
-      overflow: hidden !important;
-    }
-
-    .seedance-materials {
-      gap: 8px !important;
-      overflow: hidden !important;
-      max-height: none !important;
-    }
-
     .material-group {
       padding: 8px !important;
     }
@@ -6999,11 +6684,6 @@
     .material-group-title {
       min-height: 26px;
       margin-bottom: 6px !important;
-    }
-
-    .seedance-materials [id$="Slots"] {
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-      gap: 6px !important;
     }
 
     .slot-row {
@@ -7028,25 +6708,6 @@
       height: 26px !important;
       padding: 0 8px !important;
       font-size: 11px !important;
-    }
-
-    .seedance-card-head {
-      min-height: 34px !important;
-      padding: 7px 10px !important;
-    }
-
-    .seedance-card-body {
-      padding: 9px !important;
-    }
-
-    .seedance-prompt-field {
-      flex: 1 1 auto !important;
-    }
-
-    #seedancePromptInput {
-      height: clamp(126px, 24vh, 220px) !important;
-      min-height: 0 !important;
-      resize: none !important;
     }
 
     .module-view[data-module-view="storyboard"] .stats {
@@ -7337,7 +6998,6 @@
     .settings-modal,
     .report-modal,
     .asset-card,
-    .seedance-card,
     .material-group,
     .timeline-main,
     .compare-pane,
@@ -7368,14 +7028,6 @@
     .tiny-btn.warn,
     .assistant-guide-btn,
     .assistant-route-btn,
-    .seedance-copy-status-btn {
-      background: #181818 !important;
-      border-color: #3a3a3a !important;
-      color: #eeeeee !important;
-      box-shadow: none !important;
-      filter: none !important;
-    }
-
     .btn:hover:not(:disabled),
     .tiny-btn:hover:not(:disabled),
     .assistant-guide-btn:hover,
@@ -10035,9 +9687,9 @@
               <span>当前镜头提示词</span>
               <span>按当前镜头资产和动作编译</span>
             </div>
-            <textarea class="textarea" id="promptDraft" placeholder="从时间线选择一个镜头后，这里会显示完整 Seedance 提示词。"></textarea>
+            <textarea class="textarea" id="promptDraft" placeholder="从时间线选择一个镜头后，这里会显示完整 H3 参考提示词。"></textarea>
             <div class="prompt-actions">
-              <button class="btn good" id="useShotPromptBtn" type="button">送到 Seedance 草稿</button>
+              <button class="btn good" id="useShotPromptBtn" type="button">送到 H3 提示词</button>
               <button class="btn" id="copyShotPromptBtn" type="button">复制镜头提示词</button>
             </div>
           </div>
@@ -10111,7 +9763,7 @@
                     <input class="compose-shot-search-input" id="composeShotSearchInput" type="text" placeholder="卡号 如 21 / S021" hidden>
                     <button class="compose-add-pack-btn" id="composeRemovePackBtn" type="button" title="删除当前卡包" aria-label="删除当前卡包">-</button>
                     <button class="compose-add-pack-btn" id="composeAddPackBtn" type="button" title="新增卡包" aria-label="新增卡包">+</button>
-                    <span id="composePackSummary">0 个卡包 · 单人2-15秒 · 多人5-15秒</span>
+                    <span id="composePackSummary">0 个 H3 卡包 · 5-15秒</span>
                   </div>
                 </div>
                 <div class="compose-pack-list compose-pack-shelf" id="composePackList"></div>
@@ -10132,11 +9784,8 @@
         <div class="panel-head">
           <span>生成包执行台</span>
           <div class="generate-toolbar">
-            <select class="input generate-channel-select" id="seedanceApiChannelSelect" title="上级通道" aria-label="上级通道"></select>
-            <select class="input generate-model-select" id="seedanceModelSelect" title="模型选择"></select>
-            <select class="input generate-param-select" id="seedanceRatioSelect" title="比例" aria-label="比例"></select>
-            <select class="input generate-param-select" id="seedanceDurationSelect" title="时长" aria-label="时长"></select>
-            <select class="input generate-param-select" id="seedanceResolutionSelect" title="分辨率" aria-label="分辨率"></select>
+            <span class="generation-h3-badge" title="MiniMax H3 整包白膜与换人">MiniMax H3</span>
+            <select class="input generate-param-select" id="seedanceRatioSelect" title="H3 画幅" aria-label="H3 画幅"></select>
           </div>
         </div>
         <div class="panel-body">
@@ -10175,11 +9824,7 @@
             <aside class="generation-pipeline">
               <div class="generation-panel-head">
                 <strong>执行</strong>
-                <div class="generation-route-switch" id="generationRouteSwitch" role="group" aria-label="生成路线">
-                  <button type="button" data-generation-route="scail2" title="按单人 Scail2 生成">单人</button>
-                  <button type="button" data-generation-route="seedance" title="按多人接口生成">多人</button>
-                  <button type="button" data-generation-route="minimax_h3" title="按 MiniMax H3（远程5090）整包合并生成，整包约 15-30 分钟">H3</button>
-                </div>
+                <span class="generation-route-label" id="generationRouteSwitch">H3 only</span>
               </div>
               <div class="generation-pipeline-body">
                 <div class="generation-run-status" id="generationRunStatus">等待生成包</div>
@@ -10189,146 +9834,12 @@
                   <button class="btn" id="generateFullPipelineBtn" type="button">全流程生成</button>
                   <button class="btn secondary" id="rerunWhiteMaskBtn" type="button" hidden>重跑白膜</button>
                   <button class="btn" id="rerunResultBtn" type="button" hidden>重跑结果</button>
-                  <button class="btn" id="generateScail2PackageBtn" type="button" hidden>Scail2 生成</button>
                 </div>
-                <div class="generation-doll-retake" id="dollRetakePanel" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
-                  <div style="display:flex;gap:6px;align-items:center;">
-                    <select id="dollRetakeShotSelect" title="选择要人偶化的镜头" style="flex:1;min-width:0;"></select>
-                    <select id="dollRetakeColorSelect" title="人偶颜色">
-                      <option value="white">白色人偶</option>
-                      <option value="red">红色人偶</option>
-                      <option value="blue">蓝色人偶</option>
-                      <option value="black">黑色人偶</option>
-                      <option value="custom">自定义…</option>
-                    </select>
-                    <input id="dollRetakeCustomColor" type="text" placeholder="如：深蓝色" style="width:90px;" hidden />
-                    <button class="btn secondary" id="dollRetakeBtn" type="button">人偶重生</button>
-                  </div>
-                  <div id="dollRetakeStatus" style="font-size:12px;opacity:.8;word-break:break-all;"></div>
-                </div>
-                <label class="generation-audio-toggle" id="scail2UploadAudioRow" title="关闭后，上传给 Scail2 的输入视频会去掉声音；生成完成后仍会补回原视频音轨。">
-                  <input id="scail2UploadAudioToggle" type="checkbox" />
-                  <span>上传带声音</span>
-                  <small>Scail2 输入</small>
-                </label>
                 <div class="generation-step-list" id="generationStepList"></div>
               </div>
             </aside>
           </div>
 
-          <div class="legacy-generation-shell" hidden>
-            <div class="seedance-status-wrap">
-              <div class="seedance-submit-status" id="seedanceSubmitStatus"></div>
-              <button class="seedance-copy-status-btn" id="copySeedanceStatusBtn" type="button">复制日志</button>
-            </div>
-            <div class="seedance-key-help">
-              <strong>分镜重生通道2</strong>
-              <span>这里优先使用本页填写的中转 URL 和 API Key，不再读取外部项目配置。</span>
-            </div>
-            <div class="seedance-relay-grid">
-              <div class="field">
-                <div class="label"><span>中转 URL</span><span>你的 NewAPI / 通道2地址</span></div>
-                <input class="input" id="seedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
-              </div>
-              <div class="field">
-                <div class="label"><span>通道2 API Key</span><span>只保存在当前浏览器</span></div>
-                <div class="secret-input-wrap">
-                  <input class="input" id="seedanceRelayApiKeyInput" type="text" placeholder="sk-..." autocomplete="off" />
-                  <button class="secret-toggle" type="button" data-secret-toggle="seedanceRelayApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
-                  </button>
-                </div>
-              </div>
-              <button class="btn" id="saveSeedanceRelayBtn" type="button">保存配置</button>
-            </div>
-            <div class="legacy-generate-actions">
-              <button class="btn good" id="openTransferWorkbenchBtn" type="button">Scail2 生成</button>
-              <button class="btn primary" id="batchGenerateBtn" type="button">多人接口生成</button>
-            </div>
-            <div class="seedance-workbench">
-              <div class="seedance-materials">
-                <div class="material-group" data-kind="images">
-                  <div class="material-group-title">
-                    参考图 <span id="seedanceImageCount">0/4</span>
-                    <button class="tiny-btn" type="button" data-add-material="images">添加</button>
-                  </div>
-                  <div id="seedanceImageSlots"></div>
-                </div>
-
-                <div class="material-group" data-kind="videos">
-                  <div class="material-group-title">
-                    参考视频 <span id="seedanceVideoCount">0/3</span>
-                    <button class="tiny-btn" type="button" data-add-material="videos">添加</button>
-                  </div>
-                  <div id="seedanceVideoSlots"></div>
-                  <div class="seedance-pose-options" hidden>
-                    <label class="seedance-pose-toggle">
-                      <input id="seedanceIncludeBodyPoseInput" type="checkbox" checked />
-                      <span>使用人体姿态</span>
-                    </label>
-                    <select class="seedance-pose-select" id="seedancePoseRenderStyleSelect">
-                      <option value="capsule" selected>低模胶囊白模</option>
-                      <option value="clean">干净光影白模</option>
-                      <option value="debug_lines">调试彩色骨架</option>
-                    </select>
-                    <select class="seedance-pose-select" id="seedancePoseCapsuleStrengthSelect">
-                      <option value="strong" selected>胶囊强</option>
-                      <option value="normal">胶囊标准</option>
-                      <option value="light">胶囊轻</option>
-                    </select>
-                    <select class="seedance-pose-select" id="seedancePoseBackendSelect">
-                      <option value="server_dwpose" selected>服务器 DWPose</option>
-                      <option value="auto">自动选择</option>
-                      <option value="local_mediapipe">本地 MediaPipe</option>
-                    </select>
-                  </div>
-                  <button class="tiny-btn" id="useCurrentShotBtn" type="button" style="margin-top:8px;">使用当前时间线镜头</button>
-                  <button class="tiny-btn" id="useSourceVideoBtn" type="button" style="margin-top:8px;">使用原视频输入</button>
-                </div>
-
-                <div class="material-group" data-kind="audios">
-                  <div class="material-group-title">
-                    参考音频 <span id="seedanceAudioCount">0/3</span>
-                    <button class="tiny-btn" type="button" data-add-material="audios">添加</button>
-                  </div>
-                  <div id="seedanceAudioSlots"></div>
-                </div>
-              </div>
-
-              <div class="seedance-card seedance-draft-card">
-                <div class="seedance-card-head">
-                  <span>提示词与任务草稿</span>
-                  <div class="timeline-controls">
-                    <button class="tiny-btn" id="seedanceTemplateRemakeBtn" type="button">原视频重拍</button>
-                    <button class="tiny-btn" id="seedanceTemplateMaskBtn" type="button">人物替换</button>
-                    <button class="tiny-btn" id="copySeedancePayloadBtn" type="button">复制 payload</button>
-                  </div>
-                </div>
-                <div class="seedance-card-body">
-                  <div class="seedance-subclips" id="seedanceReferenceSubclips" hidden></div>
-                  <div class="field seedance-prompt-field">
-                    <div class="label"><span>Seedance 提示词</span><span>可手动接管</span></div>
-                    <textarea class="textarea" id="seedancePromptInput"></textarea>
-                  </div>
-                  <div class="seedance-grid seedance-task-grid">
-                    <div class="field">
-                      <div class="label"><span>任务名称</span></div>
-                      <input class="input" id="seedanceTaskNameInput" value="shot_retake_001" />
-                    </div>
-                    <div class="field">
-                      <div class="label"><span>种子</span><span>0 表示不传</span></div>
-                      <input class="input" id="seedanceSeedInput" type="number" min="0" step="1" value="0" />
-                    </div>
-                  </div>
-                  <div class="prompt-actions">
-                    <button class="btn good" id="previewSeedancePayloadBtn" type="button">刷新任务草稿</button>
-                    <button class="btn" id="saveSeedanceDraftBtn" type="button">保存到本页</button>
-                  </div>
-                  <div class="payload-preview" id="seedancePayloadPreview"></div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
       <section class="panel module-view" data-module-view="settings">
@@ -10361,32 +9872,6 @@
             <div class="field">
               <div class="label"><span>反推模型</span><span>百炼兼容模型</span></div>
               <input class="input" id="preDirectorModelInput" placeholder="qwen3.5-omni-plus" />
-            </div>
-            <div class="field">
-              <div class="label"><span>通道2中转 URL</span><span>NewAPI / 视频地址</span></div>
-              <input class="input" id="settingsSeedanceRelayBaseUrlInput" placeholder="http://152.136.38.202:3000" />
-            </div>
-            <div class="field">
-              <div class="label"><span>通道2 API Key</span><span>只保存在当前浏览器</span></div>
-              <div class="secret-input-wrap">
-                <input class="input" id="settingsSeedanceRelayApiKeyInput" type="text" placeholder="sk-..." autocomplete="off" />
-                <button class="secret-toggle" type="button" data-secret-toggle="settingsSeedanceRelayApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
-                </button>
-              </div>
-            </div>
-            <div class="field">
-              <div class="label"><span>通道1直连 URL</span><span>NukoAi 公网 API，不走中转</span></div>
-              <input class="input" id="settingsNukoChannel1BaseUrlInput" placeholder="https://www.nukoai.com/api/ext/v1" />
-            </div>
-            <div class="field">
-              <div class="label"><span>通道1 API Key</span><span>可留空，使用后端内置密钥</span></div>
-              <div class="secret-input-wrap">
-                <input class="input" id="settingsNukoChannel1ApiKeyInput" type="text" placeholder="留空使用内置 key" autocomplete="off" />
-                <button class="secret-toggle" type="button" data-secret-toggle="settingsNukoChannel1ApiKeyInput" aria-label="隐藏密钥" aria-pressed="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"></path><circle cx="12" cy="12" r="3"></circle><path class="secret-slash" d="M4 4l16 16"></path></svg>
-                </button>
-              </div>
             </div>
           </div>
           <div class="settings-page-note">这里的设置会直接影响当前流程，不再用弹窗单独打断页面。</div>
@@ -10438,7 +9923,7 @@
       <span>模式: <strong>分镜重生</strong></span>
       <span>代码: <strong>story_generate_dashboard.html</strong></span>
       <span>界面：<strong>分镜重生 · 手动资产流程</strong></span>
-      <span>状态: <strong>视频通道2已接入草稿提交</strong></span>
+      <span>状态: <strong>MiniMax H3 only</strong></span>
     </footer>
   </div>
 
@@ -10446,15 +9931,13 @@
     const $ = (selector) => document.querySelector(selector);
     const PLAN_PATH = "E:\\sp\\计划.md";
     const SEEDANCE_A_DRAFT_KEY = "sp_story_seedance_channel_a_draft";
-    const SEEDANCE_A_RELAY_CONFIG_KEY = "sp_story_seedance_channel_a_relay";
-    const SEEDANCE_API_CHANNEL_KEY = "sp_story_seedance_api_channel";
-    const NUKO_CHANNEL1_CONFIG_KEY = "sp_story_nuko_channel1_config";
     const PRE_DIRECTOR_CONFIG_KEY = "sp_story_pre_director_config";
     const ASSISTANT_MODEL_KEY = "sp_story_assistant_model";
     const ASSISTANT_WIDTH_KEY = "sp_story_assistant_width";
     const ASSISTANT_WIDTH_MIN = 280;
     const ASSISTANT_WIDTH_MAX = 720;
     const STORY_PROJECT_CONFIG_KEY = "sp_story_project_config";
+    const STORY_RATIO_MANUAL_KEY = "sp_story_output_ratio_manual_v2";
     const STORY_REFERENCE_STRATEGY_KEY = "sp_story_reference_strategy";
     const STORY_UNDERSTANDING_OPTIONS_KEY = "sp_story_understanding_options";
     const STORY_GENERATION_ROUTE_KEY = "sp_story_generation_route";
@@ -10465,38 +9948,9 @@
     const DEFAULT_PRE_DIRECTOR_API_KEY = "sk-ws-H.EHEYHRH.MmIP.MEUCIFR5bqIfGINteyGg4h74owHUSlJWFLhI-DPn7xNTk9fwAiEApZm4OqN_Z4Y5w3nj92Y6ayQaS-a7slo3yYHVBNwP8fw";
     const DEFAULT_PRE_DIRECTOR_MODEL = "qwen3.5-omni-plus";
     const DEFAULT_ASSISTANT_MODEL = "gpt-5.5";
-    const SEEDANCE_A_MODELS = [
-      "videos",
-      "videos-mini",
-      "sd-2.0-r3",
-      "xinghe-2.0",
-      "videos_stable_fast",
-      "videos_stable",
-    ];
-    const DEFAULT_SEEDANCE_A_BASE_URL = "http://152.136.38.202:3000";
-    const DEFAULT_NUKO_CHANNEL1_BASE_URL = "https://www.nukoai.com/api/ext/v1";
-    const SEEDANCE_API_CHANNELS = [
-      { value: "channel2", label: "通道2", provider: "stable-video-ch2" },
-      { value: "channel1", label: "通道1", provider: "nukoai-channel1" },
-    ];
-    const NUKO_CHANNEL1_MODELS = [
-      "SD 2.0 720P_官转",
-      "SD 2.0 480P",
-      "SD 2.0 720P",
-      "SD 2.0 Fast 480P",
-      "SD 2.0 Fast 720P",
-      "Hailuo H3",
-    ];
-    const SEEDANCE_A_RATIOS = ["9:16", "16:9"];
-    const NUKO_CHANNEL1_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
-    const SEEDANCE_A_DURATIONS = Array.from({ length: 11 }, (_, index) => index + 5);
-    const NUKO_CHANNEL1_DURATIONS = Array.from({ length: 12 }, (_, index) => index + 4);
-    const SEEDANCE_A_RESOLUTIONS = ["720x1280", "1280x720", "1024x1024", "1024x1792", "1792x1024"];
     const SEEDANCE_MATERIAL_LIMITS = { images: 4, videos: 3, audios: 3 };
     const STORY_COMPOSE_PLAN_KEY_PREFIX = "sp_mode2_compose_plan:";
-    const GENERATION_SCAIL2_UPLOAD_AUDIO_KEY = "sp_mode2_scail2_upload_audio";
     const COMPOSE_PACK_MIN_SECONDS = 5;
-    const SCAIL2_PACK_MIN_SECONDS = 2;
     const COMPOSE_PACK_TARGET_SECONDS = 10;
     const COMPOSE_PACK_MAX_SECONDS = 15;
     const COMPOSE_PACK_SOFT_MAX_SHOTS = 8;
@@ -10551,25 +10005,13 @@
     ];
     const STORY_GENERATION_ROUTES = [
       {
-        value: "seedance",
-        label: "多人接口",
-        button: "多人",
-        note: "手动选择多人/API 生成。",
-      },
-      {
-        value: "scail2",
-        label: "单人 Scail2",
-        button: "单人",
-        note: "手动选择单人 Scail2 生成。",
-      },
-      {
         value: "minimax_h3",
         label: "MiniMax H3（远程5090）",
         button: "H3",
         note: "整包合并提交到远程 5090 的 MiniMax H3 生成，整包约 15-30 分钟。",
       },
     ];
-    const STORY_RATIO_OPTIONS = ["9:16", "16:9"];
+    const STORY_RATIO_OPTIONS = ["source", "9:16", "16:9"];
     const STORY_REBUILD_DEFAULT = STORY_REBUILD_GOALS[0].value;
     let storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
     let storyGenerationRoute = (() => {
@@ -10589,7 +10031,7 @@
     };
     let seedanceDraft = {
       model: "sd-2.0-r3",
-      ratio: "9:16",
+      ratio: "source",
       duration: 5,
       resolution: "720x1280",
       taskName: "shot_retake_001",
@@ -10598,15 +10040,6 @@
       images: [""],
       videos: [""],
       audios: [],
-    };
-    let seedanceRelayConfig = {
-      base_url: DEFAULT_SEEDANCE_A_BASE_URL,
-      api_key: "",
-    };
-    let seedanceApiChannel = "channel2";
-    let nukoChannel1Config = {
-      base_url: DEFAULT_NUKO_CHANNEL1_BASE_URL,
-      api_key: "",
     };
     let preDirectorConfig = {
       base_url: DEFAULT_PRE_DIRECTOR_BASE_URL,
@@ -10627,16 +10060,7 @@
     let roleTrackRunningIds = [];
     let roleTrackPollErrorCount = 0;
     let roleTrackLatestLogs = [];
-    let currentSeedanceTaskId = null;
-    let currentSeedanceTaskApiChannel = "channel2";
-    let currentSeedanceTimelineIndex = -1;
-    let seedancePollTimer = null;
-    let seedanceSubmitting = false;
-    let seedanceLastStatusText = "";
-    let seedanceLastPollStatusText = "";
     let seedancePendingCompare = null;
-    let seedancePackagePollTimers = {};
-    let seedancePackageLastStatusText = {};
     let assistantLogLines = [];
     let assistantLastLogKey = "";
     let assistantLastStatusKey = "";
@@ -10647,8 +10071,6 @@
     let seedanceMaskPollTimer = null;
     let seedanceMaskVideoIndex = -1;
     let seedanceMaskContext = null;
-    let currentMode2ServerTransferJobId = null;
-    let mode2ServerTransferPollTimer = null;
     let seedanceReferenceSubclipState = {
       subclips: [],
       selectedIndex: 0,
@@ -10886,13 +10308,12 @@
 
     function setSeedanceSubmitStatus(lines, tone = "info", actions = [], options = {}) {
       const box = $("#seedanceSubmitStatus");
-      seedanceLastStatusText = (lines || []).join("\n");
       assistantAppendLog(lines, tone);
       syncGenerationWorkbenchStatus(lines, tone, options.packageId);
       if (!box) return;
       box.hidden = true;
       box.className = "seedance-submit-status" + (tone && tone !== "info" ? " " + tone : "");
-      box.textContent = seedanceLastStatusText;
+      box.textContent = (lines || []).join("\n");
       const actionList = Array.isArray(actions) ? actions.filter((item) => item && item.action && item.label) : [];
       if (!actionList.length) return;
       const actionBox = document.createElement("div");
@@ -10989,83 +10410,32 @@
       const rawPersonCount = Number(seg?.person_count);
       const fallbackPersonCount = Number.isFinite(rawPersonCount) ? rawPersonCount : null;
       const fallbackHasRisk = shotHasMultiOrContactRisk(seg);
-      const storedRoute = String(seg?.generation_backend || seg?.generation_route || "").trim().toLowerCase();
-      if (storedRoute === "scail2" || storedRoute === "seedance") {
-        const roleCount = Number(seg?.route_role_count ?? fallbackRoleCount);
-        const personCountValue = Number(seg?.route_person_count ?? seg?.person_count);
-        const personCount = Number.isFinite(personCountValue) ? personCountValue : fallbackPersonCount;
-        const hasRisk = Boolean(seg?.route_contact_risk) || fallbackHasRisk;
-        if (storedRoute === "scail2" && (roleCount !== 1 || personCount !== 1 || hasRisk)) {
-          return {
-            backend: "seedance",
-            label: "Seedance",
-            action: "点多人接口生成",
-            roleCount,
-            personCount,
-            reason: hasRisk
-              ? "检测到多人/粘连/别人手脚或遮挡风险。"
-              : personCount !== 1
-                ? `当前镜头 person_count=${personCount === null ? "未知" : personCount}，不能确认是单人干净镜头。`
-                : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
-          };
-        }
-        const reason = String(seg?.generation_route_reason || seg?.route_reason || "").trim()
-          || (storedRoute === "scail2" ? "当前镜头按单人干净镜头处理。" : "当前镜头按多人/粘连风险镜头处理。");
-        return {
-          backend: storedRoute,
-          label: storedRoute === "scail2" ? "单人 Scail2" : "Seedance",
-          action: storedRoute === "scail2" ? "点 Scail2 生成" : "点多人接口生成",
-          roleCount,
-          personCount,
-          reason,
-        };
-      }
       const roleCount = fallbackRoleCount;
       const personCount = fallbackPersonCount;
       const hasRisk = fallbackHasRisk;
-      const scail2Allowed = roleCount === 1 && personCount === 1 && !hasRisk;
-      if (scail2Allowed) {
-        return {
-          backend: "scail2",
-          label: "单人 Scail2",
-          action: "点 Scail2 生成",
-          roleCount,
-          personCount,
-          reason: "当前镜头按单人干净镜头处理。",
-        };
-      }
       return {
-        backend: "seedance",
-        label: "Seedance",
-        action: "点多人接口生成",
+        backend: "minimax_h3",
+        label: "MiniMax H3",
+        action: "点 H3 生成",
         roleCount,
         personCount,
         reason: hasRisk
-          ? "检测到多人/粘连/别人手脚或遮挡风险。"
-          : personCount !== 1
-            ? `当前镜头 person_count=${personCount === null ? "未知" : personCount}，不能确认是单人干净镜头。`
-            : `当前镜头角色数 ${roleCount || "未知"}，不适合单人 Scail2。`,
+          ? "检测到多人/粘连/遮挡风险，仍统一走 MiniMax H3。"
+          : "当前视频生成已统一走 MiniMax H3。",
       };
     }
 
     function generationRouteForShot(seg = timelineSegments[selectedTimelineIndex] || {}) {
-      const backend = storyGenerationRoute === "scail2" ? "scail2" : "seedance";
       return {
-        backend,
-        label: backend === "scail2" ? "单人 Scail2" : "Seedance",
-        action: backend === "scail2" ? "点 Scail2 生成" : "点多人接口生成",
-        reason: backend === "scail2"
-          ? "当前页面手动选择单人 Scail2。"
-          : "当前页面手动选择多人接口。",
+        backend: "minimax_h3",
+        label: "MiniMax H3",
+        action: "点 H3 生成",
+        reason: "当前页面只保留 MiniMax H3 生成路线。",
       };
     }
 
     function isWhiteMaskRoute(route = storyGenerationRoute) {
       return false;
-    }
-
-    function isSeedanceDirectRoute(route = storyGenerationRoute) {
-      return String(route || storyGenerationRoute) !== "scail2";
     }
 
     function assistantSetStatus(lines, tone = "info") {
@@ -11140,25 +10510,15 @@
     }
 
     function updateGenerationRouteUi() {
-      const submitBtn = $("#batchGenerateBtn");
-      const transferBtn = $("#openTransferWorkbenchBtn");
-      if (submitBtn) {
-        submitBtn.classList.add("primary");
-        submitBtn.classList.remove("warn");
-        submitBtn.textContent = "多人接口生成";
-      }
-      if (transferBtn) {
-        transferBtn.hidden = false;
-        transferBtn.textContent = "单人 Scail2 生成";
-      }
+      const routeLabel = $("#generationRouteSwitch");
+      if (routeLabel) routeLabel.textContent = "H3 only";
     }
 
     function setStoryGenerationRoute(route) {
-      storyGenerationRoute = normalizeStoryGenerationRoute(route);
+      storyGenerationRoute = "minimax_h3";
       localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
       renderAssistantRouteCard();
       updateGenerationRouteUi();
-      renderSeedancePayload();
       const decision = generationRouteForShot();
       assistantSetStatus([`当前镜头：${decision.label}`, decision.reason], "good");
     }
@@ -11343,39 +10703,14 @@
         selectTimelineSegment(0);
       }
       const decision = generationRouteForShot(timelineSegments[selectedTimelineIndex] || {});
-      if (decision.backend === "seedance") {
-        switchModule("generate");
-        useCurrentShotAsSeedanceVideo();
-        useCurrentShotPromptInSeedance();
-        assistantSetStatus([
-          "Seedance 已准备。",
-          decision.reason,
-          "确认草稿后可以点“多人接口生成”。",
-        ], "good");
-        return;
-      }
       switchModule("generate");
       useCurrentShotAsSeedanceVideo();
       useCurrentShotPromptInSeedance();
       assistantSetStatus([
-        "单人 Scail2 已准备当前镜头。",
+        "MiniMax H3 已准备当前镜头。",
         decision.reason,
-        "下一步：点“单人 Scail2 生成”。",
+        "下一步：在视频页生成白膜或全流程生成。",
       ], "good");
-    }
-
-    function seedanceSubmitErrorLines(error) {
-      const message = String(error?.message || error || "").trim();
-      const modelLabel = generationCurrentModelLabel();
-      const modelSuffix = modelLabel ? `（${modelLabel}）` : "";
-      if (/invalid token|auth failed|401|403/i.test(message)) {
-        return [
-          `x Seedance 鉴权失败${modelSuffix}：密钥无效或已过期。`,
-          "> 请到左下角设置里更新通道2 API Key。",
-          message ? `> 原始错误：${message}` : "",
-        ].filter(Boolean);
-      }
-      return [`x Seedance 请求失败${modelSuffix}`, message ? `> ${message}` : ""];
     }
 
     function zhDisplayText(value, fallback = "") {
@@ -11396,179 +10731,7 @@
       return text;
     }
 
-    function normalizeSeedanceRelayConfig(raw) {
-      const next = raw && typeof raw === "object" ? raw : {};
-      return {
-        base_url: String(next.base_url || next.baseUrl || DEFAULT_SEEDANCE_A_BASE_URL).trim() || DEFAULT_SEEDANCE_A_BASE_URL,
-        api_key: String(next.api_key || next.apiKey || "").trim(),
-      };
-    }
-
-    function loadSeedanceRelayConfig() {
-      try {
-        seedanceRelayConfig = normalizeSeedanceRelayConfig(JSON.parse(localStorage.getItem(SEEDANCE_A_RELAY_CONFIG_KEY) || "{}"));
-      } catch (_) {
-        seedanceRelayConfig = normalizeSeedanceRelayConfig({});
-      }
-      syncSeedanceRelayControls();
-      return { ...seedanceRelayConfig };
-    }
-
-    function syncSeedanceRelayControls() {
-      const baseUrl = $("#seedanceRelayBaseUrlInput");
-      const apiKey = $("#seedanceRelayApiKeyInput");
-      const settingsBaseUrl = $("#settingsSeedanceRelayBaseUrlInput");
-      const settingsApiKey = $("#settingsSeedanceRelayApiKeyInput");
-      if (baseUrl) baseUrl.value = seedanceRelayConfig.base_url;
-      if (apiKey) apiKey.value = seedanceRelayConfig.api_key;
-      if (settingsBaseUrl) settingsBaseUrl.value = seedanceRelayConfig.base_url;
-      if (settingsApiKey) settingsApiKey.value = seedanceRelayConfig.api_key;
-    }
-
-    function pullSeedanceRelayControls() {
-      seedanceRelayConfig = normalizeSeedanceRelayConfig({
-        base_url: $("#settingsSeedanceRelayBaseUrlInput")?.value || $("#seedanceRelayBaseUrlInput")?.value || seedanceRelayConfig.base_url,
-        api_key: $("#settingsSeedanceRelayApiKeyInput")?.value || $("#seedanceRelayApiKeyInput")?.value || seedanceRelayConfig.api_key,
-      });
-      return { ...seedanceRelayConfig };
-    }
-
-    function saveSeedanceRelayConfig(options = {}) {
-      const relay = pullSeedanceRelayControls();
-      localStorage.setItem(SEEDANCE_A_RELAY_CONFIG_KEY, JSON.stringify(relay));
-      if (!options.silent) {
-        setSeedanceSubmitStatus([
-          "> 分镜重生通道2配置已保存",
-          `> base URL: ${relay.base_url}`,
-          relay.api_key ? "> API Key: set" : "> API Key: empty",
-        ], relay.api_key ? "good" : "warn");
-      }
-      renderSeedancePayload();
-      return relay;
-    }
-
-    function normalizeSeedanceApiChannel(value) {
-      const channel = String(value || "").trim();
-      return SEEDANCE_API_CHANNELS.some((item) => item.value === channel) ? channel : "channel2";
-    }
-
-    function seedanceApiChannelMeta(channel = seedanceApiChannel) {
-      const safe = normalizeSeedanceApiChannel(channel);
-      return SEEDANCE_API_CHANNELS.find((item) => item.value === safe) || SEEDANCE_API_CHANNELS[0];
-    }
-
-    function seedanceApiChannelLabel(channel = seedanceApiChannel) {
-      return seedanceApiChannelMeta(channel).label;
-    }
-
-    function loadSeedanceApiChannel() {
-      seedanceApiChannel = normalizeSeedanceApiChannel(localStorage.getItem(SEEDANCE_API_CHANNEL_KEY) || seedanceApiChannel);
-      syncSeedanceApiChannelControl();
-      return seedanceApiChannel;
-    }
-
-    function syncSeedanceApiChannelControl() {
-      fillSelect("seedanceApiChannelSelect", SEEDANCE_API_CHANNELS.map((item) => item.value), seedanceApiChannel, (value) => seedanceApiChannelLabel(value));
-    }
-
-    function setSeedanceApiChannel(value, options = {}) {
-      seedanceApiChannel = normalizeSeedanceApiChannel(value);
-      localStorage.setItem(SEEDANCE_API_CHANNEL_KEY, seedanceApiChannel);
-      syncSeedanceApiChannelControl();
-      if (!options.silent) {
-        setSeedanceSubmitStatus([`> 已切换上级通道: ${seedanceApiChannelLabel(seedanceApiChannel)}`], "warn");
-      }
-      syncSeedanceControls();
-      renderGenerationPackageWorkbench();
-      return seedanceApiChannel;
-    }
-
-    function normalizeNukoChannel1Config(raw) {
-      const next = raw && typeof raw === "object" ? raw : {};
-      return {
-        base_url: String(next.base_url || next.baseUrl || DEFAULT_NUKO_CHANNEL1_BASE_URL).trim() || DEFAULT_NUKO_CHANNEL1_BASE_URL,
-        api_key: String(next.api_key || next.apiKey || "").trim(),
-      };
-    }
-
-    function loadNukoChannel1Config() {
-      try {
-        nukoChannel1Config = normalizeNukoChannel1Config(JSON.parse(localStorage.getItem(NUKO_CHANNEL1_CONFIG_KEY) || "{}"));
-      } catch (_) {
-        nukoChannel1Config = normalizeNukoChannel1Config({});
-      }
-      syncNukoChannel1Controls();
-      return { ...nukoChannel1Config };
-    }
-
-    function syncNukoChannel1Controls() {
-      const baseUrl = $("#settingsNukoChannel1BaseUrlInput");
-      const apiKey = $("#settingsNukoChannel1ApiKeyInput");
-      if (baseUrl) baseUrl.value = nukoChannel1Config.base_url;
-      if (apiKey) apiKey.value = nukoChannel1Config.api_key;
-    }
-
-    function pullNukoChannel1Controls() {
-      nukoChannel1Config = normalizeNukoChannel1Config({
-        base_url: $("#settingsNukoChannel1BaseUrlInput")?.value || nukoChannel1Config.base_url,
-        api_key: $("#settingsNukoChannel1ApiKeyInput")?.value || nukoChannel1Config.api_key,
-      });
-      return { ...nukoChannel1Config };
-    }
-
-    function saveNukoChannel1Config(options = {}) {
-      const config = pullNukoChannel1Controls();
-      localStorage.setItem(NUKO_CHANNEL1_CONFIG_KEY, JSON.stringify(config));
-      if (!options.silent) {
-        setSeedanceSubmitStatus([
-          "> 通道1直连配置已保存",
-          `> base URL: ${config.base_url}`,
-          config.api_key ? "> API Key: 已填写" : "> API Key: 留空，使用后端内置密钥",
-        ], "good");
-      }
-      renderSeedancePayload();
-      return config;
-    }
-
-    function seedanceApiRequestConfig(channel = seedanceApiChannel) {
-      const safe = normalizeSeedanceApiChannel(channel);
-      if (safe === "channel1") {
-        const config = pullNukoChannel1Controls();
-        return {
-          channel1_base_url: config.base_url,
-          channel1_api_key: config.api_key,
-        };
-      }
-      const relay = pullSeedanceRelayControls();
-      return {
-        relay_base_url: relay.base_url,
-        relay_api_key: relay.api_key,
-      };
-    }
-
-    function seedanceSubmitEndpoint(channel = seedanceApiChannel) {
-      return normalizeSeedanceApiChannel(channel) === "channel1" ? "/api/nuko-channel1-submit" : "/api/seedance-a-submit";
-    }
-
-    function seedanceStatusEndpoint(channel = seedanceApiChannel) {
-      return normalizeSeedanceApiChannel(channel) === "channel1" ? "/api/nuko-channel1-status" : "/api/seedance-a-status";
-    }
-
-    function seedanceModelOptions(channel = seedanceApiChannel) {
-      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_MODELS : SEEDANCE_A_MODELS;
-    }
-
-    function seedanceRatioOptions(channel = seedanceApiChannel) {
-      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_RATIOS : SEEDANCE_A_RATIOS;
-    }
-
-    function seedanceDurationOptions(channel = seedanceApiChannel) {
-      return normalizeSeedanceApiChannel(channel) === "channel1" ? NUKO_CHANNEL1_DURATIONS : SEEDANCE_A_DURATIONS;
-    }
-
     function openGlobalSettings() {
-      syncSeedanceRelayControls();
-      syncNukoChannel1Controls();
       switchModule("settings");
     }
 
@@ -11578,12 +10741,7 @@
 
     function resetGlobalSettings() {
       preDirectorConfig = normalizePreDirectorConfig({});
-      seedanceRelayConfig = normalizeSeedanceRelayConfig({});
-      nukoChannel1Config = normalizeNukoChannel1Config({});
       syncPreDirectorControls();
-      syncSeedanceRelayControls();
-      syncNukoChannel1Controls();
-      renderSeedancePayload();
       assistantSetStatus(["设置已恢复默认。", "确认后点“保存设置”。"]);
     }
 
@@ -12138,6 +11296,10 @@
       return items.find((item) => item.value === value) || items[0];
     }
 
+    function storyRatioLabel(value) {
+      return String(value || "") === "source" ? "跟随原视频" : String(value || "");
+    }
+
     function normalizeStoryReferenceStrategy(value) {
       return optionMeta(STORY_REFERENCE_STRATEGIES, String(value || "")).value;
     }
@@ -12221,7 +11383,12 @@
       const style = optionMeta(STORY_STYLE_PRESETS, String(next.style_preset || "")).value;
       const language = optionMeta(STORY_TARGET_LANGUAGES, String(next.target_language || "")).value;
       const ratioValue = String(next.output_ratio || "");
-      const ratio = STORY_RATIO_OPTIONS.includes(ratioValue) ? ratioValue : STORY_RATIO_OPTIONS[0];
+      let ratio = STORY_RATIO_OPTIONS.includes(ratioValue) ? ratioValue : STORY_RATIO_OPTIONS[0];
+      try {
+        if (ratioValue === "9:16" && localStorage.getItem(STORY_RATIO_MANUAL_KEY) !== "1") {
+          ratio = STORY_RATIO_OPTIONS[0];
+        }
+      } catch (_) {}
       const motion = optionMeta(STORY_MOTION_CONSTRAINTS, String(next.motion_constraint || "")).value;
       const maskSource = optionMeta(STORY_MASK_SOURCE_OPTIONS, String(next.mask_source || "")).value;
       return {
@@ -12274,7 +11441,7 @@
       const language = storyLanguageMeta(config.target_language);
       const motion = storyMotionMeta(config.motion_constraint);
       const maskSource = storyMaskSourceMeta(config.mask_source);
-      return `${rebuild.label} / ${style.label} / ${language.label} / ${config.output_ratio} / ${motion.label} / ${maskSource.label}`;
+      return `${rebuild.label} / ${style.label} / ${language.label} / ${storyRatioLabel(config.output_ratio)} / ${motion.label} / ${maskSource.label}`;
     }
 
     function updateStoryConfigNote() {
@@ -12283,14 +11450,14 @@
       const style = storyStyleMeta();
       const language = storyLanguageMeta();
       const rebuild = storyRebuildGoalMeta();
-      note.textContent = `当前参数：${rebuild.label} · ${style.label} · ${language.label} · ${storyProjectConfig.output_ratio}`;
+      note.textContent = `当前参数：${rebuild.label} · ${style.label} · ${language.label} · ${storyRatioLabel(storyProjectConfig.output_ratio)}`;
     }
 
     function syncStoryProjectControls() {
       fillSelect("storyRebuildGoalSelect", STORY_REBUILD_GOALS.map((item) => item.value), storyProjectConfig.rebuild_goal, (value) => storyRebuildGoalMeta(value).label);
       fillSelect("storyStyleSelect", STORY_STYLE_PRESETS.map((item) => item.value), storyProjectConfig.style_preset, (value) => storyStyleMeta(value).label);
       fillSelect("storyLanguageSelect", STORY_TARGET_LANGUAGES.map((item) => item.value), storyProjectConfig.target_language, (value) => storyLanguageMeta(value).label);
-      fillSelect("storyRatioSelect", STORY_RATIO_OPTIONS, storyProjectConfig.output_ratio);
+      fillSelect("storyRatioSelect", STORY_RATIO_OPTIONS, storyProjectConfig.output_ratio, storyRatioLabel);
       updateStoryConfigNote();
     }
 
@@ -12339,6 +11506,9 @@
           if (id === "storyRebuildGoalSelect") {
             applyStoryRebuildGoal(el.value);
             return;
+          }
+          if (id === "storyRatioSelect") {
+            try { localStorage.setItem(STORY_RATIO_MANUAL_KEY, "1"); } catch (_) {}
           }
           pullStoryProjectControls();
           saveStoryProjectConfig();
@@ -14539,7 +13709,7 @@
         } catch (_) {}
       }
       if (target === "generate") {
-        try { renderGenerationPackageWorkbench(); } catch (_) {}
+        try { ensureComposePlan(); renderGenerationPackageWorkbench(); } catch (_) {}
       }
     }
 
@@ -16556,7 +15726,7 @@
       const lines = [
         "> 正在提交角色分轨任务...",
         selectedRoleIds.length ? `> role_id: ${selectedRoleIds.join(", ")}` : "> 角色: 全部已标注角色",
-        "> 分轨用于原片身份核对、关键帧和批量绑定辅助，不是 Seedance 生成前置条件",
+        "> 分轨用于原片身份核对、关键帧和批量绑定辅助，不是 H3 生成前置条件",
       ];
       setStoryStatus(lines, "warn");
       setLogs(lines);
@@ -16882,7 +16052,7 @@
       const started = [
         "> 正在整理资产库...",
         `> project_dir: ${projectDir}`,
-        "> 只整理原片身份、目标替换图绑定和 Seedance 参考用途，不会直接生成视频",
+        "> 只整理原片身份、目标替换图绑定和 H3 参考用途，不会直接生成视频",
       ];
       setAssetOrganizeRunning(true);
       setStoryStatus(started, "warn");
@@ -16909,7 +16079,7 @@
           "> 资产库整理完成",
           `> 资产: ${storyAssets.length}`,
           summary.roles !== undefined ? `> roles=${summary.roles} scenes=${summary.scenes || 0} props=${summary.props || 0}` : "",
-          "> 已刷新资产详情；体检/分轨提醒不会阻断 Seedance，缺参考图时再补",
+          "> 已刷新资产详情；体检/分轨提醒不会阻断 H3，缺参考图时再补",
         ].filter(Boolean);
         setStoryStatus(lines, "good");
         setLogs(lines);
@@ -16960,7 +16130,7 @@
         const lines = [
           "> 资产体检完成",
           `> total=${summary.total || storyAssets.length} blocked=${summary.blocked || 0} warning=${summary.warning || 0} ok=${summary.ok || 0}`,
-          summary.blocked ? "> 有体检提醒：用于整理资产库和批量绑定，不会单独阻断 Seedance；生成前重点检查替换图" : "> 没有发现需要提醒的资产问题",
+          summary.blocked ? "> 有体检提醒：用于整理资产库和批量绑定，不会单独阻断 H3；生成前重点检查替换图" : "> 没有发现需要提醒的资产问题",
         ];
         if (!options.silent) {
           setStoryStatus(lines, summary.blocked ? "bad" : summary.warning ? "warn" : "good");
@@ -18280,10 +17450,9 @@
 
     function composeShotType(seg = {}, decision = autoGenerationRouteForShot(seg)) {
       const personCount = Number(decision.personCount ?? seg.person_count);
-      if (decision.backend === "scail2") return "单人";
       if (shotHasMultiOrContactRisk(seg) || Number(decision.roleCount || 0) > 1 || personCount > 1) return "多人";
       if (personCount === 0) return "场景";
-      return "Seedance";
+      return "镜头";
     }
 
     function composeShotRoute(seg = {}) {
@@ -18291,15 +17460,15 @@
       return {
         ...decision,
         type: composeShotType(seg, decision),
-        labelText: decision.backend === "scail2" ? "Scail2" : "Seedance",
+        backend: "minimax_h3",
+        labelText: "MiniMax H3",
       };
     }
 
     function composePackKey(seg = {}, route = composeShotRoute(seg)) {
       const roleIds = composeShotRoles(seg).map((asset) => String(asset.id || "").trim()).filter(Boolean).sort();
-      if (route.backend === "scail2") return `scail2:${roleIds[0] || composeShotLabel(seg)}`;
-      if (roleIds.length) return `seedance:${roleIds.join("+")}`;
-      return `seedance:${route.type}:${composeShotLabel(seg)}`;
+      if (roleIds.length) return `minimax_h3:${roleIds.join("+")}`;
+      return `minimax_h3:${route.type}:${composeShotLabel(seg)}`;
     }
 
     function composePackDuration(pack = {}) {
@@ -18352,13 +17521,12 @@
             seenInPack.add(id);
             return true;
           });
-        const rawBackend = String(pack?.backend || pack?.route || "").trim().toLowerCase();
         return {
           id: String(pack?.id || `P${String(index + 1).padStart(3, "0")}`).trim(),
           key: String(pack?.key || "").trim(),
           label: String(pack?.label || "未分配").trim(),
-          route: String(pack?.route || "Seedance").trim(),
-          backend: rawBackend.includes("scail2") ? "scail2" : "seedance",
+          route: "MiniMax H3",
+          backend: "minimax_h3",
           type: String(pack?.type || "待定").trim(),
           shotIds: composeSortedShotIds(ids),
         };
@@ -18424,7 +17592,7 @@
     }
 
     function composePackTitle(pack = {}) {
-      return `${pack.id || "P000"} ${pack.label || "生成包"} / ${pack.route || "Seedance"}`;
+      return `${pack.id || "P000"} ${pack.label || "生成包"} / ${pack.route || "MiniMax H3"}`;
     }
 
     function composePackShotListText(pack = {}) {
@@ -18540,8 +17708,8 @@
         id: `P${String(serial).padStart(3, "0")}`,
         key: meta.key || "",
         label: meta.label || "镜头",
-        route: meta.route?.labelText || "Seedance",
-        backend: meta.route?.backend || "seedance",
+        route: "MiniMax H3",
+        backend: "minimax_h3",
         type: meta.route?.type || "待定",
         shotIds: [],
       };
@@ -18612,8 +17780,8 @@
       const pack = {
         id: composeNextPackId(),
         label: "未分配",
-        route: "Seedance",
-        backend: "seedance",
+        route: "MiniMax H3",
+        backend: "minimax_h3",
         type: "待定",
         shotIds: [],
       };
@@ -18767,6 +17935,8 @@
         return {
           ...pack,
           id: String(pack.id || `P${String(index + 1).padStart(3, "0")}`).trim(),
+          route: "MiniMax H3",
+          backend: "minimax_h3",
           shotIds: sortedIds,
         };
       }).filter((pack) => pack.id);
@@ -19559,9 +18729,11 @@
       });
     }
 
-    function purgeWhiteMaskPackLocal(packId) {
+    function purgeWhiteMaskPackLocal(packId, clearedAt = Date.now() / 1000) {
       const target = String(packId || "").trim();
       if (!target) return;
+      clearGenerationH3Poll(target, "mask");
+      clearGenerationH3Poll(target, "result");
       // 架子上这个包的白膜项全部移除；手牌里从该包抓走的卡一并清掉（文件已删）。
       const kept = [];
       loadWhiteMaskShelf().forEach((item) => {
@@ -19589,6 +18761,9 @@
         maskTaskId: "",
         maskJobId: "",
         maskPollContext: null,
+        h3Jobs: {},
+        h3ClearedAt: Number(clearedAt || 0),
+        pendingAutoResult: false,
         lastMessage: "白膜已清空，可重新生成",
         lastTone: "warn",
         errorMessage: "",
@@ -19662,7 +18837,15 @@
             data = {};
           }
           if (!response.ok || data.error) throw new Error(data.error || raw || `HTTP ${response.status}`);
-          purgeWhiteMaskPackLocal(target);
+          const clearedAt = Number(
+            data.h3ClearedAt
+            || data.state?.h3ClearedAt
+            || (Array.isArray(data.packages)
+              ? data.packages.find((item) => String(item?.package_id || "").trim() === target)?.state?.h3ClearedAt
+              : 0)
+            || Date.now() / 1000
+          );
+          purgeWhiteMaskPackLocal(target, clearedAt);
           closeComposeMaskVideoPreview();
           renderComposePage();
           const lines = [
@@ -20385,7 +19568,7 @@
       if (title) title.textContent = "卡包架";
       const packs = composePlan.packs || [];
       const summary = $("#composePackSummary");
-      if (summary) summary.textContent = `${packs.length} 个卡包 · 单人2-15秒 · 多人5-15秒`;
+      if (summary) summary.textContent = `${packs.length} 个 H3 卡包 · 5-15秒`;
       list.classList.toggle("dense", packs.length > 6 && packs.length <= 12);
       list.classList.toggle("extra-dense", packs.length > 12);
       if (!packs.length) {
@@ -20534,9 +19717,7 @@
       }
       const duration = composePackDuration(pack);
       const minSeconds = generationPackMinSeconds(pack);
-      const rangeText = generationPackBackend(pack) === "scail2"
-        ? `${SCAIL2_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒`
-        : `${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒`;
+      const rangeText = `${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒`;
       if (title) title.textContent = composePackTitle(pack);
       if (meta) {
         if (duration > COMPOSE_PACK_MAX_SECONDS) {
@@ -20797,6 +19978,21 @@
       });
     }
 
+    function generationRuntimeHasActiveH3Job(runtime = {}, role = "") {
+      const jobs = runtime?.h3Jobs && typeof runtime.h3Jobs === "object" ? runtime.h3Jobs : null;
+      if (!jobs) return false;
+      const expectedRole = String(role || "").trim();
+      if (expectedRole && String(jobs.role || "") !== expectedRole) return false;
+      return (Array.isArray(jobs.entries) ? jobs.entries : []).some((entry) => {
+        return String(entry?.status || "") === "running";
+      });
+    }
+
+    function generationRuntimeNeedsH3JobRecovery(runtime = {}, role = "") {
+      return generationRuntimeHasActiveH3Job(runtime, role)
+        && !generationRuntimeHasRunningH3Job(runtime, role);
+    }
+
     function normalizeGenerationRuntimeForStorage(runtime = {}) {
       const keys = [
         "status",
@@ -20826,6 +20022,7 @@
         "maskPollContext",
         "maskRuns",
         "h3Jobs",
+        "h3ClearedAt",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
@@ -20846,12 +20043,12 @@
       const status = String(next.status || "");
       const hasMaskTask = Boolean(String(next.maskTaskId || next.maskJobId || "").trim());
       const hasResultTask = Boolean(String(next.resultTaskId || "").trim());
-      const hasH3MaskTask = generationRuntimeHasRunningH3Job(next, "mask");
-      const hasH3ResultTask = generationRuntimeHasRunningH3Job(next, "result");
+      const hasH3MaskTask = generationRuntimeHasActiveH3Job(next, "mask");
+      const hasH3ResultTask = generationRuntimeHasActiveH3Job(next, "result");
       const missingRunningTask =
         (status === "mask_running" && !hasMaskTask && !hasH3MaskTask)
         || (status === "result_running" && !hasResultTask && !hasH3ResultTask)
-        || status === "scail2_running";
+        || (!["mask_running", "result_running"].includes(status) && status.endsWith("_running"));
       if (missingRunningTask) {
         next.status = String(next.resultPath || "").trim()
           ? "result_done"
@@ -20873,7 +20070,7 @@
         || (Array.isArray(runtime.resultSegments) && runtime.resultSegments.length)
         || (Array.isArray(runtime.maskRuns) && runtime.maskRuns.length)
         || (Array.isArray(runtime.resultRuns) && runtime.resultRuns.length)
-        || generationRuntimeHasRunningH3Job(runtime)
+        || generationRuntimeHasActiveH3Job(runtime)
         || !["", "idle"].includes(String(runtime.status || "idle"))
       );
     }
@@ -21042,77 +20239,15 @@
     }
 
     function generationPackBackend(pack = {}) {
-      const backend = String(pack.backend || pack.route || "").trim().toLowerCase();
-      if (backend) {
-        if (backend.includes("scail2")) return "scail2";
-        if (backend.includes("h3") || backend.includes("minimax")) return "minimax_h3";
-        return "seedance";
-      }
-      const globalRoute = String(storyGenerationRoute || "").trim().toLowerCase();
-      if (globalRoute === "scail2") return "scail2";
-      if (globalRoute.includes("h3") || globalRoute.includes("minimax")) return "minimax_h3";
-      return "seedance";
+      return "minimax_h3";
     }
 
     function generationPackMinSeconds(pack = {}) {
-      return generationPackBackend(pack) === "scail2" ? SCAIL2_PACK_MIN_SECONDS : COMPOSE_PACK_MIN_SECONDS;
+      return COMPOSE_PACK_MIN_SECONDS;
     }
 
     function generationBackendLabel(pack = {}) {
-      const backend = generationPackBackend(pack);
-      if (backend === "scail2") return "单人 Scail2";
-      if (backend === "minimax_h3") return "MiniMax H3（远程5090）";
-      return "多人接口";
-    }
-
-    function setGenerationPackBackend(packId, backend) {
-      const id = String(packId || "").trim();
-      if (!id) return;
-      const pack = (composePlan.packs || []).find((item) => String(item.id || "") === id);
-      if (!pack) return;
-      const requested = String(backend || "").trim().toLowerCase();
-      const nextBackend = requested === "scail2"
-        ? "scail2"
-        : (requested.includes("h3") || requested.includes("minimax") ? "minimax_h3" : "seedance");
-      storyGenerationRoute = nextBackend;
-      localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute);
-      if (String(pack.backend || "") === nextBackend) return;
-      pack.backend = nextBackend;
-      pack.route = nextBackend === "scail2" ? "Scail2" : (nextBackend === "minimax_h3" ? "MiniMax H3" : "Seedance");
-      pack.type = nextBackend === "scail2" ? "单人" : "多人";
-      composePlan.selectedPackId = id;
-      generationWorkbench.selectedPackId = id;
-      saveComposePlanDraft();
-      const nextPack = generationPackById(id) || pack;
-      const signature = generationPackSignature(nextPack);
-      generationWorkbench.packageRuntime[id] = {
-        status: "idle",
-        planSignature: signature,
-        packageIdentityId: generationPackIdentityId(nextPack),
-        packageSourceVersion: GENERATION_PACKAGE_SOURCE_VERSION,
-        lastMessage: `已手动切换路线：${generationBackendLabel(nextPack)}`,
-        lastTone: "good",
-        errorMessage: "",
-        updatedAt: Date.now(),
-      };
-      saveGenerationRuntimeDraft();
-      renderComposePage();
-      renderGenerationPackageWorkbench();
-      setSeedanceSubmitStatus(["> 已手动切换生成路线", `> ${id}: ${generationBackendLabel(nextPack)}`], "good");
-      assistantSetStatus(["> 已手动切换生成路线", `> ${id}: ${generationBackendLabel(nextPack)}`], "good");
-    }
-
-    function generationScail2UploadAudioEnabled() {
-      const input = $("#scail2UploadAudioToggle");
-      if (input) return Boolean(input.checked);
-      return localStorage.getItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY) === "1";
-    }
-
-    function setGenerationScail2UploadAudioEnabled(value) {
-      const enabled = Boolean(value);
-      const input = $("#scail2UploadAudioToggle");
-      if (input) input.checked = enabled;
-      try { localStorage.setItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY, enabled ? "1" : "0"); } catch (_) {}
+      return "MiniMax H3（远程5090）";
     }
 
     // 旧 runtime 的整包源必须与当前卡包逐段一致才可信：
@@ -21218,7 +20353,7 @@
         .slice(0, SEEDANCE_MATERIAL_LIMITS.images);
     }
 
-    function generationPackReferenceImages(pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
+    function generationManualReferenceImages(pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
       const id = String(pack?.id || "").trim();
       if (id) {
         const runtime = generationRuntimeForPack(id);
@@ -21226,10 +20361,6 @@
         if (savedRefs.length || runtime.referenceImages !== undefined) return savedRefs;
       }
       return compactMaterials(seedanceDraft.images).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
-    }
-
-    function generationManualReferenceImages(pack = generationPackById(generationWorkbench.selectedPackId) || {}) {
-      return generationPackReferenceImages(pack);
     }
 
     function generationReferenceAssetsForPicker() {
@@ -22024,8 +21155,8 @@
       const status = String(runtime.status || "");
       const hasMaskTask = Boolean(String(runtime.maskTaskId || runtime.maskJobId || "").trim());
       const hasResultTask = Boolean(String(runtime.resultTaskId || "").trim());
-      const hasH3MaskTask = generationRuntimeHasRunningH3Job(runtime, "mask");
-      const hasH3ResultTask = generationRuntimeHasRunningH3Job(runtime, "result");
+      const hasH3MaskTask = generationRuntimeHasActiveH3Job(runtime, "mask");
+      const hasH3ResultTask = generationRuntimeHasActiveH3Job(runtime, "result");
       if (hasH3MaskTask || hasH3ResultTask) return true;
       if (status === "mask_running" && hasMaskTask) return true;
       if (status === "result_running" && hasResultTask) return true;
@@ -22033,45 +21164,6 @@
       if (!String(runtime.whiteMaskPath || runtime.maskPath || runtime.resultPath || "").trim() && hasMaskTask) return true;
       if (!String(runtime.resultPath || "").trim() && hasResultTask) return true;
       return false;
-    }
-
-    function restoreGenerationPackageRuntimeFromWhiteMaskShelf(pack = {}) {
-      const id = String(pack?.id || "").trim();
-      if (!id) return false;
-      const runtime = generationRuntimeForPack(id);
-      if (String(runtime.whiteMaskPath || runtime.maskPath || "").trim()) return false;
-      const packShotKey = composeSortedShotIds(pack.shotIds).join("|");
-      const item = loadWhiteMaskShelf()
-        .filter((entry) => String(entry?.package_id || "") === id && String(entry?.source_path || "").trim())
-        .filter((entry) => {
-          const entryShotKey = composeSortedShotIds(entry?.shot_ids || []).join("|");
-          return !entryShotKey || !packShotKey || entryShotKey === packShotKey;
-        })
-        .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0))[0];
-      if (!item) return false;
-      const maskRun = {
-        id: String(item.id || item.manifest_path || item.source_path || Date.now()).trim(),
-        role: "mask",
-        source_path: String(item.source_path || "").trim(),
-        manifest_path: String(item.manifest_path || "").trim(),
-        clips: Array.isArray(item.clips) ? item.clips : [],
-        shot_count: Number(item.shot_count || item.clips?.length || 0),
-        created_at: Number(item.created_at || Date.now() / 1000),
-      };
-      generationWorkbench.packageRuntime[id] = {
-        ...runtime,
-        status: "mask_done",
-        whiteMaskPath: maskRun.source_path,
-        maskSegments: maskRun.clips,
-        maskSplitManifest: maskRun.manifest_path,
-        maskRuns: appendGenerationRun(runtime.maskRuns, maskRun),
-        lastMessage: "已从白膜结果包恢复白膜视频",
-        lastTone: "good",
-        errorMessage: "",
-        updatedAt: Date.now(),
-      };
-      saveGenerationRuntimeDraft();
-      return true;
     }
 
     async function restoreGenerationPackageRuntime(pack = {}) {
@@ -22090,12 +21182,37 @@
       });
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error || "生成包恢复失败");
-      if (!data.restored) return data;
+      const currentRuntime = generationRuntimeForPack(id);
+      const serverClearedAt = Number(data.h3ClearedAt || 0);
+      const localClearedAt = Number(currentRuntime.h3ClearedAt || 0);
+      const maskStateAuthoritative = data.h3MaskStateAuthoritative === true;
+      const maskCleared = maskStateAuthoritative
+        ? data.h3MaskCleared === true
+        : (serverClearedAt > 0 && serverClearedAt > localClearedAt);
+      if (!data.restored && !maskStateAuthoritative && !maskCleared) return data;
       const patch = {
         sourcePreparing: false,
         sourcePreviewFailed: false,
         restoredAt: Date.now(),
       };
+      if (maskCleared) {
+        Object.assign(patch, {
+          whiteMaskPath: "",
+          maskPath: "",
+          maskSourcePath: "",
+          maskSegments: [],
+          maskSplitManifest: "",
+          maskRuns: [],
+          maskTaskId: "",
+          maskJobId: "",
+          maskPollContext: null,
+          h3Jobs: {},
+          pendingAutoResult: false,
+          h3ClearedAt: serverClearedAt,
+        });
+        clearGenerationH3Poll(id, "mask");
+        clearGenerationH3Poll(id, "result");
+      }
       [
         "status",
         "sourcePath",
@@ -22110,6 +21227,7 @@
         "maskPollContext",
         "maskRuns",
         "h3Jobs",
+        "h3ClearedAt",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
@@ -22125,7 +21243,7 @@
         if (data[key] !== undefined) patch[key] = data[key];
       });
       patchGenerationPackRuntime(id, patch);
-      if (patch.h3Jobs) {
+      if (patch.h3Jobs && Object.keys(patch.h3Jobs).length) {
         resumeGenerationH3Polling(generationPackById(id) || pack);
       }
       return data;
@@ -22135,31 +21253,53 @@
       const id = String(pack?.id || "").trim();
       if (!id) return;
       const runtime = generationRuntimeForPack(id);
-      if (runtime.restoreRequested || runtime.restoreDone) return;
-      if (String(runtime.whiteMaskPath || runtime.resultPath || "").trim()) return;
-      if (generationRuntimeHasActivePackageTask(runtime)) return;
-      if (restoreGenerationPackageRuntimeFromWhiteMaskShelf(pack)) return;
+      const needsH3JobRecovery = generationRuntimeNeedsH3JobRecovery(runtime);
+      if (runtime.restoreRequested) return;
+      if (runtime.restoreDone && !needsH3JobRecovery) return;
+      if (String(runtime.resultPath || "").trim() && !needsH3JobRecovery) return;
+      if (generationRuntimeHasActivePackageTask(runtime) && !needsH3JobRecovery) return;
+      const restoreAttempts = needsH3JobRecovery ? Number(runtime.restoreAttempts || 0) + 1 : 1;
       generationWorkbench.packageRuntime[id] = {
         ...runtime,
         restoreRequested: true,
+        restoreAttempts,
+      };
+      const finishRestoreAttempt = () => {
+        const latest = generationRuntimeForPack(id);
+        const stillNeedsH3Job = generationRuntimeNeedsH3JobRecovery(latest);
+        const shouldRetry = stillNeedsH3Job && restoreAttempts < 20;
+        const exhausted = stillNeedsH3Job && !shouldRetry;
+        const nextRuntime = {
+          ...latest,
+          restoreRequested: false,
+          restoreDone: !shouldRetry,
+          restoreAttempts,
+        };
+        if (exhausted) {
+          const jobs = nextRuntime.h3Jobs && typeof nextRuntime.h3Jobs === "object" ? nextRuntime.h3Jobs : {};
+          jobs.entries = (Array.isArray(jobs.entries) ? jobs.entries : []).map((entry) => (
+            String(entry?.status || "") === "running" && !String(entry?.jobId || "").trim()
+              ? { ...entry, status: "failed", error: "服务端未找到可恢复的 H3 任务，请重新提交" }
+              : entry
+          ));
+          nextRuntime.h3Jobs = jobs;
+          nextRuntime.status = "failed";
+          nextRuntime.lastTone = "bad";
+          nextRuntime.lastMessage = "服务端未找到可恢复的 H3 任务；未取得 jobId 的任务可重新提交";
+          nextRuntime.errorMessage = nextRuntime.lastMessage;
+        }
+        generationWorkbench.packageRuntime[id] = nextRuntime;
+        saveGenerationRuntimeDraft();
+        if (exhausted) renderGenerationPackageWorkbench();
+        if (shouldRetry) {
+          setTimeout(() => {
+            ensureGenerationPackageRuntimeRestored(generationPackById(id) || pack);
+          }, 3000);
+        }
       };
       restoreGenerationPackageRuntime(pack)
-        .then(() => {
-          const latest = generationRuntimeForPack(id);
-          generationWorkbench.packageRuntime[id] = {
-            ...latest,
-            restoreRequested: false,
-            restoreDone: true,
-          };
-        })
-        .catch(() => {
-          const latest = generationRuntimeForPack(id);
-          generationWorkbench.packageRuntime[id] = {
-            ...latest,
-            restoreRequested: false,
-            restoreDone: true,
-          };
-        });
+        .then(finishRestoreAttempt)
+        .catch(finishRestoreAttempt);
     }
 
     function applyGenerationResultClipsToTimeline(clips = [], taskId = "") {
@@ -22174,8 +21314,8 @@
       });
       if (changed) {
         renderTimeline(timelineSegments);
-        if (currentSeedanceTimelineIndex >= 0 && currentSeedanceTimelineIndex < timelineSegments.length) {
-          selectTimelineSegment(currentSeedanceTimelineIndex);
+        if (selectedTimelineIndex >= 0 && selectedTimelineIndex < timelineSegments.length) {
+          selectTimelineSegment(selectedTimelineIndex);
         }
       }
     }
@@ -22197,7 +21337,7 @@
       const duration = generationPackageSeedanceDuration(pack, minSeconds);
       const error = generationDurationRangeError(duration, minSeconds, COMPOSE_PACK_MAX_SECONDS);
       if (!error) return true;
-      const routeLabel = generationPackBackend(pack) === "scail2" ? "单人 Scail2" : "多人接口";
+      const routeLabel = "MiniMax H3";
       const lines = [
         `x ${actionLabel}已停止：时长不符合${routeLabel}范围`,
         "> " + error,
@@ -22217,69 +21357,7 @@
       return false;
     }
 
-    function syncGenerationPackageToSeedanceDraft(pack = {}, options = {}) {
-      const shots = generationPackShots(pack);
-      const first = shots[0];
-      if (!first) {
-        const lines = ["x 当前生成包没有镜头"];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        return null;
-      }
-      if (selectedTimelineIndex !== first.index) {
-        selectTimelineSegment(first.index, { previewMode: "segment" });
-      }
-      const sourcePath = generationPackSourceVideo(pack);
-      const maskPath = generationPackMaskVideo(pack);
-      const useMask = options.useMask === true;
-      const videoPath = useMask ? maskPath : sourcePath;
-      if (!videoPath) {
-        const lines = [useMask ? "x 当前生成包还没有白膜视频" : "x 当前生成包没有原视频"];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        return null;
-      }
-      const refs = generationManualReferenceImages();
-      const duration = generationPackageSeedanceDuration(pack, composeShotDuration(first.seg) || COMPOSE_PACK_MIN_SECONDS);
-      const apiChannel = normalizeSeedanceApiChannel(seedanceApiChannel);
-      const models = seedanceModelOptions(apiChannel);
-      seedanceDraft.model = models.includes(seedanceDraft.model)
-        ? seedanceDraft.model
-        : (models[0] || seedanceDraft.model || "sd-2.0-r3");
-      // 执行台顶栏的比例下拉是用户的显式选择，必须优先；
-      // 项目级 output_ratio 只作为没有界面值时的兜底，不能反过来覆盖界面
-      seedanceDraft.ratio = String($("#seedanceRatioSelect")?.value || "").trim()
-        || seedanceDraft.ratio
-        || storyProjectConfig.output_ratio
-        || "9:16";
-      seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
-      seedanceDraft.duration = duration;
-      seedanceDraft.taskName = `${useMask ? "result" : "mask"}_${pack.id || "P000"}`;
-      seedanceDraft.prompt = generationEditorPromptText(pack, generationPromptStage(pack, { useMask }));
-      seedanceDraft.images = normalizeMaterialList(refs, 1).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
-      seedanceDraft.videos = normalizeMaterialList([videoPath], 1).slice(0, SEEDANCE_MATERIAL_LIMITS.videos);
-      const promptInput = $("#seedancePromptInput");
-      const taskNameInput = $("#seedanceTaskNameInput");
-      const modelSelect = $("#seedanceModelSelect");
-      const durationSelect = $("#seedanceDurationSelect");
-      const ratioSelect = $("#seedanceRatioSelect");
-      const resolutionSelect = $("#seedanceResolutionSelect");
-      if (promptInput) promptInput.value = seedanceDraft.prompt;
-      if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
-      if (modelSelect) fillSelect("seedanceModelSelect", models, seedanceDraft.model);
-      if (durationSelect) syncSeedanceDurationSelect(seedanceDraft.duration);
-      if (ratioSelect) ratioSelect.value = seedanceDraft.ratio;
-      if (resolutionSelect) resolutionSelect.value = seedanceDraft.resolution;
-      renderSeedanceMaterialSlots("images");
-      renderSeedanceMaterialSlots("videos");
-      renderSeedancePayload();
-      patchGenerationPackRuntime(pack.id, {
-        sourcePath,
-        referenceImages: refs,
-        referenceCount: refs.length,
-      }, { render: false });
-      return { first, sourcePath, videoPath, refs };
-    }
+    // H3 submits directly from package runtime and does not mirror provider drafts.
 
     function generationPlayerHtml(path, emptyText, time = 0.1) {
       const value = String(path || "").trim();
@@ -22342,7 +21420,6 @@
       const status = String(runtime.status || "idle");
       if (status === "mask_running") return "白膜生成中";
       if (status === "result_running") return "结果生成中";
-      if (status === "scail2_running") return "Scail2 生成中";
       if (status === "failed") return "生成失败";
       if (generationPackResultVideo(pack)) return "结果就绪";
       if (generationPackMaskVideo(pack)) {
@@ -22376,7 +21453,7 @@
           : (runtime.resultPackageIdentityId || runtime.outputPackageIdentityId || "")
       ).trim();
       if (storedIdentity && storedIdentity !== identityId && !canRestore) return false;
-      const expectedSource = role === "result" && generationPackBackend(pack) !== "scail2"
+      const expectedSource = role === "result"
         ? generationPackMaskVideo(pack)
         : generationPackSourceInfo(pack).path;
       const storedSource = String(
@@ -22396,16 +21473,14 @@
     function generationPackageCardStateClass(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const status = String(runtime?.status || "");
-      if (status === "mask_running" || status === "result_running" || status === "scail2_running") return " is-running";
+      if (status === "mask_running" || status === "result_running") return " is-running";
       if (generationPackResultVideo(pack)) return " has-result";
       if (generationPackMaskVideo(pack)) return " has-mask";
       return "";
     }
 
     function generationCurrentModelLabel() {
-      const channel = seedanceApiChannelLabel(normalizeSeedanceApiChannel($("#seedanceApiChannelSelect")?.value || seedanceApiChannel));
-      const model = String(seedanceDraft.model || $("#seedanceModelSelect")?.value || "").trim();
-      return [channel, model].filter(Boolean).join(" · ");
+      return "MiniMax H3（远程5090）";
     }
 
     function generationPackOutputPath(pack = {}) {
@@ -22423,8 +21498,7 @@
     }
 
     function generationActivePromptLabel(pack = {}) {
-      if (generationPackBackend(pack) === "scail2") return "单人提示词";
-      return "视频生成提示词";
+      return "H3 视频生成提示词";
     }
 
     function generationActivePromptText(pack = {}) {
@@ -22432,7 +21506,6 @@
     }
 
     function generationPromptStage(pack = {}, options = {}) {
-      if (generationPackBackend(pack) === "scail2") return "scail2";
       if (options.stage) return String(options.stage || "").trim();
       if (options.useMask === true) return "result";
       const runtimeStage = generationWorkbench.promptStageByPack?.[pack.id];
@@ -22625,28 +21698,19 @@
           runStatus.textContent = "等待生成包";
         }
         $("#generationStepList").innerHTML = "";
-        const audioRow = $("#scail2UploadAudioRow");
-        if (audioRow) audioRow.hidden = true;
-        ["#generateWhiteMaskBtn", "#generateResultBtn", "#generateFullPipelineBtn", "#rerunWhiteMaskBtn", "#rerunResultBtn", "#generateScail2PackageBtn"].forEach((selector) => {
+        ["#generateWhiteMaskBtn", "#generateResultBtn", "#generateFullPipelineBtn", "#rerunWhiteMaskBtn", "#rerunResultBtn"].forEach((selector) => {
           const button = $(selector);
           if (button) button.disabled = true;
-        });
-        $("#generationRouteSwitch")?.querySelectorAll("[data-generation-route]").forEach((button) => {
-          button.classList.remove("active");
-          button.setAttribute("aria-pressed", "false");
-          button.disabled = true;
         });
         return;
       }
       packs.forEach((pack) => {
         ensureGenerationPackageRuntimeRestored(pack);
-        resumeGenerationPackageTaskPolling(pack);
+        resumeGenerationH3Polling(pack);
       });
-      if (composePlan.selectedPackId && generationPackById(composePlan.selectedPackId)) {
-        generationWorkbench.selectedPackId = composePlan.selectedPackId;
+      if (!generationPackById(generationWorkbench.selectedPackId)) {
+        generationWorkbench.selectedPackId = generationPackById(composePlan.selectedPackId)?.id || packs[0].id;
       }
-      const selected = generationPackById(generationWorkbench.selectedPackId);
-      generationWorkbench.selectedPackId = selected?.id || packs[0].id;
       const list = $("#generationPackageList");
       if (list) {
         list.innerHTML = packs.map((pack) => {
@@ -22674,15 +21738,13 @@
       $("#generationPackageSummary").textContent = String(packs.length);
       const pack = generationPackById(generationWorkbench.selectedPackId);
       const runtime = generationRuntimeForPack(pack.id);
-      const backend = generationPackBackend(pack);
       const sourceInfo = generationPackSourceInfo(pack);
       const maskPath = generationPackMaskVideo(pack);
       const resultPath = generationPackResultVideo(pack);
       const refs = generationManualReferenceImages();
       const shots = generationPackShots(pack);
       const duration = Number(pack.duration || composePackDuration(pack) || 0);
-      root.classList.toggle("route-scail2", backend === "scail2");
-      root.classList.toggle("route-seedance", backend !== "scail2");
+      root.classList.add("route-h3");
       $("#generationStageTitle").textContent = `${pack.id || "P000"} · ${generationPackRoleLabel(pack)}`;
       $("#generationStageMeta").textContent = `${generationBackendLabel(pack)} · 镜头 ${shots.length} 段 · ${duration.toFixed(1)}s`;
       $("#generationOriginalMeta").textContent = "";
@@ -22710,26 +21772,9 @@
       }
       const whiteDone = Boolean(maskPath);
       const resultDone = Boolean(resultPath);
-      const running = ["mask_running", "result_running", "scail2_running"].includes(String(runtime.status || ""));
+      const running = ["mask_running", "result_running"].includes(String(runtime.status || ""));
       const canPrepareSource = Boolean(sourceInfo.path || shots.length);
-      const routeSwitch = $("#generationRouteSwitch");
-      if (routeSwitch) {
-        routeSwitch.querySelectorAll("[data-generation-route]").forEach((button) => {
-          const active = String(button.dataset.generationRoute || "") === backend;
-          button.classList.toggle("active", active);
-          button.setAttribute("aria-pressed", active ? "true" : "false");
-          button.disabled = running;
-        });
-      }
-      const audioRow = $("#scail2UploadAudioRow");
-      if (audioRow) audioRow.hidden = backend !== "scail2";
-      $("#generationStepList").innerHTML = backend === "scail2"
-        ? `<div class="generation-step${running ? " active" : ""}${resultDone ? " done" : ""}">
-            <div class="generation-step-title"><span>单人 Scail2 生成</span><b>${resultDone ? "完成" : (running ? "运行中" : "待生成")}</b></div>
-            <div class="generation-step-detail">输入：原视频 + 单人角色参考图。输出：结果视频。</div>
-          </div>`
-        : backend === "minimax_h3"
-        ? `
+      $("#generationStepList").innerHTML = `
           <div class="generation-step${whiteDone ? " done" : (runtime.status === "mask_running" ? " active" : "")}">
             <div class="generation-step-title"><span>第一步：H3 逐段生成白膜</span><b>${whiteDone ? "完成" : (runtime.status === "mask_running" ? "运行中" : "待生成")}</b></div>
             <div class="generation-step-detail">远程 5090 整包合并生成白膜（提示词对整包反推），整包约 15-30 分钟，完成后按镜头拆回每段一张卡。</div>
@@ -22738,46 +21783,31 @@
             <div class="generation-step-title"><span>第二步：H3 逐段换人</span><b>${resultDone ? "完成" : (runtime.status === "result_running" ? "运行中" : "待生成")}</b></div>
             <div class="generation-step-detail">输入：每段白膜卡 + 会上传的人物参考图（1-3 张）。输出：逐段结果视频，时长自动对齐源片段。</div>
           </div>
-        `
-        : `
-          <div class="generation-step${whiteDone ? " done" : (runtime.status === "mask_running" ? " active" : "")}">
-            <div class="generation-step-title"><span>第一步：生成白膜</span><b>${whiteDone ? "完成" : (runtime.status === "mask_running" ? "运行中" : "待生成")}</b></div>
-            <div class="generation-step-detail">输入：原视频 + 提示词 + 角色参考信息。输出：白膜视频。</div>
-          </div>
-          <div class="generation-step${resultDone ? " done" : (runtime.status === "result_running" ? " active" : "")}">
-            <div class="generation-step-title"><span>第二步：生成结果</span><b>${resultDone ? "完成" : (runtime.status === "result_running" ? "运行中" : "待生成")}</b></div>
-            <div class="generation-step-detail">输入：参考图 + 白膜视频。输出：最终视频。</div>
-          </div>
         `;
       const whiteBtn = $("#generateWhiteMaskBtn");
       const resultBtn = $("#generateResultBtn");
       const fullBtn = $("#generateFullPipelineBtn");
       const rerunWhiteBtn = $("#rerunWhiteMaskBtn");
       const rerunResultBtn = $("#rerunResultBtn");
-      const scailBtn = $("#generateScail2PackageBtn");
       if (whiteBtn) {
-        whiteBtn.hidden = backend === "scail2" || whiteDone;
-        whiteBtn.disabled = backend === "scail2" || running || !canPrepareSource;
+        whiteBtn.hidden = whiteDone;
+        whiteBtn.disabled = running || !canPrepareSource;
       }
       if (resultBtn) {
-        resultBtn.hidden = backend === "scail2" || resultDone;
-        resultBtn.disabled = backend === "scail2" || running || !maskPath;
+        resultBtn.hidden = resultDone;
+        resultBtn.disabled = running || !maskPath;
       }
       if (fullBtn) {
-        fullBtn.hidden = backend === "scail2";
-        fullBtn.disabled = backend === "scail2" || running || !canPrepareSource;
+        fullBtn.hidden = false;
+        fullBtn.disabled = running || !canPrepareSource;
       }
       if (rerunWhiteBtn) {
-        rerunWhiteBtn.hidden = backend === "scail2" || !whiteDone;
-        rerunWhiteBtn.disabled = backend === "scail2" || running || !canPrepareSource;
+        rerunWhiteBtn.hidden = !whiteDone;
+        rerunWhiteBtn.disabled = running || !canPrepareSource;
       }
       if (rerunResultBtn) {
-        rerunResultBtn.hidden = backend === "scail2" || !resultDone;
-        rerunResultBtn.disabled = backend === "scail2" || running || !maskPath;
-      }
-      if (scailBtn) {
-        scailBtn.hidden = backend !== "scail2";
-        scailBtn.disabled = backend !== "scail2" || running || !canPrepareSource;
+        rerunResultBtn.hidden = !resultDone;
+        rerunResultBtn.disabled = running || !maskPath;
       }
       bindGenerationCompareSync();
     }
@@ -22913,148 +21943,7 @@
       if (!pack) return;
       generationWorkbench.selectedPackId = pack.id;
       generationWorkbench.promptStageByPack[pack.id] = "mask";
-      if (generationPackBackend(pack) === "scail2") {
-        assistantSetStatus(["单人包走 Scail2，不需要白膜。"], "warn");
-        return;
-      }
-      if (generationPackBackend(pack) === "minimax_h3") {
-        return startGenerationPackageH3Mask(pack, options);
-      }
-      const maskRuntime = generationRuntimeForPack(pack.id);
-      // 无条件清掉旧任务轮询：哪怕状态不是 mask_running，残留轮询也会把旧任务的错误回写盖掉新提交
-      const staleMaskTaskId = String(maskRuntime.maskTaskId || "").trim();
-      if (staleMaskTaskId) clearSeedancePackagePoll(staleMaskTaskId);
-      if (String(maskRuntime.status || "") === "mask_running") {
-        const runningTaskId = String(maskRuntime.maskTaskId || "").trim();
-        const confirmed = await appConfirm({
-          title: `${pack.id} 的白膜还在生成中`,
-          lines: [
-            runningTaskId ? `task_id: ${runningTaskId}` : "",
-            "任务尚未返回成功或失败，重复提交会导致状态来回跳动。",
-            "确定要强制结束当前任务并重新生成吗？",
-          ],
-          confirmText: "强制重跑",
-          cancelText: "继续等待",
-        });
-        if (!confirmed) {
-          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} 白膜仍在生成中`], "warn");
-          return;
-        }
-        if (runningTaskId) clearSeedancePackagePoll(runningTaskId);
-        patchGenerationPackRuntime(pack.id, { status: "idle", maskTaskId: "", maskPollContext: null }, { render: false });
-      }
-      if (!ensureGenerationPackageDurationInRange(pack, "生成白膜")) return;
-      // 白膜阶段不使用人物参考图：白膜是中性动作载体，任何身份特征（包括新人物的）都会污染下一步换人
-      const maskProgress = generationPackMaskProgress(pack);
-      const successKeptCount = maskProgress.keptShots.length;
-      let incrementalMaskPlan = null;
-      if (maskProgress.clips.length && !maskProgress.missingShots.length) {
-        const doneLines = [
-          `✓ ${pack.id} 白膜 ${maskProgress.shots.length} 段已全部就绪，无需重复提交`,
-          "> 如需重做某一段，请先在白膜结果包里删除那张卡，再点生成白膜",
-        ];
-        setSeedanceSubmitStatus(doneLines, "good");
-        assistantSetStatus(doneLines, "good");
-        patchGenerationPackRuntime(pack.id, { lastMessage: doneLines[0], lastTone: "good" });
-        return;
-      }
-      if (maskProgress.clips.length && maskProgress.missingShots.length) {
-        const keptSummary = successKeptCount ? `${successKeptCount} 段已成功将跳过` : "无保留段";
-        const confirmed = await appConfirm({
-          title: `${pack.id} 白膜增量生成`,
-          lines: [
-            `共 ${maskProgress.shots.length} 段，${keptSummary}，只提交缺失的 ${maskProgress.missingShots.length} 段。`,
-            "如需全部重跑，请先删除白膜结果包里的卡。",
-          ],
-          confirmText: "增量生成缺失段",
-          cancelText: "中止",
-        });
-        if (!confirmed) return;
-        incrementalMaskPlan = buildIncrementalMaskPlan(maskProgress);
-      }
-      patchGenerationPackRuntime(pack.id, {
-        status: "mask_running",
-        lastMessage: "正在准备白膜输入",
-        lastTone: "warn",
-        errorMessage: "",
-      });
-      let prepared = null;
-      try {
-        prepared = incrementalMaskPlan
-          ? await prepareIncrementalMaskSource(pack, incrementalMaskPlan.submitShots)
-          : await prepareGenerationPackageSource(pack);
-      } catch (error) {
-        const message = error.message || String(error);
-        patchGenerationPackRuntime(pack.id, {
-          status: "failed",
-          lastMessage: `生成包合成失败\n${message}`,
-          lastTone: "bad",
-          errorMessage: `生成包合成失败\n${message}`,
-        });
-        setSeedanceSubmitStatus(["x 生成包合成失败", "> " + message], "bad");
-        return;
-      }
-      const synced = syncGenerationPackageToSeedanceDraft(pack, { useMask: false });
-      if (!synced) return;
-      if (incrementalMaskPlan) {
-        synced.sourcePath = String(prepared.output_path || prepared.source_path || "").trim();
-        const subDuration = Number(prepared.duration || 0)
-          || incrementalMaskPlan.submitShots.reduce((sum, shot) => sum + (Number(shot.duration) || 0), 0);
-        seedanceDraft.duration = Math.min(15, Math.max(4, Math.ceil(subDuration)));
-        seedanceDraft.videos = [synced.sourcePath];
-        syncSeedanceDurationSelect(seedanceDraft.duration);
-        renderSeedanceMaterialSlots("videos");
-      }
-      seedanceDraft.prompt = generationEditorPromptText(pack, "mask");
-      // 白膜只带统一风格图，不带任何人物参考图（参考图留给换人阶段）
-      seedanceDraft.images = whiteMaskImagesWithStyleRef([]);
-      seedanceDraft.prompt = `${seedanceDraft.prompt}\n${WHITE_MASK_STYLE_REF_PROMPT_CLAUSE}`;
-      seedanceDraft.taskName = `api_white_mask_${pack.id || "P000"}`;
-      const promptInput = $("#seedancePromptInput");
-      const taskNameInput = $("#seedanceTaskNameInput");
-      if (promptInput) promptInput.value = seedanceDraft.prompt;
-      if (taskNameInput) taskNameInput.value = seedanceDraft.taskName;
-      renderSeedanceMaterialSlots("images");
-      renderSeedancePayload();
-      const payloadHint = synced.sourcePath ? `> 白膜输入: ${fileName(synced.sourcePath)}` : "> 白膜输入为空";
-      const incrementalHint = incrementalMaskPlan
-        ? `> 增量生成: 跳过已成功 ${maskProgress.keptShots.length} 段，提交缺失 ${incrementalMaskPlan.missingShotIds.length} 段${incrementalMaskPlan.submitShots.length > incrementalMaskPlan.missingShotIds.length ? `（含凑时长相邻段 ${incrementalMaskPlan.submitShots.length - incrementalMaskPlan.missingShotIds.length} 段，成果会被丢弃）` : ""}`
-        : "";
-      const requestMessage = seedanceStatusVisibleText([
-        "> 已收到生成白膜请求",
-        `> 生成包: ${pack.id}`,
-        prepared?.shot_count ? `> 已合成镜头: ${prepared.shot_count} 段` : "",
-        incrementalHint,
-        payloadHint,
-      ]);
-      setSeedanceSubmitStatus([
-        "> 已收到生成白膜请求",
-        `> 生成包: ${pack.id}`,
-        prepared?.shot_count ? `> 已合成镜头: ${prepared.shot_count} 段` : "",
-        incrementalHint,
-        payloadHint,
-      ].filter(Boolean), "warn");
-      patchGenerationPackRuntime(pack.id, {
-        status: "mask_running",
-        sourcePath: synced.sourcePath,
-        maskModelLabel: generationCurrentModelLabel(),
-        pendingAutoResult: options.autoGenerateResult === true,
-        lastMessage: requestMessage,
-        lastTone: "warn",
-        errorMessage: "",
-      });
-      await submitSeedanceATask({
-        forceSeedance: true,
-        useDraftAsIs: true,
-        packageId: pack.id,
-        compareSourcePath: synced.sourcePath,
-        compareOutputLabel: "白膜视频",
-        outputRole: "mask",
-        autoGenerateResult: options.autoGenerateResult === true,
-        incrementalMask: incrementalMaskPlan
-          ? { missingShotIds: incrementalMaskPlan.missingShotIds, orderedShotIds: incrementalMaskPlan.orderedShotIds }
-          : null,
-      });
+      return startGenerationPackageH3Mask(pack, options);
     }
 
     async function startGenerationPackageResult(packId = generationWorkbench.selectedPackId) {
@@ -23062,130 +21951,23 @@
       if (!pack) return;
       generationWorkbench.selectedPackId = pack.id;
       generationWorkbench.promptStageByPack[pack.id] = "result";
-      if (generationPackBackend(pack) === "scail2") {
-        return startGenerationPackageScail2(pack.id);
-      }
-      if (generationPackBackend(pack) === "minimax_h3") {
-        return startGenerationPackageH3Result(pack);
-      }
-      const resultRuntime = generationRuntimeForPack(pack.id);
-      if (String(resultRuntime.status || "") === "result_running") {
-        const runningTaskId = String(resultRuntime.resultTaskId || "").trim();
-        const confirmed = await appConfirm({
-          title: `${pack.id} 的结果还在生成中`,
-          lines: [
-            runningTaskId ? `task_id: ${runningTaskId}` : "",
-            "任务尚未返回成功或失败，重复提交会导致状态来回跳动。",
-            "确定要强制结束当前任务并重新生成吗？",
-          ],
-          confirmText: "强制重跑",
-          cancelText: "继续等待",
-        });
-        if (!confirmed) {
-          setSeedanceSubmitStatus([`> 已取消重复提交: ${pack.id} 结果仍在生成中`], "warn");
-          return;
-        }
-        if (runningTaskId) clearSeedancePackagePoll(runningTaskId);
-        patchGenerationPackRuntime(pack.id, { status: "idle", resultTaskId: "", resultPollContext: null }, { render: false });
-      }
-      if (!ensureGenerationPackageDurationInRange(pack, "生成结果")) return;
-      if (!generationPackMaskVideo(pack)) {
-        const lines = ["x 先生成白膜视频", "> 多人接口需要先用原视频生成白膜，再用白膜生成结果。"];
-        setSeedanceSubmitStatus(lines, "warn");
-        assistantSetStatus(lines, "warn");
-        return;
-      }
-      if (currentSeedanceMaskJobId) {
-        setSeedanceSubmitStatus(["> 白膜任务正在运行", `> job_id: ${currentSeedanceMaskJobId}`], "warn");
-        return;
-      }
-      if (!ensureGenerationPackageManualReferences(pack, "生成结果")) return;
-      patchGenerationPackRuntime(pack.id, {
-        status: "result_running",
-        lastMessage: "正在准备结果输入",
-        lastTone: "warn",
-        errorMessage: "",
-      }, { render: false });
-      const synced = syncGenerationPackageToSeedanceDraft(pack, { useMask: true });
-      if (!synced) return;
-      const resultMessage = seedanceStatusVisibleText([
-        "> 正在提交生成结果",
-        `> 生成包: ${pack.id}`,
-      ]);
-      patchGenerationPackRuntime(pack.id, {
-        status: "result_running",
-        sourcePath: synced.sourcePath,
-        resultModelLabel: generationCurrentModelLabel(),
-        lastMessage: resultMessage,
-        lastTone: "warn",
-        errorMessage: "",
-      });
-      await submitSeedanceATask({
-        forceSeedance: true,
-        useDraftAsIs: true,
-        packageId: pack.id,
-        compareSourcePath: synced.sourcePath,
-        compareOutputLabel: "结果视频",
-      });
+      return startGenerationPackageH3Result(pack);
     }
 
     async function startGenerationPackageFull(packId = generationWorkbench.selectedPackId) {
       const pack = generationPackById(packId);
       if (!pack) return;
-      if (generationPackBackend(pack) === "scail2") return startGenerationPackageScail2(pack.id);
-      if (generationPackBackend(pack) === "minimax_h3") {
-        const h3Progress = generationPackMaskProgress(pack);
-        if (h3Progress.shots.length && !h3Progress.missingShots.length) return startGenerationPackageResult(pack.id);
-        return startGenerationPackageMask(pack.id, { autoGenerateResult: true });
-      }
-      if (!ensureGenerationPackageDurationInRange(pack, "全流程生成")) return;
-      if (generationPackMaskVideo(pack)) return startGenerationPackageResult(pack.id);
+      const h3Progress = generationPackMaskProgress(pack);
+      if (h3Progress.shots.length && !h3Progress.missingShots.length) return startGenerationPackageResult(pack.id);
       return startGenerationPackageMask(pack.id, { autoGenerateResult: true });
-    }
-
-    async function startGenerationPackageScail2(packId = generationWorkbench.selectedPackId) {
-      const pack = generationPackById(packId);
-      if (!pack) return;
-      generationWorkbench.selectedPackId = pack.id;
-      if (currentMode2ServerTransferJobId) {
-        setSeedanceSubmitStatus(["> Scail2 任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
-        return;
-      }
-      if (!ensureGenerationPackageDurationInRange(pack, "Scail2 生成")) return;
-      if (!ensureGenerationPackageManualReferences(pack, "Scail2 生成")) return;
-      try {
-        await prepareGenerationPackageInputFromWorkbench(pack, { silent: true });
-      } catch (error) {
-        const message = error.message || String(error);
-        patchGenerationPackRuntime(pack.id, {
-          status: "failed",
-          lastMessage: `生成包合成失败\n${message}`,
-          lastTone: "bad",
-          errorMessage: `生成包合成失败\n${message}`,
-        });
-        setSeedanceSubmitStatus(["x 生成包合成失败", "> " + message], "bad");
-        return;
-      }
-      const synced = syncGenerationPackageToSeedanceDraft(pack, { useMask: false });
-      if (!synced) return;
-      const scail2Message = seedanceStatusVisibleText([
-        "> 正在提交 Scail2 生成",
-        `> 生成包: ${pack.id}`,
-      ]);
-      patchGenerationPackRuntime(pack.id, {
-        status: "scail2_running",
-        sourcePath: synced.sourcePath,
-        lastMessage: scail2Message,
-        lastTone: "warn",
-        errorMessage: "",
-      });
-      await startMode2ServerTransfer({ packageId: pack.id });
     }
 
     // ---------------------------------------------------------------- MiniMax H3（远程5090）整包合并后端
     // H3 白膜整包合并提交 /api/mode2/h3-white-mask（合包经人工审核），完成后按镜头时长拆回每段一张卡；换人仍逐段提交 /api/mode2/h3-charswap，
     // 远程 5090 整包约 15-30 分钟，前端按 /api/jobs/{job_id} 轮询，白膜拆分后把卡挂到对应片段上。
     const generationH3PollTimers = {};
+    const generationH3PollVersions = {};
+    const generationH3PollInFlight = {};
 
     // ---------------------------------------------------------------- H3 白膜提示词反推（每段专属提示词）
     // 反推结果存服务端 .h3_reverse_cache（按片段指纹），前端镜像到 runtime.reversePrompts（shot_id → 提示词）。
@@ -23327,11 +22109,13 @@
       const key = generationH3PollKey(packId, role);
       if (generationH3PollTimers[key]) clearInterval(generationH3PollTimers[key]);
       delete generationH3PollTimers[key];
+      generationH3PollVersions[key] = Number(generationH3PollVersions[key] || 0) + 1;
+      delete generationH3PollInFlight[key];
     }
 
     function generationH3VideoSize() {
-      // 与 syncGenerationPackageToSeedanceDraft 同一套画幅推导：执行台比例下拉优先，其次草稿，再项目 output_ratio
-      const ratio = String($("#seedanceRatioSelect")?.value || seedanceDraft.ratio || storyProjectConfig.output_ratio || "9:16").trim();
+      const ratio = String($("#seedanceRatioSelect")?.value || seedanceDraft.ratio || storyProjectConfig.output_ratio || "source").trim();
+      if (ratio === "source") return { width: 0, height: 0 };
       return ratio === "16:9" ? { width: 864, height: 480 } : { width: 480, height: 864 };
     }
 
@@ -23436,7 +22220,7 @@
       const introLines = [
         "> 已收到 MiniMax H3 白膜请求（整包合并模式）",
         `> 生成包: ${pack.id}，${shots.length} 段合并为一条整包视频，单次提交`,
-        `> 画幅: ${size.width}x${size.height}，完成后按镜头时长自动拆回每段一张卡`,
+        `> 画幅: ${size.width && size.height ? `${size.width}x${size.height}` : "跟随原视频"}，完成后按镜头时长自动拆回每段一张卡`,
         "> 远程 5090 整包生成约 15-30 分钟，长时间不更新属正常",
       ];
       setSeedanceSubmitStatus(introLines, "warn");
@@ -23469,6 +22253,9 @@
         entry.jobId = await submitGenerationH3Job("/api/mode2/h3-white-mask", {
           clip_path: entry.sourcePath,
           project_dir: projectDir,
+          package_id: pack.id,
+          shot_id: entry.shotId,
+          auto_generate_result: jobs.autoGenerateResult === true,
           width: size.width,
           height: size.height,
           prompt,
@@ -23566,7 +22353,7 @@
         "> 已收到 MiniMax H3 换人请求",
         `> 生成包: ${pack.id}，逐段提交 ${entries.length} 段${resultShotIds.size ? `（${resultShotIds.size} 段已有结果卡，自动跳过）` : ""}`,
         `> 人物参考图: ${charImages.map((path, index) => `${generationReferenceLabelForPath(path, index)} / ${fileName(path)}`).join(", ")}`,
-        `> 画幅: ${size.width}x${size.height}，时长自动对齐白膜片段`,
+        `> 画幅: ${size.width && size.height ? `${size.width}x${size.height}` : "跟随原视频"}，时长自动对齐白膜片段`,
         "> 远程 5090 单段约 15-25 分钟，长时间不更新属正常",
       ];
       setSeedanceSubmitStatus(introLines, "warn");
@@ -23590,6 +22377,8 @@
             mask_video_path: entry.sourcePath,
             char_image_paths: charImages,
             project_dir: projectDir,
+            package_id: pack.id,
+            shot_id: entry.shotId,
             width: size.width,
             height: size.height,
             prompt: resultPrompt,
@@ -23663,6 +22452,7 @@
       const doneEntries = jobs.entries.filter((entry) => entry.status === "done");
       const failedEntries = jobs.entries.filter((entry) => entry.status === "failed");
       const runtime = generationRuntimeForPack(pack.id);
+      const shouldAutoGenerateResult = jobs.autoGenerateResult === true || runtime.pendingAutoResult === true;
       const identityId = generationPackIdentityId(pack);
       const lines = [
         failedEntries.length
@@ -23731,29 +22521,33 @@
       setSeedanceSubmitStatus(lines, tone);
       assistantSetStatus(lines, tone);
       addLogs(lines);
-      if (role === "mask" && jobs.autoGenerateResult === true && doneEntries.length) {
+      if (role === "mask" && shouldAutoGenerateResult && doneEntries.length) {
         window.setTimeout(() => startGenerationPackageResult(pack.id), 250);
       }
     }
 
     function pollGenerationH3Jobs(packId, role) {
       const key = generationH3PollKey(packId, role);
-      if (generationH3PollTimers[key]) clearInterval(generationH3PollTimers[key]);
+      clearGenerationH3Poll(packId, role);
+      const pollVersion = Number(generationH3PollVersions[key] || 0);
       const label = role === "mask" ? "白膜" : "换人";
       const tick = async () => {
-        const pack = generationPackById(packId);
-        if (!pack) {
-          clearGenerationH3Poll(packId, role);
-          return;
-        }
-        const runtime = generationRuntimeForPack(packId);
-        const jobs = generationH3JobsFor(runtime, role);
-        if (!jobs || !jobs.entries.some((entry) => entry.status === "running")) {
-          clearGenerationH3Poll(packId, role);
-          return;
-        }
-        const doneNow = [];
-        for (const entry of jobs.entries) {
+        if (generationH3PollVersions[key] !== pollVersion || generationH3PollInFlight[key] === pollVersion) return;
+        generationH3PollInFlight[key] = pollVersion;
+        try {
+          const pack = generationPackById(packId);
+          if (!pack) {
+            clearGenerationH3Poll(packId, role);
+            return;
+          }
+          const runtime = generationRuntimeForPack(packId);
+          const jobs = generationH3JobsFor(runtime, role);
+          if (!jobs || !jobs.entries.some((entry) => entry.status === "running")) {
+            clearGenerationH3Poll(packId, role);
+            return;
+          }
+          const doneNow = [];
+          for (const entry of jobs.entries) {
           if (entry.status !== "running" || !entry.jobId) continue;
           try {
             const response = await fetch("/api/jobs/" + encodeURIComponent(entry.jobId));
@@ -23806,35 +22600,39 @@
             // 查询失败不判死，下一轮继续轮询
             entry.logsTail = [`> 查询失败（会继续轮询）: ${error.message || error}`];
           }
-        }
-        // 完成一段就立刻挂到对应片段的卡上
-        if (doneNow.length) attachGenerationH3Clips(pack, role, doneNow);
-        const total = jobs.entries.length;
-        const doneCount = jobs.entries.filter((entry) => entry.status === "done").length;
-        const failedCount = jobs.entries.filter((entry) => entry.status === "failed").length;
-        const activeEntry = jobs.entries.find((entry) => entry.status === "running" && Array.isArray(entry.logsTail) && entry.logsTail.length)
-          || jobs.entries.find((entry) => entry.status === "running");
-        const lines = [
+          }
+          if (generationH3PollVersions[key] !== pollVersion) return;
+          // 完成一段就立刻挂到对应片段的卡上
+          if (doneNow.length) attachGenerationH3Clips(pack, role, doneNow);
+          const total = jobs.entries.length;
+          const doneCount = jobs.entries.filter((entry) => entry.status === "done").length;
+          const failedCount = jobs.entries.filter((entry) => entry.status === "failed").length;
+          const activeEntry = jobs.entries.find((entry) => entry.status === "running" && Array.isArray(entry.logsTail) && entry.logsTail.length)
+            || jobs.entries.find((entry) => entry.status === "running");
+          const lines = [
           `> MiniMax H3 ${label}运行中: ${doneCount}/${total} 段完成${failedCount ? `，${failedCount} 段失败` : ""}`,
           "> 远程 5090 约 15-30 分钟，长时间不更新属正常，完成后出卡",
           ...(activeEntry ? [
             `> ${activeEntry.shotId}${activeEntry.jobId ? ` job:${activeEntry.jobId}` : ""}`,
             ...((Array.isArray(activeEntry.logsTail) ? activeEntry.logsTail : []).map((line) => `> ${line}`)),
           ] : []),
-        ];
-        const visible = seedanceStatusVisibleText(lines);
-        setSeedanceSubmitStatus(lines, "warn");
-        patchGenerationPackRuntime(packId, {
+          ];
+          const visible = seedanceStatusVisibleText(lines);
+          setSeedanceSubmitStatus(lines, "warn");
+          patchGenerationPackRuntime(packId, {
           status: role === "mask" ? "mask_running" : "result_running",
           h3Jobs: jobs,
           lastMessage: visible,
           lastTone: "warn",
-        }, { render: false });
-        const runStatus = $("#generationRunStatus");
-        if (runStatus && generationWorkbench.selectedPackId === packId) runStatus.textContent = visible;
-        if (!jobs.entries.some((entry) => entry.status === "running")) {
-          clearGenerationH3Poll(packId, role);
-          finalizeGenerationH3Jobs(pack, role, jobs);
+          }, { render: false });
+          const runStatus = $("#generationRunStatus");
+          if (runStatus && generationWorkbench.selectedPackId === packId) runStatus.textContent = visible;
+          if (!jobs.entries.some((entry) => entry.status === "running")) {
+            clearGenerationH3Poll(packId, role);
+            finalizeGenerationH3Jobs(pack, role, jobs);
+          }
+        } finally {
+          if (generationH3PollInFlight[key] === pollVersion) delete generationH3PollInFlight[key];
         }
       };
       generationH3PollTimers[key] = setInterval(tick, 10000);
@@ -23858,146 +22656,13 @@
       });
     }
 
-    // ---------------------------------------------------------------- 人偶白膜重生
-    let dollRetakePolling = false;
-
-    function dollRetakeSetStatus(text, tone = "") {
-      const box = $("#dollRetakeStatus");
-      if (!box) return;
-      box.textContent = text || "";
-      box.style.color = tone === "bad" ? "#e0655f" : tone === "ok" ? "#6fbf73" : "";
-    }
-
-    function dollRetakeRefreshShots() {
-      const select = $("#dollRetakeShotSelect");
-      if (!select) return;
-      const pack = generationPackById(generationWorkbench.selectedPackId);
-      const shots = pack ? generationPackShotPayload(pack) : [];
-      const previous = select.value;
-      select.innerHTML = "";
-      if (!shots.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "（无镜头，先选生成包）";
-        select.appendChild(opt);
-        return;
-      }
-      shots.forEach((shot) => {
-        const opt = document.createElement("option");
-        opt.value = shot.video_path;
-        opt.dataset.shotId = shot.shot_id;
-        opt.textContent = `${shot.shot_id}（${Number(shot.duration || 0).toFixed(1)}s）`;
-        select.appendChild(opt);
-      });
-      if (previous && shots.some((shot) => shot.video_path === previous)) select.value = previous;
-    }
-
-    async function dollRetakeSubmit() {
-      if (dollRetakePolling) return;
-      const select = $("#dollRetakeShotSelect");
-      const clipPath = String(select?.value || "").trim();
-      if (!clipPath) {
-        dollRetakeSetStatus("请先选择生成包和镜头", "bad");
-        return;
-      }
-      const colorSelect = $("#dollRetakeColorSelect");
-      const doll = String(colorSelect?.value || "white");
-      const customColor = doll === "custom" ? String($("#dollRetakeCustomColor")?.value || "").trim() : "";
-      if (doll === "custom" && !customColor) {
-        dollRetakeSetStatus("请填写自定义颜色", "bad");
-        return;
-      }
-      const pack = generationPackById(generationWorkbench.selectedPackId);
-      const body = {
-        clip_path: clipPath,
-        shot_id: String(select.selectedOptions[0]?.dataset.shotId || "").trim(),
-        project_dir: String($("#projectDirInput")?.value || "").trim(),
-        package_id: pack ? String(pack.id || "") : "",
-        doll,
-        custom_color: customColor,
-      };
-      dollRetakeSetStatus("> 正在提交人偶重生…");
-      try {
-        const response = await fetch(storyboardApiUrl("/api/whitematte-shot-submit"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) throw new Error(data.error || `HTTP ${response.status}`);
-        dollRetakeSetStatus(`> 已提交（慢放 ${data.speed}x，${data.anchor_count} 锚点），生成中…`);
-        dollRetakePoll({
-          task_id: data.task_id,
-          speed: data.speed,
-          work_dir: data.work_dir,
-          shot_id: data.shot_id,
-        });
-      } catch (error) {
-        dollRetakeSetStatus("x 提交失败: " + (error.message || String(error)), "bad");
-      }
-    }
-
-    async function dollRetakePoll(job) {
-      dollRetakePolling = true;
-      try {
-        for (;;) {
-          await new Promise((resolve) => setTimeout(resolve, 10000));
-          const response = await fetch(storyboardApiUrl("/api/whitematte-shot-status"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(job),
-          });
-          const data = await response.json();
-          if (!response.ok || data.error) throw new Error(data.error || `HTTP ${response.status}`);
-          if (data.restored_path) {
-            dollRetakeSetStatus(`✓ 完成（已还原原节奏）: ${data.restored_path}`, "ok");
-            const player = $("#generationMaskPlayer");
-            if (player) {
-              player.innerHTML = "";
-              const video = document.createElement("video");
-              video.controls = true;
-              video.muted = true;
-              video.loop = true;
-              video.src = mediaSrc(data.restored_path, 0.1);
-              video.style.maxWidth = "100%";
-              player.appendChild(video);
-            }
-            return;
-          }
-          if (data.status === "FAILED") {
-            dollRetakeSetStatus("x 生成失败: " + (data.fail_reason || "通道1任务失败"), "bad");
-            return;
-          }
-          dollRetakeSetStatus(`> 生成中… ${data.status || ""} ${Math.round(Number(data.progress || 0))}%`);
-        }
-      } catch (error) {
-        dollRetakeSetStatus("x 轮询失败: " + (error.message || String(error)), "bad");
-      } finally {
-        dollRetakePolling = false;
-      }
-    }
-
     function initGenerationWorkbench() {
-      setGenerationScail2UploadAudioEnabled(localStorage.getItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY) === "1");
-      $("#scail2UploadAudioToggle")?.addEventListener("change", (event) => {
-        setGenerationScail2UploadAudioEnabled(Boolean(event.target.checked));
-      });
       $("#generationLoadPackagesBtn")?.addEventListener("click", () => reloadGenerationPackagesFromCompose());
-      $("#generationRouteSwitch")?.querySelectorAll("[data-generation-route]").forEach((button) => {
-        button.addEventListener("click", () => setGenerationPackBackend(generationWorkbench.selectedPackId, button.dataset.generationRoute));
-      });
       $("#generateWhiteMaskBtn")?.addEventListener("click", () => startGenerationPackageMask());
       $("#generateResultBtn")?.addEventListener("click", () => startGenerationPackageResult());
       $("#generateFullPipelineBtn")?.addEventListener("click", () => startGenerationPackageFull());
       $("#rerunWhiteMaskBtn")?.addEventListener("click", () => startGenerationPackageMask());
       $("#rerunResultBtn")?.addEventListener("click", () => startGenerationPackageResult());
-      $("#generateScail2PackageBtn")?.addEventListener("click", () => startGenerationPackageScail2());
-      $("#dollRetakeBtn")?.addEventListener("click", () => dollRetakeSubmit());
-      $("#dollRetakeShotSelect")?.addEventListener("focus", () => dollRetakeRefreshShots());
-      $("#dollRetakeColorSelect")?.addEventListener("change", (event) => {
-        const customInput = $("#dollRetakeCustomColor");
-        if (customInput) customInput.hidden = event.target.value !== "custom";
-      });
       renderGenerationPackageWorkbench();
     }
 
@@ -24040,7 +22705,7 @@
         try { ensureComposePlan(); renderComposePage(); } catch (_) {}
       }
       if (target === "generate") {
-        try { renderGenerationPackageWorkbench(); } catch (_) {}
+        try { ensureComposePlan(); renderGenerationPackageWorkbench(); } catch (_) {}
       }
     }
 
@@ -24089,17 +22754,8 @@
       return duration.toFixed(3).replace(/\.?0+$/, "");
     }
 
-    function seedanceDurationSelectValues(current = seedanceDraft.duration) {
-      const values = seedanceDurationOptions(seedanceApiChannel).map((value) => formatSeedanceDurationValue(value));
-      const currentValue = formatSeedanceDurationValue(current);
-      if (currentValue && !values.includes(currentValue)) values.push(currentValue);
-      return values.sort((left, right) => Number(left) - Number(right));
-    }
-
     function syncSeedanceDurationSelect(current = seedanceDraft.duration) {
-      const value = formatSeedanceDurationValue(current);
-      fillSelect("seedanceDurationSelect", seedanceDurationSelectValues(value), value, (item) => `${item}s`);
-      seedanceDraft.duration = normalizeSeedanceDurationValue(value);
+      seedanceDraft.duration = normalizeSeedanceDurationValue(current);
     }
 
     function generationDurationRangeError(duration, minSeconds = COMPOSE_PACK_MIN_SECONDS, maxSeconds = COMPOSE_PACK_MAX_SECONDS) {
@@ -24112,47 +22768,6 @@
 
     function seedanceDurationRangeError(duration) {
       return generationDurationRangeError(duration, COMPOSE_PACK_MIN_SECONDS, COMPOSE_PACK_MAX_SECONDS);
-    }
-
-    function loadSeedanceDraft() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(SEEDANCE_A_DRAFT_KEY) || "{}");
-        seedanceDraft = {
-          ...seedanceDraft,
-          ...saved,
-          images: normalizeMaterialList(saved.images, 1),
-          videos: normalizeMaterialList(saved.videos, 1),
-          audios: normalizeMaterialList(saved.audios, 0),
-        };
-      } catch (_) {
-        seedanceDraft.images = normalizeMaterialList(seedanceDraft.images, 1);
-        seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
-        seedanceDraft.audios = normalizeMaterialList(seedanceDraft.audios, 0);
-      }
-      if (seedanceDraft.model === "videos_stable_fast") {
-        seedanceDraft.model = "sd-2.0-r3";
-      }
-      const models = seedanceModelOptions(seedanceApiChannel);
-      if (!models.includes(seedanceDraft.model)) {
-        seedanceDraft.model = models[0] || "sd-2.0-r3";
-      }
-      seedanceDraft.duration = normalizeSeedanceDurationValue(seedanceDraft.duration, 6);
-      const durations = seedanceDurationOptions(seedanceApiChannel);
-      if (!durations.some((value) => Number(value) === Number(seedanceDraft.duration))) {
-        seedanceDraft.duration = durations.includes(6) ? 6 : (durations[0] || 6);
-      }
-      const ratios = seedanceRatioOptions(seedanceApiChannel);
-      if (!ratios.includes(seedanceDraft.ratio)) {
-        seedanceDraft.ratio = ratios.includes(storyProjectConfig.output_ratio)
-          ? storyProjectConfig.output_ratio
-          : ratios[0];
-      }
-      if (/^\d+p$/i.test(String(seedanceDraft.resolution || ""))) {
-        seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
-      }
-      if (!SEEDANCE_A_RESOLUTIONS.includes(seedanceDraft.resolution)) {
-        seedanceDraft.resolution = seedanceDraft.ratio === "16:9" ? "1280x720" : "720x1280";
-      }
     }
 
     function normalizeMaterialList(items, minimumRows) {
@@ -24168,40 +22783,6 @@
         if (value && !out.includes(value)) out.push(value);
       });
       return out;
-    }
-
-    function syncSeedanceControls() {
-      syncSeedanceApiChannelControl();
-      const models = seedanceModelOptions(seedanceApiChannel);
-      if (!models.includes(seedanceDraft.model)) seedanceDraft.model = models[0] || seedanceDraft.model;
-      const ratios = seedanceRatioOptions(seedanceApiChannel);
-      if (!ratios.includes(seedanceDraft.ratio)) seedanceDraft.ratio = ratios[0] || seedanceDraft.ratio;
-      fillSelect("seedanceModelSelect", models, seedanceDraft.model);
-      fillSelect("seedanceRatioSelect", ratios, seedanceDraft.ratio);
-      syncSeedanceDurationSelect(seedanceDraft.duration);
-      fillSelect("seedanceResolutionSelect", SEEDANCE_A_RESOLUTIONS, seedanceDraft.resolution);
-      const prompt = $("#seedancePromptInput");
-      if (prompt) prompt.value = seedanceDraft.prompt || seedanceTemplate("remake");
-      const taskName = $("#seedanceTaskNameInput");
-      if (taskName) taskName.value = seedanceDraft.taskName || "shot_retake_001";
-      const seed = $("#seedanceSeedInput");
-      if (seed) seed.value = String(seedanceDraft.seed || 0);
-      renderSeedanceMaterialSlots("images");
-      renderSeedanceMaterialSlots("videos");
-      renderSeedanceMaterialSlots("audios");
-      renderSeedancePayload();
-    }
-
-    function pullSeedanceControls() {
-      seedanceApiChannel = normalizeSeedanceApiChannel($("#seedanceApiChannelSelect")?.value || seedanceApiChannel);
-      localStorage.setItem(SEEDANCE_API_CHANNEL_KEY, seedanceApiChannel);
-      seedanceDraft.model = $("#seedanceModelSelect")?.value || seedanceDraft.model;
-      seedanceDraft.ratio = $("#seedanceRatioSelect")?.value || seedanceDraft.ratio;
-      seedanceDraft.duration = normalizeSeedanceDurationValue($("#seedanceDurationSelect")?.value || seedanceDraft.duration || 6, 6);
-      seedanceDraft.resolution = $("#seedanceResolutionSelect")?.value || seedanceDraft.resolution;
-      seedanceDraft.prompt = $("#seedancePromptInput")?.value || "";
-      seedanceDraft.taskName = $("#seedanceTaskNameInput")?.value || "shot_retake_001";
-      seedanceDraft.seed = Math.max(0, Number($("#seedanceSeedInput")?.value || 0) || 0);
     }
 
     function seedanceSlotMeta(kind) {
@@ -25297,7 +23878,7 @@
       const taskName = $("#seedanceTaskNameInput");
       if (taskName) taskName.value = seedanceDraft.taskName;
       renderSeedancePayload();
-      addLogs(["> 已把当前时间线镜头加入 Seedance 参考视频槽"]);
+      addLogs(["> 已把当前时间线镜头加入 H3 参考视频槽"]);
     }
 
     function useCurrentShotPromptInSeedance() {
@@ -25331,7 +23912,7 @@
       renderSeedancePayload();
       switchModule("generate");
       addLogs([
-        `> 已把镜头 ${id} 的提示词送到 Seedance 草稿`,
+        `> 已把镜头 ${id} 的提示词送到 H3 生成页`,
         images.length ? `> 保留 ${images.length} 张人物参考图` : "> 未自动带入参考图，请在生成页选择",
       ]);
     }
@@ -25343,7 +23924,7 @@
       seedanceDraft.videos[0] = path;
       renderSeedanceMaterialSlots("videos");
       renderSeedancePayload();
-      addLogs(["> 已把原视频加入 Seedance 参考视频槽"]);
+      addLogs(["> 已把原视频加入 H3 参考视频槽"]);
     }
     function seedanceReferenceMaskSelection() {
       pullSeedanceMaterialSlots("images");
@@ -25429,10 +24010,6 @@
     async function startSeedanceReferenceExpressionMask(index, options = {}) {
       if (currentSeedanceMaskJobId) {
         setSeedanceSubmitStatus(["> 蒙版/白膜任务正在运行", `> job_id: ${currentSeedanceMaskJobId}`], "warn");
-        return;
-      }
-      if (seedanceSubmitting) {
-        setSeedanceSubmitStatus(["> 通道A生成任务正在运行", "> 请等当前任务结束后再反推控制视频"], "warn");
         return;
       }
       pullSeedanceMaterialSlots("videos");
@@ -25807,112 +24384,8 @@
       }
     }
 
-    function buildSeedancePayload() {
-      pullSeedanceControls();
-      const apiChannel = normalizeSeedanceApiChannel(seedanceApiChannel);
-      const channelMeta = seedanceApiChannelMeta(apiChannel);
-      const relay = apiChannel === "channel2" ? pullSeedanceRelayControls() : null;
-      const channel1 = apiChannel === "channel1" ? pullNukoChannel1Controls() : null;
-      const imageRefs = compactMaterials(seedanceDraft.images).slice(0, SEEDANCE_MATERIAL_LIMITS.images);
-      const videoRefs = compactMaterials(seedanceDraft.videos).slice(0, SEEDANCE_MATERIAL_LIMITS.videos);
-      const audioRefs = compactMaterials(seedanceDraft.audios).slice(0, SEEDANCE_MATERIAL_LIMITS.audios);
-      const promptText = seedanceDraft.prompt || seedanceTemplate("remake");
-      const duration = Number(seedanceDraft.duration) || 5;
-      const ratio = seedanceDraft.ratio || "9:16";
-      const resolution = seedanceDraft.resolution || (ratio === "16:9" ? "1280x720" : "720x1280");
-      const payload = {
-        model: seedanceDraft.model,
-        prompt: promptText,
-        __logicVariant: "video-v2",
-        duration,
-        seconds: duration,
-        ratio,
-        aspect_ratio: ratio,
-        resolution,
-      };
-      if (imageRefs.length) payload.images = imageRefs;
-      if (videoRefs.length) {
-        payload.videos = videoRefs;
-        payload.referenceVideos = videoRefs;
-        if (apiChannel === "channel1") {
-          const videoDurations = videoRefs.map(() => duration);
-          payload.video_durations = videoDurations;
-          payload.videoDurations = videoDurations;
-          payload.referenceVideoDurations = videoDurations;
-        }
-      }
-      if (audioRefs.length) payload.audios = audioRefs;
-      if (Number(seedanceDraft.seed) > 0) payload.seed = Number(seedanceDraft.seed);
-      return {
-        taskName: seedanceDraft.taskName || "shot_retake_001",
-        channel: channelMeta.label,
-        apiChannel,
-        provider: channelMeta.provider,
-        projectConfig: pullStoryProjectControls(),
-        materialLimits: SEEDANCE_MATERIAL_LIMITS,
-        relay: relay ? {
-          base_url: relay.base_url,
-          api_key_configured: Boolean(relay.api_key),
-        } : undefined,
-        channel1: channel1 ? {
-          base_url: channel1.base_url,
-          api_key_configured: Boolean(channel1.api_key),
-          backend_default_key: !channel1.api_key,
-        } : undefined,
-        payload,
-      };
-    }
-
     function renderSeedancePayload() {
-      const preview = $("#seedancePayloadPreview");
-      if (!preview) return;
-      preview.textContent = JSON.stringify(buildSeedancePayload(), null, 2);
-    }
-
-    function saveSeedanceDraft() {
-      pullSeedanceControls();
-      localStorage.setItem(SEEDANCE_A_DRAFT_KEY, JSON.stringify(seedanceDraft));
-      renderSeedancePayload();
-      addLogs(["> Seedance 通道A任务草稿已保存到本页"]);
-    }
-
-    async function copySeedancePayload() {
-      const text = JSON.stringify(buildSeedancePayload(), null, 2);
-      try {
-        await navigator.clipboard.writeText(text);
-        addLogs(["> 已复制 Seedance 通道A payload"]);
-      } catch (_) {
-        const box = document.createElement("textarea");
-        box.value = text;
-        document.body.appendChild(box);
-        box.select();
-        document.execCommand("copy");
-        box.remove();
-        addLogs(["> 已复制 Seedance 通道A payload"]);
-      }
-    }
-
-    async function copySeedanceStatus() {
-      const text = (seedanceLastStatusText || $("#seedanceSubmitStatus")?.textContent || "").trim();
-      if (!text) return addLogs(["x 当前没有可复制的通道A日志"]);
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch (_) {
-        const box = document.createElement("textarea");
-        box.value = text;
-        document.body.appendChild(box);
-        box.select();
-        document.execCommand("copy");
-        box.remove();
-      }
-      addLogs(["> 已复制通道A日志"]);
-    }
-
-    function setMode2ServerTransferRunning(running) {
-      const button = $("#openTransferWorkbenchBtn");
-      if (!button) return;
-      button.disabled = !!running;
-      button.textContent = running ? "Scail2 生成中..." : "Scail2 生成";
+      // Kept as a no-op while H3 and asset helpers still share the historical draft object.
     }
 
     function storyboardCutTimeKey(value) {
@@ -26275,7 +24748,7 @@
         const lines = [
           options.save ? "> 镜头切段已保存" : "> 镜头切段候选已生成",
           `> 子镜头: ${subclips.length} 段`,
-          shortCount ? `> ${shortCount} 段短于 2 秒，本机会补长后送 Scail2，返回后再裁回` : "",
+          shortCount ? `> ${shortCount} 段短于 2 秒，切段处理会自动补齐时长并在完成后裁回` : "",
           data.cut_error ? `> 硬切提醒: ${data.cut_error}` : "",
         ].filter(Boolean);
         setSeedanceSubmitStatus(lines, shortCount ? "warn" : "good");
@@ -26688,233 +25161,7 @@
       addLogs(lines);
     }
 
-    async function startMode2ServerTransfer(options = {}) {
-      if (currentMode2ServerTransferJobId) {
-        setSeedanceSubmitStatus(["> Scail2 生成任务正在运行", `> job_id: ${currentMode2ServerTransferJobId}`], "warn");
-        return;
-      }
-      if (selectedTimelineIndex < 0 && timelineSegments.length) {
-        selectTimelineSegment(0);
-      }
-      const packageId = String(options.packageId || "").trim();
-      const packagePack = packageId ? generationPackById(packageId) : null;
-      const manualScail2Override = true;
-      const seg = timelineSegments[selectedTimelineIndex] || {};
-      const projectDir = $("#projectDirInput")?.value.trim() || "";
-      const packageSourcePath = packagePack ? generationPackSourceVideo(packagePack) : "";
-      const videoPath = packageSourcePath || shotVideoPath(seg) || seedanceDraft.videos[0] || $("#videoPathInput")?.value.trim() || "";
-      const segmentId = String(seg.segment_id || "").trim();
-      syncSeedanceDraftImagesFromCurrentShot(seg);
-      const roles = currentServerTransferRoleAssets(seg).filter((asset) => asset.kind === "role");
-      const readyRoles = roles.filter((asset) => String(asset.target_image || asset.seedance_reference_image || "").trim());
-      const selectedRefs = generationManualReferenceImages(packagePack || generationPackById(generationWorkbench.selectedPackId) || {});
-      const selectedRefKeys = new Set(selectedRefs.map((path) => String(path || "").trim().toLowerCase()).filter(Boolean));
-      const matchedRoles = readyRoles.filter((asset) => roleReferenceOptions(asset)
-        .some((option) => selectedRefKeys.has(String(option || "").trim().toLowerCase())));
-      const selectedRoleIds = (selectedRefs.length ? matchedRoles : readyRoles)
-        .slice(0, 1)
-        .map((asset) => asset?.id)
-        .filter(Boolean);
-      if (!projectDir) {
-        const lines = ["x 项目目录为空", "> 请先读取或创建分镜项目。"];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        return;
-      }
-      if (!videoPath) {
-        const lines = ["x 当前镜头视频为空", "> 请先选择分镜，或把原视频加入参考视频。"];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        return;
-      }
-      if (!readyRoles.length && !selectedRefs.length) {
-        const lines = ["x 当前镜头没有可替换角色参考图", "> 请先在资产库给角色绑定参考图。"];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        return;
-      }
-      const body = {
-        project_dir: projectDir,
-        video_path: videoPath,
-        segment_id: segmentId,
-        package_id: packageId,
-        role_ids: selectedRoleIds,
-        manual_reference_images: selectedRefs,
-        reference_images: selectedRefs,
-        transfer_backend: "scail2",
-        manual_scail2_override: manualScail2Override,
-        scail2_upload_audio: generationScail2UploadAudioEnabled(),
-        normalize_size: true,
-        sampler_preset: "balanced",
-        video_window: {
-          frame_load_cap: 241,
-          skip_first_frames: 0,
-          select_every_nth: 1,
-        },
-        positive_prompt: seedanceDraft.prompt || currentShotPrompt() || "",
-        sam_text: "person",
-      };
-      const intro = [
-        "> 正在提交 Scail2 生成...",
-        `> 视频: ${fileName(videoPath)}`,
-        `> 参考图: ${selectedRefs.map((path, index) => `${generationReferenceLabelForPath(path, index)} / ${fileName(path)}`).join(", ")}`,
-        `> 上传声音: ${generationScail2UploadAudioEnabled() ? "开" : "关"}`,
-      ].filter(Boolean);
-      setSeedanceSubmitStatus(intro, "warn");
-      assistantSetRunStatus(["Scail2 生成提交中", fileName(videoPath)], true);
-      setMode2ServerTransferRunning(true);
-      addLogs(intro);
-      try {
-        const response = await fetch("/api/storyboard-server-transfer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-        if ((!response.ok || data.error) && data.error === "scail2_busy" && data.active_job_id) {
-          currentMode2ServerTransferJobId = data.active_job_id;
-          const lines = [
-            "> Scail2 已有任务正在运行",
-            `> job_id: ${data.active_job_id}`,
-            "> 已接回当前任务，继续等待结果",
-          ];
-          setSeedanceSubmitStatus(lines, "warn");
-          assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${data.active_job_id}`], true);
-          addLogs(lines);
-          pollMode2ServerTransferJob(data.active_job_id, videoPath, { packageId: options.packageId });
-          return;
-        }
-        if (!response.ok || data.error) throw new Error(data.error || "Scail2 生成提交失败");
-        currentMode2ServerTransferJobId = data.job_id;
-        const mappingLogs = (data.mapping || []).map((item) => `> ${item.color || item.order}: ${item.role || "角色"} -> ${item.target_ref || ""}`);
-        const lines = [
-          "> Scail2 生成已提交",
-          `> job_id: ${data.job_id}`,
-          `> backend: ${data.backend || "scail2"}`,
-          ...mappingLogs,
-          data.mapping_warning ? `> 提醒: ${data.mapping_warning}` : "",
-        ].filter(Boolean);
-        setSeedanceSubmitStatus(lines, data.mapping_warning ? "warn" : "good");
-        assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${data.job_id}`], true);
-        addLogs(lines);
-        pollMode2ServerTransferJob(data.job_id, videoPath, { packageId: options.packageId });
-      } catch (error) {
-        currentMode2ServerTransferJobId = null;
-        setMode2ServerTransferRunning(false);
-        assistantSetRunStatus([], false);
-        const packageId = String(options.packageId || "").trim();
-        if (packageId) patchGenerationPackRuntime(packageId, { status: "failed" });
-        const lines = ["x Scail2 生成提交失败", "> " + (error.message || error)];
-        setSeedanceSubmitStatus(lines, "bad");
-        assistantSetStatus(lines, "bad");
-        addLogs(lines);
-      }
-    }
-
-    function pollMode2ServerTransferJob(jobId, sourcePath, options = {}) {
-      if (mode2ServerTransferPollTimer) clearInterval(mode2ServerTransferPollTimer);
-      mode2ServerTransferPollTimer = setInterval(async () => {
-        try {
-          const response = await fetch("/api/jobs/" + encodeURIComponent(jobId));
-          const job = await response.json();
-          if (!response.ok || job.error && !job.status) throw new Error(job.error || "job_not_found");
-          const logs = Array.isArray(job.logs) ? job.logs.slice(-8) : [];
-          if (job.status === "done") {
-            clearInterval(mode2ServerTransferPollTimer);
-            mode2ServerTransferPollTimer = null;
-            currentMode2ServerTransferJobId = null;
-            setMode2ServerTransferRunning(false);
-            assistantSetRunStatus([], false);
-            const outputPath = String(job.result?.output_path || (job.result?.output_paths || [])[0] || "").trim();
-            const lines = [
-              "> Scail2 生成完成",
-              `> job_id: ${jobId}`,
-              outputPath ? `> 输出: ${outputPath}` : "> 输出: 未返回路径，请看日志",
-            ];
-            setSeedanceSubmitStatus(lines, outputPath ? "good" : "warn");
-            assistantSetStatus([
-              outputPath ? "Scail2 成片已完成。" : "Scail2 生成完成，但没有返回输出路径。",
-              outputPath ? "左侧已显示结果对比，可以检查是否满意。" : "请看运行日志。",
-            ], outputPath ? "good" : "warn");
-            const packageId = String(options.packageId || "").trim();
-            if (outputPath) {
-              const seg = timelineSegments[selectedTimelineIndex];
-              if (seg && !packageId) {
-                const keepIndex = selectedTimelineIndex;
-                seg.generated_path = outputPath;
-                renderTimeline(timelineSegments);
-                selectTimelineSegment(keepIndex);
-              }
-              renderSeedanceSingleMaskCompare(sourcePath, outputPath, "Scail2 生成结果", 0);
-            }
-            if (packageId) {
-              patchGenerationPackRuntime(packageId, {
-                status: outputPath ? "result_done" : "failed",
-                resultPath: outputPath || "",
-                resultSourcePath: sourcePath,
-                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                resultTaskId: jobId,
-                sourcePath,
-              });
-            }
-            addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
-            return;
-          }
-          if (job.status === "failed" || job.status === "cancelled") {
-            clearInterval(mode2ServerTransferPollTimer);
-            mode2ServerTransferPollTimer = null;
-            currentMode2ServerTransferJobId = null;
-            setMode2ServerTransferRunning(false);
-            assistantSetRunStatus([], false);
-            const packageId = String(options.packageId || "").trim();
-            if (packageId) patchGenerationPackRuntime(packageId, { status: "failed", sourcePath });
-            const lines = ["x Scail2 生成失败", `> job_id: ${jobId}`, "> " + (job.error || job.status)];
-            setSeedanceSubmitStatus(lines, "bad");
-            assistantSetStatus(lines, "bad");
-            addLogs([...lines, ...logs.map((line) => `> ${line}`)]);
-            return;
-          }
-          const lines = ["> Scail2 生成运行中", `> job_id: ${jobId}`, ...logs.map((line) => `> ${line}`)];
-          setSeedanceSubmitStatus(lines, "warn");
-          assistantSetRunStatus(["Scail2 生成运行中", `job_id: ${jobId}`], true);
-        } catch (error) {
-          clearInterval(mode2ServerTransferPollTimer);
-          mode2ServerTransferPollTimer = null;
-          currentMode2ServerTransferJobId = null;
-          setMode2ServerTransferRunning(false);
-          assistantSetRunStatus([], false);
-          const packageId = String(options.packageId || "").trim();
-          if (packageId) patchGenerationPackRuntime(packageId, { status: "failed", sourcePath });
-          const lines = ["x 查询 Scail2 生成任务失败", `> job_id: ${jobId}`, "> " + (error.message || error)];
-          setSeedanceSubmitStatus(lines, "bad");
-          assistantSetStatus(lines, "bad");
-          addLogs(lines);
-        }
-      }, 5000);
-    }
-
-    function setSeedanceSubmitting(running) {
-      seedanceSubmitting = !!running;
-      const button = $("#batchGenerateBtn");
-      if (button) {
-        button.disabled = seedanceSubmitting;
-        button.textContent = seedanceSubmitting ? "多人接口生成中..." : "多人接口生成";
-      }
-      const previewBtn = $("#previewSeedancePayloadBtn");
-      if (previewBtn) previewBtn.disabled = seedanceSubmitting;
-    }
-
-    function canManualOverrideAssetBlock(asset) {
-      return !assetApprovalRestricted(asset)
-        && asset?.manual_asset_status === "approved"
-        && Boolean(String(asset?.target_image || "").trim());
-    }
+    // MiniMax H3 is the only package generation backend.
 
     function currentGenerationAssets() {
       const seg = timelineSegments[selectedTimelineIndex] || {};
@@ -26925,693 +25172,27 @@
       return ids.map((id) => findStoryAsset(id)).filter(Boolean);
     }
 
-    async function ensureAssetAuditBeforeGeneration(projectDir) {
-      if (!projectDir || !storyAssets.length) return true;
-      if (assetAuditRunning) {
-        addLogs(["> 资产体检正在运行，但 Seedance 生成不会再等待体检/分轨"]);
-      }
-      return true;
-    }
-    function seedanceAssetPreflight(options = {}) {
-      const assets = currentGenerationAssets();
-      const errors = [];
-      const warnings = [];
-      const draftImages = compactMaterials(seedanceDraft.images);
-      const roleAssets = assets.filter((asset) => asset.kind === "role");
-      const availableRoleReferenceCount = draftImages.length;
-      if (!assets.length && selectedTimelineIndex >= 0) {
-        warnings.push("当前镜头没有关联资产，Seedance 将只依赖提示词和参考视频/参考图，角色稳定性可能变弱。");
-      }
-      if (roleAssets.length && availableRoleReferenceCount < roleAssets.length) {
-        const message = `当前镜头有 ${roleAssets.length} 个角色，但只手动选择了 ${availableRoleReferenceCount} 张参考图。`;
-        if (options.allowReferenceCountMismatch === true) {
-          warnings.push(`${message} 本次按“会上传的参考图”继续提交。`);
-        } else {
-          errors.push(message);
-        }
-      }
-      assets.forEach((asset) => {
-        const name = asset.name || asset.id;
-        if (asset.manual_asset_status === "ignored") {
-          warnings.push(`${name}: 已标记忽略，但当前镜头仍在引用它，本次按 Seedance 草稿继续。`);
-        }
-        if (asset.manual_asset_status === "needs_replacement" && !asset.target_image) {
-          warnings.push(`${name}: 已标记需要换图，但资产上还没有绑定目标替换图。`);
-        }
-        if (asset.kind === "role" && !asset.target_image) {
-          warnings.push(`${name}: 资产上没有目标替换图，本次只能按已选参考图顺序理解。`);
-        }
-        if (asset.kind === "role" && asset.identity_status !== "tracked") {
-          warnings.push(`${name}: 原片跟踪/分轨状态是 ${assetStatusText(asset)}，只影响批量绑定辅助，不阻断 Seedance。`);
-        }
-        if (asset.asset_audit_status === "blocked" || asset.asset_audit_status === "warning") {
-          const issues = assetAuditIssues(asset, asset.asset_audit_status);
-          const detail = issues[0]?.message || asset.asset_audit_summary || "资产体检提醒";
-          warnings.push(`${name}: ${detail}`);
-        }
-      });
-      return { ok: errors.length === 0, errors, warnings };
-    }
+    // Legacy provider package polling was removed; H3 jobs resume via resumeGenerationH3Polling.
 
-    function seedancePackageTaskRoleLabel(outputRole = "result") {
-      return String(outputRole || "result") === "mask" ? "白膜" : "结果";
-    }
-
-    function generationPackagePollContextFromRuntime(pack = {}, outputRole = "result") {
-      const role = String(outputRole || "result") === "mask" ? "mask" : "result";
-      const runtime = generationRuntimeForPack(pack.id);
-      const stored = runtime[role === "mask" ? "maskPollContext" : "resultPollContext"];
-      const base = stored && typeof stored === "object" ? stored : {};
-      const fallbackSource = role === "mask"
-        ? String(runtime.packageSourcePath || runtime.sourcePath || generationPackSourceVideo(pack) || "").trim()
-        : String(base.sourcePath || runtime.sourcePath || generationPackMaskVideo(pack) || "").trim();
-      return {
-        ...base,
-        packageId: String(pack.id || base.packageId || "").trim(),
-        outputRole: role,
-        apiChannel: normalizeSeedanceApiChannel(base.apiChannel || runtime.apiChannel || seedanceApiChannel),
-        sourcePath: String(base.sourcePath || fallbackSource || "").trim(),
-        outputLabel: String(base.outputLabel || (role === "mask" ? "白膜视频" : "结果视频")).trim(),
-        autoGenerateResult: role === "mask" && (base.autoGenerateResult === true || runtime.pendingAutoResult === true),
-        timelineIndex: Number.isFinite(Number(base.timelineIndex)) ? Number(base.timelineIndex) : -1,
-      };
-    }
-
-    function resumeGenerationPackageTaskPolling(pack = {}) {
-      const id = String(pack?.id || "").trim();
-      if (!id) return;
-      if (generationPackBackend(pack) === "minimax_h3") {
-        resumeGenerationH3Polling(pack);
-        return;
-      }
-      const runtime = generationRuntimeForPack(id);
-      const status = String(runtime.status || "");
-      const hasMaskOutput = Boolean(String(runtime.whiteMaskPath || runtime.maskPath || "").trim());
-      const hasResultOutput = Boolean(String(runtime.resultPath || "").trim());
-      const maskTaskId = String(runtime.maskTaskId || "").trim();
-      const resultTaskId = String(runtime.resultTaskId || "").trim();
-      let outputRole = "";
-      let taskId = "";
-      if (status === "mask_running" && maskTaskId) {
-        outputRole = "mask";
-        taskId = maskTaskId;
-      } else if (status === "result_running" && resultTaskId) {
-        outputRole = "result";
-        taskId = resultTaskId;
-      } else if (!hasResultOutput && resultTaskId && status !== "failed") {
-        outputRole = "result";
-        taskId = resultTaskId;
-      } else if (!hasMaskOutput && maskTaskId && status !== "failed") {
-        outputRole = "mask";
-        taskId = maskTaskId;
-      }
-      if (!taskId || seedancePackagePollTimers[taskId]) return;
-      patchGenerationPackRuntime(id, {
-        status: outputRole === "mask" ? "mask_running" : "result_running",
-        lastMessage: `已恢复${seedancePackageTaskRoleLabel(outputRole)}任务轮询\ntask_id: ${taskId}`,
-        lastTone: "warn",
-        errorMessage: "",
-      }, { render: false });
-      startSeedancePackageTaskPolling(taskId, generationPackagePollContextFromRuntime(pack, outputRole));
-    }
-
-    function clearSeedancePackagePoll(taskId) {
-      const id = String(taskId || "").trim();
-      if (!id) return;
-      if (seedancePackagePollTimers[id]) clearInterval(seedancePackagePollTimers[id]);
-      delete seedancePackagePollTimers[id];
-      delete seedancePackageLastStatusText[id];
-    }
-
-    function startSeedancePackageTaskPolling(taskId, context = {}) {
-      const id = String(taskId || "").trim();
-      if (!id) return;
-      clearSeedancePackagePoll(id);
-      seedancePackagePollTimers[id] = setInterval(() => pollSeedancePackageTask(id, context), 5000);
-      pollSeedancePackageTask(id, context);
-    }
-
-    async function pollSeedancePackageTask(taskId, context = {}) {
-      const id = String(taskId || "").trim();
-      if (!id) return;
-      const packageId = String(context.packageId || "").trim();
-      const outputRole = String(context.outputRole || "result").trim();
-      const isMaskOutput = outputRole === "mask";
-      const roleLabel = seedancePackageTaskRoleLabel(outputRole);
-      if (packageId) {
-        const runtimeNow = generationRuntimeForPack(packageId);
-        const activeTaskId = String((isMaskOutput ? runtimeNow.maskTaskId : runtimeNow.resultTaskId) || "").trim();
-        if (activeTaskId && activeTaskId !== id) {
-          // 这个轮询属于旧任务：已有更新的任务在跑，旧任务的结果直接丢弃，避免状态来回跳动。
-          clearSeedancePackagePoll(id);
-          return;
-        }
-      }
-      try {
-        const apiChannel = normalizeSeedanceApiChannel(context.apiChannel || seedanceApiChannel);
-        const requestConfig = seedanceApiRequestConfig(apiChannel);
-        const response = await fetch(seedanceStatusEndpoint(apiChannel), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            task_id: id,
-            ...requestConfig,
-            api_channel: apiChannel,
-            project_dir: $("#projectDirInput")?.value.trim() || "",
-            source_video_path: String(context.sourcePath || $("#videoPathInput")?.value.trim() || "").trim(),
-            package_id: packageId,
-            output_role: outputRole,
-          }),
+    function initH3GenerationWorkbench() {
+      storyGenerationRoute = "minimax_h3";
+      try { localStorage.setItem(STORY_GENERATION_ROUTE_KEY, storyGenerationRoute); } catch (_) {}
+      seedanceDraft.ratio = storyProjectConfig.output_ratio || STORY_RATIO_OPTIONS[0];
+      fillSelect("seedanceRatioSelect", STORY_RATIO_OPTIONS, seedanceDraft.ratio, storyRatioLabel);
+      $("#seedanceRatioSelect")?.addEventListener("change", (event) => {
+        try { localStorage.setItem(STORY_RATIO_MANUAL_KEY, "1"); } catch (_) {}
+        storyProjectConfig = normalizeStoryProjectConfig({
+          ...storyProjectConfig,
+          output_ratio: event.target?.value || STORY_RATIO_OPTIONS[0],
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "通道2查询失败");
-        const status = String(data.status || "PENDING");
-        const progress = String(data.progress || "");
-        const statusText = `${status}${progress ? " " + progress : ""}`;
-        if (statusText !== seedancePackageLastStatusText[id]) {
-          seedancePackageLastStatusText[id] = statusText;
-          const lines = [`> ${packageId || "生成包"} ${roleLabel}状态: ${statusText}`, `> task_id: ${id}`];
-          setSeedanceSubmitStatus(lines, status === "FAILED" ? "bad" : "warn");
-          addLogs(lines);
-          if (packageId) {
-            // 进度刷新不整页重渲染，避免原视频播放器被反复重建导致无限刷新
-            patchGenerationPackRuntime(packageId, {
-              status: isMaskOutput ? "mask_running" : "result_running",
-              lastMessage: seedanceStatusVisibleText(lines),
-              lastTone: "warn",
-            }, { render: false });
-          }
-        }
-        if (status === "SUCCESS") {
-          clearSeedancePackagePoll(id);
-          const outputPath = data.output_path || data.video_url || data.videoUrl || "";
-          let splitData = null;
-          let splitWarning = "";
-          if (packageId && outputPath) {
-            try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", context.sourcePath, context.incrementalMask || null);
-            } catch (error) {
-              splitWarning = error.message || String(error);
-            }
-          }
-          const seg = timelineSegments[Number(context.timelineIndex)];
-          if (seg && outputPath && !isMaskOutput && !splitData && !packageId) {
-            seg.generated_path = outputPath;
-            seg.seedance_task_id = id;
-            renderTimeline(timelineSegments);
-          }
-          const lines = [
-            isMaskOutput ? "> API 白膜生成完成" : "> 通道2生成完成",
-            packageId ? `> 生成包: ${packageId}` : "",
-            outputPath ? `> ${isMaskOutput ? "白膜视频" : "新视频"}: ${outputPath}` : "> 没有返回本地视频路径",
-            !outputPath && data.result_url_found === false ? "> 后台诊断: 上游返回成功，但状态结果里没有识别到视频链接" : "",
-            !outputPath && data.result_url_found === true && data.downloaded === false ? "> 后台诊断: 已识别到远程视频链接，但没有下载成本地文件" : "",
-            splitData?.clips?.length ? `> 已保存${isMaskOutput ? "白膜结果包" : "成片结果包"}: ${splitData.clips.length} 段` : "",
-            splitWarning ? `> 拆分提醒: ${splitWarning}` : "",
-          ].filter(Boolean);
-          setSeedanceSubmitStatus(lines, "good");
-          addLogs(lines);
-          const compareSource = String(context.sourcePath || shotVideoPath(seg) || "").trim();
-          if (outputPath && compareSource) renderSeedanceSingleMaskCompare(compareSource, outputPath, context.outputLabel || "通道2生成结果", 0);
-          if (packageId) {
-            if (isMaskOutput) {
-              const incremental = context.incrementalMask || null;
-              const mergedWhiteMaskPath = String(splitData?.white_mask_path || "").trim();
-              const splitClips = Array.isArray(splitData?.clips) ? splitData.clips : [];
-              const existingMaskSegments = generationRuntimeForPack(packageId).maskSegments;
-              const nextMaskSegments = splitClips.length
-                ? splitClips
-                : (incremental && Array.isArray(existingMaskSegments) ? existingMaskSegments : []);
-              const submittedCount = Array.isArray(splitData?.submitted_clips) ? splitData.submitted_clips.length : 0;
-              const maskRun = generationRunFromSplitData(splitData, "mask");
-              if (maskRun) appendWhiteMaskShelfRun(packageId, maskRun);
-              patchGenerationPackRuntime(packageId, {
-                status: outputPath ? "mask_done" : "failed",
-                whiteMaskPath: mergedWhiteMaskPath || outputPath || "",
-                maskSourcePath: compareSource,
-                maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                maskSegments: nextMaskSegments,
-                maskSplitManifest: String(splitData?.manifest_path || "").trim(),
-                maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
-                maskTaskId: id,
-                maskPollContext: null,
-                ...(incremental ? {
-                  packageSourcePath: "",
-                  packageSegments: generationPackShotPayload(generationPackById(packageId) || { id: packageId }),
-                  packageDuration: composePackDuration(generationPackById(packageId) || {}),
-                } : {}),
-                lastMessage: outputPath
-                  ? `API 白膜生成完成\n${incremental && splitClips.length ? `增量新增 ${submittedCount || splitClips.length} 段，合并后整包 ${splitClips.length} 段\n` : (splitClips.length ? `已拆分 ${splitClips.length} 段\n` : "")}输出: ${mergedWhiteMaskPath || outputPath}`
-                  : "API 白膜没有返回本地视频路径",
-                lastTone: outputPath && !splitWarning ? "good" : "warn",
-                errorMessage: outputPath ? "" : "API 白膜没有返回本地视频路径",
-              });
-              if (context.autoGenerateResult && outputPath) {
-                window.setTimeout(() => startGenerationPackageResult(packageId), 250);
-              }
-            } else {
-              if (Array.isArray(splitData?.clips) && splitData.clips.length) {
-                applyGenerationResultClipsToTimeline(splitData.clips, id);
-              }
-              const resultRun = generationRunFromSplitData(splitData, "result");
-              patchGenerationPackRuntime(packageId, {
-                status: outputPath ? "result_done" : "failed",
-                resultPath: outputPath || "",
-                resultSourcePath: compareSource,
-                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                resultSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
-                resultSplitManifest: String(splitData?.manifest_path || "").trim(),
-                resultRuns: appendGenerationRun(generationRuntimeForPack(packageId).resultRuns, resultRun),
-                resultTaskId: id,
-                resultPollContext: null,
-                lastMessage: outputPath ? `通道2生成完成\n输出: ${outputPath}` : "通道2没有返回本地视频路径",
-                lastTone: outputPath && !splitWarning ? "good" : "warn",
-                errorMessage: outputPath ? "" : "通道2没有返回本地视频路径",
-              });
-            }
-          }
-        } else if (status === "FAILED" || data.success === false) {
-          clearSeedancePackagePoll(id);
-          const runtimeForLabel = packageId ? generationRuntimeForPack(packageId) : {};
-          const modelLabel = String(
-            (isMaskOutput ? runtimeForLabel.maskModelLabel : runtimeForLabel.resultModelLabel)
-            || runtimeForLabel.maskModelLabel
-            || ""
-          ).trim();
-          const lines = [`x ${packageId || "生成包"} ${roleLabel}生成失败${modelLabel ? `（${modelLabel}）` : ""}`, "> " + (data.fail_reason || data.error || "未知错误")];
-          setSeedanceSubmitStatus(lines, "bad");
-          addLogs(lines);
-          if (packageId) {
-            patchGenerationPackRuntime(packageId, {
-              status: "failed",
-              lastMessage: seedanceStatusVisibleText(lines),
-              lastTone: "bad",
-              errorMessage: seedanceStatusVisibleText(lines),
-              [isMaskOutput ? "maskPollContext" : "resultPollContext"]: null,
-            });
-          }
-        }
-      } catch (error) {
-        const catchRuntime = packageId ? generationRuntimeForPack(packageId) : {};
-        const catchModelLabel = String(
-          (isMaskOutput ? catchRuntime.maskModelLabel : catchRuntime.resultModelLabel)
-          || catchRuntime.maskModelLabel
-          || ""
-        ).trim();
-        const lines = [`x 查询 ${packageId || "生成包"} ${roleLabel}任务失败${catchModelLabel ? `（${catchModelLabel}）` : ""}`, `> task_id: ${id}`, "> " + (error.message || error)];
-        const statusText = `ERROR ${error.message || error}`;
-        if (statusText !== seedancePackageLastStatusText[id]) {
-          seedancePackageLastStatusText[id] = statusText;
-          setSeedanceSubmitStatus([...lines, "> 会继续轮询，不会丢弃任务"], "warn");
-          addLogs([...lines, "> 会继续轮询，不会丢弃任务"]);
-        }
-        if (packageId) {
-          patchGenerationPackRuntime(packageId, {
-            status: isMaskOutput ? "mask_running" : "result_running",
-            lastMessage: seedanceStatusVisibleText(lines),
-            lastTone: "warn",
-          }, { render: false });
-        }
-      }
-    }
-
-    async function submitSeedanceATask(options = {}) {
-      const optionPackageId = String(options.packageId || "").trim();
-      const isPackageTask = Boolean(optionPackageId);
-      if (!isPackageTask && seedanceSubmitting) {
-        setSeedanceSubmitStatus(["> 通道2生成任务正在运行", "> 请等待当前任务结束"], "warn");
-        return;
-      }
-      if (selectedTimelineIndex < 0 && timelineSegments.length) {
-        selectTimelineSegment(0);
-      }
-      const seg = timelineSegments[selectedTimelineIndex] || {};
-      if (options.useDraftAsIs !== true) {
-        syncSeedanceDraftImagesFromCurrentShot(seg);
-        useCurrentShotAsSeedanceVideo();
-        useCurrentShotPromptInSeedance();
-      }
-      pullSeedanceControls();
-      if (options.useDraftAsIs !== true) {
-        pullSeedanceMaterialSlots("images");
-        pullSeedanceMaterialSlots("videos");
-        pullSeedanceMaterialSlots("audios");
-      }
-      const projectDir = $("#projectDirInput")?.value.trim() || "";
-      const videoPath = $("#videoPathInput")?.value.trim() || "";
-      const draft = buildSeedancePayload();
-      const apiChannel = normalizeSeedanceApiChannel(options.apiChannel || draft.apiChannel || seedanceApiChannel);
-      const requestConfig = seedanceApiRequestConfig(apiChannel);
-      const apiChannelLabel = seedanceApiChannelLabel(apiChannel);
-      if (isPackageTask) {
-        const durationError = seedanceDurationRangeError(draft.payload?.duration);
-        if (durationError) {
-          const lines = [
-            "x 通道2提交已拦截：时长不符合范围",
-            "> " + durationError,
-            `> 允许范围是 ${COMPOSE_PACK_MIN_SECONDS}-${COMPOSE_PACK_MAX_SECONDS} 秒。`,
-          ];
-          setSeedanceSubmitStatus(lines, "bad");
-          patchGenerationPackRuntime(optionPackageId, {
-            status: "failed",
-            lastMessage: seedanceStatusVisibleText(lines),
-            lastTone: "bad",
-            errorMessage: durationError,
-          });
-          return addLogs(lines);
-        }
-      }
-      if (!draft.payload?.prompt) {
-        const lines = ["x Seedance 提示词为空", "> 请先刷新任务草稿，或补完整当前镜头提示词"];
-        setSeedanceSubmitStatus(lines, "bad");
-        if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
-        return addLogs(lines);
-      }
-      if (!draft.payload?.videos?.length && !videoPath) {
-        const lines = ["x 缺少参考视频", "> 请先添加参考视频，或选择原视频路径"];
-        setSeedanceSubmitStatus(lines, "bad");
-        if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
-        return addLogs(lines);
-      }
-      if (optionPackageId && !draft.payload?.images?.length) {
-        const lines = [
-          "x 缺参考图",
-          "> 请先从当前资产缩略图中选择参考图，再生成白膜/结果。",
-          "> 本项目已关闭自动放图，防止传错旧参考图。",
-        ];
-        setSeedanceSubmitStatus(lines, "bad");
-        if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
-        return addLogs(lines);
-      }
-      const preflight = seedanceAssetPreflight({
-        allowReferenceCountMismatch: isPackageTask,
+        seedanceDraft.ratio = storyProjectConfig.output_ratio;
+        saveStoryProjectConfig();
+        syncStoryProjectControls();
+        fillSelect("seedanceRatioSelect", STORY_RATIO_OPTIONS, seedanceDraft.ratio, storyRatioLabel);
+        renderGenerationPackageWorkbench();
       });
-      if (!preflight.ok) {
-        const lines = [
-          "x Seedance 提交已拦截：缺少必要替换图",
-          ...preflight.errors.slice(0, 6).map((line) => `> ${line}`),
-          preflight.errors.length > 6 ? `> 还有 ${preflight.errors.length - 6} 个问题` : "",
-          "> 处理方式：给缺图角色绑定替换图，或在 Seedance 草稿里补足外部参考图",
-        ].filter(Boolean);
-        setSeedanceSubmitStatus(lines, "bad");
-        setStoryStatus(lines, "bad");
-        if (optionPackageId) patchGenerationPackRuntime(optionPackageId, { status: "failed" });
-        return setLogs(lines);
-      }
-      if (preflight.warnings.length) {
-        setSeedanceSubmitStatus(["> 预检完成，存在少量警告，但仍可提交"], "warn");
-        addLogs(["> 生成前资产提醒", ...preflight.warnings.slice(0, 4).map((line) => `> ${line}`)]);
-      } else {
-        setSeedanceSubmitStatus(["> 预检通过，准备提交通道2任务..."], "warn");
-      }
-      if (!draft.payload?.videos?.length && videoPath) {
-        seedanceDraft.videos = normalizeMaterialList(seedanceDraft.videos, 1);
-        seedanceDraft.videos[0] = videoPath;
-        draft.payload.videos = [videoPath];
-        renderSeedanceMaterialSlots("videos");
-        renderSeedancePayload();
-      }
-      const body = {
-        ...draft,
-        ...requestConfig,
-        api_channel: apiChannel,
-        project_dir: projectDir,
-        video_path: videoPath,
-        source_video_path: String(options.compareSourcePath || shotVideoPath(seg) || videoPath).trim(),
-        package_id: optionPackageId,
-        output_role: String(options.outputRole || seedancePendingCompare?.outputRole || "result").trim(),
-        segment_id: seg.segment_id || "",
-        selected_timeline_index: selectedTimelineIndex,
-      };
-      const compareContext = {
-        sourcePath: String(options.compareSourcePath || seedancePendingCompare?.sourcePath || body.source_video_path || draft.payload?.videos?.[0] || videoPath || "").trim(),
-        outputLabel: String(options.compareOutputLabel || seedancePendingCompare?.outputLabel || `${apiChannelLabel}生成结果`).trim(),
-        packageId: String(options.packageId || seedancePendingCompare?.packageId || "").trim(),
-        outputRole: String(options.outputRole || seedancePendingCompare?.outputRole || "result").trim(),
-        apiChannel,
-        autoGenerateResult: options.autoGenerateResult === true,
-        incrementalMask: options.incrementalMask || null,
-        timelineIndex: selectedTimelineIndex,
-      };
-      if (!isPackageTask) {
-        seedancePendingCompare = {
-          ...(seedancePendingCompare || {}),
-          ...compareContext,
-        };
-        currentSeedanceTimelineIndex = selectedTimelineIndex;
-      }
-      if (isPackageTask) {
-        // 新提交开始前先停掉同包同角色的旧任务轮询：
-        // 否则旧任务的失败/结果会在新提交期间插队显示，盖上新模型名误导。
-        const runtimeBeforeSubmit = generationRuntimeForPack(optionPackageId);
-        const staleTaskId = String((compareContext.outputRole === "mask" ? runtimeBeforeSubmit.maskTaskId : runtimeBeforeSubmit.resultTaskId) || "").trim();
-        if (staleTaskId) clearSeedancePackagePoll(staleTaskId);
-      }
-      saveSeedanceDraft();
-      if (!isPackageTask) setSeedanceSubmitting(true);
-      seedanceLastStatusText = "";
-      seedanceLastPollStatusText = "";
-      const submitIntro = [
-        "> 正在提交通道2视频任务...",
-        `> 任务: ${body.taskName}`,
-        seg.segment_id ? `> 镜头: ${seg.segment_id}` : "> 镜头: 当前草稿",
-      ];
-      setSeedanceSubmitStatus(submitIntro, "warn");
-      addLogs(submitIntro);
-      try {
-        const response = await fetch(seedanceSubmitEndpoint(apiChannel), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        const data = await response.json();
-        if (!response.ok || data.success === false) throw new Error(data.error || "通道2提交失败");
-        const submittedTaskId = data.task_id || data.taskId;
-        const submitLines = [
-          "> 通道2任务已提交",
-          `> task_id: ${submittedTaskId}`,
-          `> mode: ${data.mode_type || "auto"}`,
-          data.debug_path ? `> 调试记录: ${data.debug_path}` : "",
-          ...(Array.isArray(data.warnings) ? data.warnings.slice(0, 4).map((line) => `> ${line}`) : []),
-        ].filter(Boolean);
-        setSeedanceSubmitStatus(submitLines, Array.isArray(data.warnings) && data.warnings.length ? "warn" : "good");
-        addLogs(submitLines);
-        if (isPackageTask) {
-          const taskPatch = {
-            lastMessage: seedanceStatusVisibleText(submitLines),
-            lastTone: Array.isArray(data.warnings) && data.warnings.length ? "warn" : "good",
-            apiChannel,
-          };
-          if (compareContext.outputRole === "mask") taskPatch.maskTaskId = submittedTaskId;
-          else taskPatch.resultTaskId = submittedTaskId;
-          if (compareContext.outputRole === "mask") taskPatch.maskPollContext = compareContext;
-          else taskPatch.resultPollContext = compareContext;
-          patchGenerationPackRuntime(optionPackageId, taskPatch);
-          startSeedancePackageTaskPolling(submittedTaskId, compareContext);
-          return;
-        }
-        currentSeedanceTaskId = submittedTaskId;
-        currentSeedanceTaskApiChannel = apiChannel;
-        if (seedancePollTimer) clearInterval(seedancePollTimer);
-        seedancePollTimer = setInterval(pollSeedanceATask, 5000);
-        pollSeedanceATask();
-      } catch (error) {
-        if (!isPackageTask) setSeedanceSubmitting(false);
-        const packageId = String(seedancePendingCompare?.packageId || options.packageId || "").trim();
-        if (packageId) {
-          patchGenerationPackRuntime(packageId, {
-            status: "failed",
-          });
-        }
-        if (!isPackageTask) seedancePendingCompare = null;
-        const lines = seedanceSubmitErrorLines(error);
-        setSeedanceSubmitStatus(lines, "bad");
-        addLogs(lines);
-      }
-    }
-
-    async function pollSeedanceATask() {
-      if (!currentSeedanceTaskId) return;
-      try {
-        const compare = seedancePendingCompare || {};
-        const apiChannel = normalizeSeedanceApiChannel(compare.apiChannel || currentSeedanceTaskApiChannel || seedanceApiChannel);
-        const requestConfig = seedanceApiRequestConfig(apiChannel);
-        const response = await fetch(seedanceStatusEndpoint(apiChannel), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            task_id: currentSeedanceTaskId,
-            ...requestConfig,
-            api_channel: apiChannel,
-            project_dir: $("#projectDirInput")?.value.trim() || "",
-            source_video_path: String(compare.sourcePath || $("#videoPathInput")?.value.trim() || "").trim(),
-            package_id: String(compare.packageId || "").trim(),
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "通道2查询失败");
-        const status = String(data.status || "PENDING");
-        const progress = String(data.progress || "");
-        const statusText = `${status}${progress ? " " + progress : ""}`;
-        if (statusText !== seedanceLastPollStatusText) {
-          seedanceLastPollStatusText = statusText;
-          setSeedanceSubmitStatus([`> 通道2状态: ${statusText}`], status === "FAILED" ? "bad" : "warn");
-          addLogs([`> 通道2状态: ${statusText}`]);
-        }
-        if (status === "SUCCESS") {
-          if (seedancePollTimer) clearInterval(seedancePollTimer);
-          seedancePollTimer = null;
-          setSeedanceSubmitting(false);
-          const outputPath = data.output_path || data.video_url || data.videoUrl || "";
-          const compare = seedancePendingCompare || {};
-          const packageId = String(compare.packageId || "").trim();
-          const outputRole = String(compare.outputRole || "result").trim();
-          const isMaskOutput = outputRole === "mask";
-          const seg = timelineSegments[currentSeedanceTimelineIndex];
-          let splitData = null;
-          let splitWarning = "";
-          if (packageId && outputPath) {
-            try {
-              splitData = await splitGenerationPackageOutput(packageId, outputPath, isMaskOutput ? "mask" : "result", compare.sourcePath, compare.incrementalMask || null);
-            } catch (error) {
-              splitWarning = error.message || String(error);
-            }
-          }
-          if (seg && outputPath && !isMaskOutput && !splitData && !packageId) {
-            seg.generated_path = outputPath;
-            seg.seedance_task_id = currentSeedanceTaskId;
-            renderTimeline(timelineSegments);
-            const restoredIndex = Math.max(0, Math.min(timelineSegments.length - 1, currentSeedanceTimelineIndex));
-            selectTimelineSegment(restoredIndex);
-          }
-          const lines = [
-            isMaskOutput ? "> API 白膜生成完成" : "> 通道2生成完成",
-            outputPath ? `> ${isMaskOutput ? "白膜视频" : "新视频"}: ${outputPath}` : "> 没有返回本地视频路径",
-            !outputPath && data.result_url_found === false ? "> 后台诊断: 上游返回成功，但状态结果里没有识别到视频链接" : "",
-            !outputPath && data.result_url_found === true && data.downloaded === false ? "> 后台诊断: 已识别到远程视频链接，但没有下载成本地文件" : "",
-            splitData?.clips?.length ? `> 已保存${isMaskOutput ? "白膜结果包" : "成片结果包"}: ${splitData.clips.length} 段` : "",
-            splitWarning ? `> 拆分提醒: ${splitWarning}` : "",
-          ].filter(Boolean);
-          setSeedanceSubmitStatus(lines, "good");
-          addLogs(lines);
-          if (outputPath) {
-            const compareSource = String(compare.sourcePath || shotVideoPath(seg) || "").trim();
-            if (compareSource) renderSeedanceSingleMaskCompare(compareSource, outputPath, compare.outputLabel || "通道2生成结果", 0);
-          }
-          if (packageId) {
-            if (isMaskOutput) {
-              const incremental = compare.incrementalMask || null;
-              const mergedWhiteMaskPath = String(splitData?.white_mask_path || "").trim();
-              const splitClips = Array.isArray(splitData?.clips) ? splitData.clips : [];
-              const existingMaskSegments = generationRuntimeForPack(packageId).maskSegments;
-              const nextMaskSegments = splitClips.length
-                ? splitClips
-                : (incremental && Array.isArray(existingMaskSegments) ? existingMaskSegments : []);
-              const maskRun = generationRunFromSplitData(splitData, "mask");
-              if (maskRun) appendWhiteMaskShelfRun(packageId, maskRun);
-              patchGenerationPackRuntime(packageId, {
-                status: outputPath ? "mask_done" : "failed",
-                whiteMaskPath: mergedWhiteMaskPath || outputPath || "",
-                maskSourcePath: String(compare.sourcePath || shotVideoPath(seg) || "").trim(),
-                maskPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                maskSegments: nextMaskSegments,
-                maskSplitManifest: String(splitData?.manifest_path || "").trim(),
-                maskRuns: appendGenerationRun(generationRuntimeForPack(packageId).maskRuns, maskRun),
-                maskTaskId: currentSeedanceTaskId || "",
-                ...(incremental ? {
-                  packageSourcePath: "",
-                  packageSegments: generationPackShotPayload(generationPackById(packageId) || { id: packageId }),
-                  packageDuration: composePackDuration(generationPackById(packageId) || {}),
-                } : {}),
-                lastMessage: outputPath
-                  ? `API 白膜生成完成\n${splitClips.length ? `已拆分 ${splitClips.length} 段\n` : ""}输出: ${mergedWhiteMaskPath || outputPath}`
-                  : "API 白膜没有返回本地视频路径",
-                lastTone: outputPath && !splitWarning ? "good" : "warn",
-                errorMessage: outputPath ? "" : "API 白膜没有返回本地视频路径",
-              });
-              if (compare.autoGenerateResult && outputPath) {
-                window.setTimeout(() => startGenerationPackageResult(packageId), 250);
-              }
-            } else {
-              if (Array.isArray(splitData?.clips) && splitData.clips.length) {
-                applyGenerationResultClipsToTimeline(splitData.clips, currentSeedanceTaskId || "");
-              }
-              const resultRun = generationRunFromSplitData(splitData, "result");
-              patchGenerationPackRuntime(packageId, {
-                status: outputPath ? "result_done" : "failed",
-                resultPath: outputPath || "",
-                resultSourcePath: String(compare.sourcePath || shotVideoPath(seg) || "").trim(),
-                resultPackageIdentityId: generationPackIdentityId(generationPackById(packageId) || { id: packageId }),
-                resultSegments: Array.isArray(splitData?.clips) ? splitData.clips : [],
-                resultSplitManifest: String(splitData?.manifest_path || "").trim(),
-                resultRuns: appendGenerationRun(generationRuntimeForPack(packageId).resultRuns, resultRun),
-                resultTaskId: currentSeedanceTaskId || "",
-              });
-            }
-          }
-          seedancePendingCompare = null;
-        } else if (status === "FAILED" || data.success === false) {
-          if (seedancePollTimer) clearInterval(seedancePollTimer);
-          seedancePollTimer = null;
-          setSeedanceSubmitting(false);
-          const packageId = String(seedancePendingCompare?.packageId || "").trim();
-          if (packageId) {
-            patchGenerationPackRuntime(packageId, {
-              status: "failed",
-            });
-          }
-          seedancePendingCompare = null;
-          const singleFailModelLabel = generationCurrentModelLabel();
-          const lines = [`x 通道2生成失败${singleFailModelLabel ? `（${singleFailModelLabel}）` : ""}`, "> " + (data.fail_reason || data.error || "未知错误")];
-          setSeedanceSubmitStatus(lines, "bad");
-          addLogs(lines);
-        }
-      } catch (error) {
-        if (seedancePollTimer) clearInterval(seedancePollTimer);
-        seedancePollTimer = null;
-        setSeedanceSubmitting(false);
-        const packageId = String(seedancePendingCompare?.packageId || "").trim();
-        if (packageId) {
-          patchGenerationPackRuntime(packageId, {
-            status: "failed",
-          });
-        }
-        seedancePendingCompare = null;
-        const lines = seedanceSubmitErrorLines(error);
-        setSeedanceSubmitStatus(lines, "bad");
-        addLogs(lines);
-      }
-    }
-    function initSeedanceWorkbench() {
-      loadSeedanceRelayConfig();
-      loadNukoChannel1Config();
-      loadSeedanceApiChannel();
-      loadSeedanceDraft();
-      seedanceDraft.ratio = storyProjectConfig.output_ratio || seedanceDraft.ratio;
-      syncSeedanceRelayControls();
-      syncSeedanceControls();
-      $("#seedanceApiChannelSelect")?.addEventListener("change", (event) => {
-        setSeedanceApiChannel(event.target?.value || "channel2");
-      });
-      ["seedanceModelSelect", "seedanceRatioSelect", "seedanceDurationSelect", "seedanceResolutionSelect", "seedancePromptInput", "seedanceTaskNameInput", "seedanceSeedInput", "seedanceIncludeBodyPoseInput", "seedancePoseBackendSelect", "seedancePoseRenderStyleSelect", "seedancePoseCapsuleStrengthSelect"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", renderSeedancePayload);
-        if (el) el.addEventListener("change", renderSeedancePayload);
-      });
-      document.querySelectorAll("[data-add-material]").forEach((button) => {
-        button.addEventListener("click", () => addSeedanceMaterial(button.dataset.addMaterial));
-      });
-      $("#useCurrentShotBtn")?.addEventListener("click", useCurrentShotAsSeedanceVideo);
       $("#useShotPromptBtn")?.addEventListener("click", useCurrentShotPromptInSeedance);
       $("#copyShotPromptBtn")?.addEventListener("click", copyCurrentShotPrompt);
-      $("#useSourceVideoBtn")?.addEventListener("click", useSourceVideoAsSeedanceVideo);
-      $("#seedanceTemplateRemakeBtn")?.addEventListener("click", () => setSeedanceTemplate("remake"));
-      $("#seedanceTemplateMaskBtn")?.addEventListener("click", () => setSeedanceTemplate("mask"));
-      $("#previewSeedancePayloadBtn")?.addEventListener("click", renderSeedancePayload);
-      $("#saveSeedanceDraftBtn")?.addEventListener("click", saveSeedanceDraft);
-      $("#copySeedancePayloadBtn")?.addEventListener("click", copySeedancePayload);
-      $("#copySeedanceStatusBtn")?.addEventListener("click", copySeedanceStatus);
-      $("#saveSeedanceRelayBtn")?.addEventListener("click", () => saveSeedanceRelayConfig());
       initGenerationWorkbench();
       $("#openGlobalSettingsBtn")?.addEventListener("click", openGlobalSettings);
       initSecretToggles();
@@ -27619,8 +25200,6 @@
         const projectDir = $("#projectDirInput")?.value.trim() || "";
         localStorage.setItem("sp_last_projectDirInput", projectDir);
         savePreDirectorConfig({ silent: true });
-        saveSeedanceRelayConfig();
-        saveNukoChannel1Config({ silent: true });
         assistantSetStatus(["设置已保存。"]);
       });
       $("#cancelGlobalSettingsBtn")?.addEventListener("click", resetGlobalSettings);
@@ -27632,41 +25211,6 @@
       $("#closeVideoAnalysisReportBtn")?.addEventListener("click", closeVideoAnalysisReport);
       $("#videoAnalysisReportOverlay")?.addEventListener("click", (event) => {
         if (event.target === event.currentTarget) closeVideoAnalysisReport();
-      });
-      ["seedanceRelayBaseUrlInput", "seedanceRelayApiKeyInput"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", renderSeedancePayload);
-        if (el) el.addEventListener("change", renderSeedancePayload);
-      });
-      ["settingsSeedanceRelayBaseUrlInput", "settingsSeedanceRelayApiKeyInput"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.addEventListener("input", () => {
-            pullSeedanceRelayControls();
-            renderSeedancePayload();
-          });
-          el.addEventListener("change", () => {
-            pullSeedanceRelayControls();
-            renderSeedancePayload();
-          });
-        }
-      });
-      ["settingsNukoChannel1BaseUrlInput", "settingsNukoChannel1ApiKeyInput"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.addEventListener("input", () => {
-            pullNukoChannel1Controls();
-            renderSeedancePayload();
-          });
-          el.addEventListener("change", () => {
-            pullNukoChannel1Controls();
-            renderSeedancePayload();
-          });
-        }
-      });
-      $("#batchGenerateBtn")?.addEventListener("click", () => {
-        setStoryGenerationRoute("seedance");
-        submitSeedanceATask({ forceSeedance: true });
       });
     }
 
@@ -27733,10 +25277,6 @@
       bindClick("#shotUndoCutBtn", () => undoCurrentShotCut());
       bindClick("#shotSaveCutsBtn", () => saveCurrentShotCuts());
       bindClick("#saveStoryboardBtn", () => saveStoryboardAndGoGenerate());
-      bindClick("#openTransferWorkbenchBtn", () => {
-        setStoryGenerationRoute("scail2");
-        startMode2ServerTransfer();
-      });
       bindClick("#sourceVideoPreviewBox", () => chooseSourceVideo());
       bindClick("#pickSourceVideoBtn", () => chooseSourceVideo());
       $("#sourceVideoFileInput")?.addEventListener("change", (event) => {
@@ -27822,7 +25362,7 @@
     runBootStep("初始化项目设定", initStoryProjectConfig);
     runBootStep("初始化百炼反推配置", initPreDirectorConfigControls);
     runBootStep("初始化全片理解", initStoryUnderstandingControls);
-    runBootStep("初始化视频生成区", initSeedanceWorkbench);
+    runBootStep("初始化 H3 视频生成区", initH3GenerationWorkbench);
     runBootStep("初始化助手路线", initAssistantRoutePanel);
     runBootStep("渲染全片理解", renderFullVideoUnderstanding);
     runBootStep("恢复项目缓存", autoRestoreMode2ProjectCache);

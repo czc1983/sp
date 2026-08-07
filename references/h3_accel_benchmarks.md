@@ -1,38 +1,64 @@
-# H3 加速组合实测档案（5090 · cu132 · 2026-08-06）
+# H3 5090 生产链路与加速实测
 
-测试环境：RTX 5090 32G、torch 2.13.0+cu132、ComfyUI 0.30.0、全局 `--use-sage-attention`。
-测试片：S024 参考视频 73f → 生成 124 帧 480×864 20 步同种子；长片组为 277 帧。
-判定维度：耗时 + 场景忠实度（对比原片：户外院子/中式门廊/地面土渍/无镜子）。
+更新时间：2026-08-07。适用于 Mode 2 的白膜生成与白膜换人工作流。
 
-## 短片（124 帧）
+## 当前生产定案
 
-| 组合 | 耗时 | 忠实 | 结论 |
-|---|---|---|---|
-| 纯 sage（基准） | 131.6s | ✅ | 基准 |
-| **sage + BlockCache 0.12（生产定案）** | **72.3s** | ✅ 几乎无损 | **1.8x，首选** |
-| sage + BlockCache 0.06 | 104.0s | ✅ | 太温和 |
-| sage + HyperStep Turbo | 54.3s | ⚠️ 场景对但不听提示词（改人偶颜色/加五官/姿态偏离） | 快但不可用（用户实测确认） |
-| SolAttn exact off | 90.6s | ❌ 丢参考 token，场景漂成室内+脑补镜子 | 禁用 |
-| SolAttn exact_kv | 142.7s | ✅ | 比基准还慢，无价值 |
-| SolAttn + BlockCache | — | — | **代码级冲突**：BlockCache 的 H3BlockCacheHit 异常被 SolAttn 包装层吞掉直接报错，不可叠加 |
-| SolAttn exact_kv + HyperStep | 143.4s | — | 慢且 HS 本身不可用 |
+两套 H3 API 工作流固定使用同一条模型、采样和输出链路：
 
-## 长片（277 帧，验证"SolAttn 长片翻身"假设）
+```text
+UNETLoader 127
+  minimax_h3_ref2va_pruned_int8_convrot.safetensors
+    -> MiniMaxH3MemoryEfficientSageAttentionPatch 204
+    -> MiniMaxH3BlockCacheT8 205
+         residual_diff_threshold = 0.12
+         start_percent = 0.08
+         end_percent = 0.95
+         max_consecutive_hits = 2
+         cache_device = cpu
+         metric_stride = 8
+         verbose = false
+    -> BasicScheduler 124 (simple, 固定 20 步)
+    -> BasicGuider 126
 
-| 组合 | 耗时 | 结论 |
-|---|---|---|
-| 纯 sage（基准） | 249.1s | 基准 |
-| 纯 HyperStep Turbo | 123.2s | 2.0x 但同样不听提示词 |
-| SolAttn exact_kv 单独 | 270.4s | ✅ 忠实但比基准慢 8.5%，**未翻盘** |
-| SolAttn exact_kv + HyperStep | 274.7s | 最差 |
+KSamplerSelect 123 = res_multistep
+SamplerCustomAdvanced 125 = 123 sampler + 124 sigmas + 126 guider
 
-SolAttn 在 5090 走 flex_attention（Python 路径），固定开销 > 稀疏收益；片长 ≤277 帧均为负资产。
-备用模板 `comfy_workflows/h3_whitemask_solattn_api.json`（exact_kv 唯一可用形态）已留存，
-若未来片长上千帧或该插件出 SM120 原生 kernel 版，可重新评估。
+125 -> VAEDecode 122 -> FlashVSRNode 206 -> CreateVideo 130
+125 -> VAEDecodeAudio 121 -----------------> CreateVideo 130
+```
 
-## 生产配置（已写进 spvideo/minimax_h3_client.py）
+FlashVSR 固定为 `FlashVSR-v1.1`、`tiny`、2 倍放大，并启用 `tiled_vae` 与
+`tiled_dit`。H3 基础生成尺寸按源视频宽高比自动推导到约 0.4MP，宽高均为 32
+的倍数；显式传入正宽高时保持调用值。日志同时记录源尺寸、基础尺寸和 2 倍输出尺寸。
 
-- sage：ComfyUI 启动参数 `--use-sage-attention` 全局生效，无需节点（两台服务器均有 cron 守护自动拉起/纠偏）
-- BlockCache 0.12：代码自动注入（env `H3_BLOCKCACHE=off` 可关，`H3_BLOCKCACHE_THRESHOLD` 调阈值，
-  远程无插件时自动降级不报错）
-- HyperStep / SolAttn：不进生产
+采样步数固定为 `20`，BlockCache 阈值固定为 `0.12`，均不接受环境变量或接口参数
+覆盖。调用方传入非 20 步时会明确报错，不会静默生成另一条链路。固定链路不可关闭；
+远程缺少 Sage patch、BlockCache 或 FlashVSR 任一节点时直接报错，不切换模型，也不
+降级为其他加速或无加速链路。
+
+## 5090 实测依据
+
+测试环境：RTX 5090 32G、torch 2.13.0+cu132、ComfyUI 0.30.0。历史测试片为
+S024，生成 124 帧、480x864、20 步、同种子。以下耗时是接入 FlashVSR 输出节点前的
+生成阶段对比，用于确定 BlockCache 参数：
+
+| 组合 | 耗时 | 画面结论 |
+|---|---:|---|
+| Sage 基准 | 131.6s | 忠实基准 |
+| Sage + BlockCache 0.12 | 72.3s | 几乎无损，约 1.8x |
+| Sage + BlockCache 0.06 | 104.0s | 忠实但收益偏低 |
+
+因此生产阈值定为 `0.12`。FlashVSR 2 倍输出是当前工作流的一部分，其耗时应在后续
+端到端基准中单独记录，不能与上表的旧生成阶段耗时直接比较。
+
+## 已废弃路线
+
+- HyperStep：提示词服从和人物细节会偏离基准，不用于生产。
+- Turbo LoRA 与 DualClock：全量 UNet、低步数采样和对应测试脚本均已移除。
+- SolAttn：会丢参考 token 或在保真模式下变慢，并与 BlockCache 存在异常处理冲突；
+  模板和补丁脚本均已移除。
+- 全量非裁剪 UNet、无缓存回退和多级 fallback：均不属于当前生产链路。
+
+这些路线不作为应急降级选项。生产结果必须来自本页记录的固定链路，避免不同任务
+在模型、采样步数或输出分辨率上悄然分叉。

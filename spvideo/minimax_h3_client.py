@@ -36,33 +36,32 @@ NODE_GUIDER = "126"
 NODE_UNET = "127"
 NODE_NOISE = "129"
 NODE_SAVE_VIDEO = "92"
-NODE_BLOCKCACHE = "202"
 NODE_SAMPLER = "125"
 NODE_KSAMPLER_SELECT = "123"
-NODE_LORA_TURBO = "203"
-NODE_DUALCLOCK = "204"
+NODE_VIDEO_DECODE = "122"
+NODE_AUDIO_DECODE = "121"
+NODE_CREATE_VIDEO = "130"
+NODE_SAGE = "204"
+NODE_BLOCKCACHE = "205"
+NODE_FLASHVSR = "206"
 LOAD_IMAGE_BASE_ID = 150  # 150/151/152...
 
-# BlockCache（T8）跨步缓存加速：5090 实测 20 步 124 帧从 131.6s 降到 72.3s（1.8x），
-# 画面与基准几乎无损；HyperStep 更快但细节会偏离基准，SolAttn 会丢参考视频 token
-# 导致场景漂移，均不进生产。可用 H3_BLOCKCACHE=off 关闭、H3_BLOCKCACHE_THRESHOLD 调阈值。
+# 5090 生产链路固定为：裁剪 INT8 UNet -> SageAttentionPatch -> BlockCache -> 标准 20 步采样，
+# 视频解码后再经 FlashVSR 2x 输出。模型、步数和缓存阈值均不可覆盖；缺少任一生产
+# 节点时直接报错，不切换模型或回退到其他加速路线。
+SAGE_CLASS = "MiniMaxH3MemoryEfficientSageAttentionPatch"
 BLOCKCACHE_CLASS = "MiniMaxH3BlockCacheT8"
-BLOCKCACHE_DEFAULT_THRESHOLD = 0.12
-
-# Turbo 加速（T8 turbo LoRA + 双时钟采样器）：20 步链路整体替换为
-# LoraLoaderBypassModelOnly(INT8 量化模型不能走普通 LoRA 合并链) + DualClockSampler
-# (视频 shift12/音频 shift3 双时钟，修低步数爆音)。LoRA 必须配全量非裁剪模型。
-# 与 BlockCache 互斥（低步数下缓存命中率低，叠了没意义）。
-# 2026-08-07 起对齐 5090 服务器 lora-ref 工作流：默认开、8 步（服务器实测 widgets [8,12,3]），
-# H3_TURBO=off 可退回 20 步 + BlockCache。
-TURBO_LORA_CLASS = "LoraLoaderBypassModelOnly"
-DUALCLOCK_CLASS = "MiniMaxH3DualClockSamplerT8"
-TURBO_LORA_NAME = "minimax_h3_turbo_4step_comfyui.safetensors"
-TURBO_UNET_NAME = "minimax_h3_ref2va_int8_convrot.safetensors"  # 全量非裁剪版
+FLASHVSR_CLASS = "FlashVSRNode"
+BLOCKCACHE_THRESHOLD = 0.12
+H3_PRODUCTION_STEPS = 20
 PRUNED_UNET_NAME = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
-TURBO_STEPS = 8
-TURBO_SHIFT_VIDEO = 12.0
-TURBO_SHIFT_AUDIO = 3.0
+FLASHVSR_MODEL = "FlashVSR-v1.1"
+FLASHVSR_MODE = "tiny"
+FLASHVSR_SCALE = 2
+
+H3_TARGET_PIXELS = 400_000
+H3_SIZE_MULTIPLE = 32
+H3_SIZE_AREA_TOLERANCE = 0.05
 
 MAX_CHAR_IMAGES = 3
 
@@ -123,6 +122,63 @@ def snap_frame_count(frames: int) -> int:
     frames = max(H3_FRAME_BASE, int(frames))
     k = max(0, math.ceil((frames - H3_FRAME_BASE) / H3_FRAME_STEP))
     return H3_FRAME_STEP * k + H3_FRAME_BASE
+
+
+def derive_h3_base_size(
+    source_width: int,
+    source_height: int,
+    target_pixels: int = H3_TARGET_PIXELS,
+) -> tuple[int, int]:
+    """按源宽高比推导约 0.4MP、宽高均为 32 倍数的 H3 基础尺寸。"""
+    if source_width <= 0 or source_height <= 0:
+        raise ValueError(f"source dimensions must be positive, got {source_width}x{source_height}")
+    if target_pixels <= 0:
+        raise ValueError(f"target_pixels must be positive, got {target_pixels}")
+
+    source_ratio = source_width / source_height
+    target_units = target_pixels / (H3_SIZE_MULTIPLE**2)
+    min_product = max(1, math.ceil(target_units * (1.0 - H3_SIZE_AREA_TOLERANCE)))
+    max_product = max(min_product, math.floor(target_units * (1.0 + H3_SIZE_AREA_TOLERANCE)))
+
+    best: tuple[tuple[float, float], int, int] | None = None
+    for width_units in range(1, max_product + 1):
+        min_height_units = max(1, math.ceil(min_product / width_units))
+        max_height_units = math.floor(max_product / width_units)
+        for height_units in range(min_height_units, max_height_units + 1):
+            candidate_ratio = width_units / height_units
+            ratio_error = abs(math.log(candidate_ratio / source_ratio))
+            area_error = abs(width_units * height_units - target_units) / target_units
+            candidate = ((ratio_error, area_error), width_units, height_units)
+            if best is None or candidate[0] < best[0]:
+                best = candidate
+
+    if best is None:
+        raise RuntimeError("unable to derive H3 base dimensions")
+    return best[1] * H3_SIZE_MULTIPLE, best[2] * H3_SIZE_MULTIPLE
+
+
+def _resolve_h3_run_size(
+    video_path: Path,
+    width: int,
+    height: int,
+    log: Callable[[str], None],
+) -> tuple[int, int]:
+    from spvideo import ffmpeg_tools
+
+    meta = ffmpeg_tools.probe_video(video_path)
+    source_width = int(meta.width or 0)
+    source_height = int(meta.height or 0)
+    if source_width <= 0 or source_height <= 0:
+        raise ValueError(f"H3 source video has invalid dimensions: {source_width}x{source_height}")
+    if width <= 0 or height <= 0:
+        width, height = derive_h3_base_size(source_width, source_height)
+    else:
+        width, height = int(width), int(height)
+    log(
+        f"> H3 尺寸: source {source_width}x{source_height} -> base {width}x{height} "
+        f"-> FlashVSR 2x {width * FLASHVSR_SCALE}x{height * FLASHVSR_SCALE}"
+    )
+    return width, height
 
 
 def _full_ffmpeg() -> str:
@@ -252,30 +308,105 @@ def _random_seed() -> int:
     return secrets.randbelow(2**53)
 
 
-def _blockcache_enabled() -> bool:
-    return os.environ.get("H3_BLOCKCACHE", "on").strip().lower() not in ("0", "off", "false", "no")
-
-
-def _blockcache_threshold() -> float:
+def _require_production_steps(value: int) -> int:
     try:
-        return float(os.environ.get("H3_BLOCKCACHE_THRESHOLD", "") or BLOCKCACHE_DEFAULT_THRESHOLD)
-    except ValueError:
-        return BLOCKCACHE_DEFAULT_THRESHOLD
+        steps = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"H3 production workflow steps must be {H3_PRODUCTION_STEPS}, got {value!r}") from exc
+    if steps != H3_PRODUCTION_STEPS:
+        raise ValueError(f"H3 production workflow steps must be {H3_PRODUCTION_STEPS}, got {steps}")
+    return H3_PRODUCTION_STEPS
 
 
-def _apply_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
-    """在 UNETLoader(127) 与 Scheduler(124)/Guider(126) 之间插入 BlockCache 节点。
+def _validate_production_workflow(workflow: dict[str, Any]) -> None:
+    """拒绝模板漂移，确保实际采样和输出都经过固定生产链路。"""
+    expected_classes = {
+        NODE_UNET: "UNETLoader",
+        NODE_SAGE: SAGE_CLASS,
+        NODE_BLOCKCACHE: BLOCKCACHE_CLASS,
+        NODE_SCHEDULER: "BasicScheduler",
+        NODE_GUIDER: "BasicGuider",
+        NODE_KSAMPLER_SELECT: "KSamplerSelect",
+        NODE_SAMPLER: "SamplerCustomAdvanced",
+        NODE_VIDEO_DECODE: "VAEDecode",
+        NODE_AUDIO_DECODE: "VAEDecodeAudio",
+        NODE_FLASHVSR: FLASHVSR_CLASS,
+        NODE_CREATE_VIDEO: "CreateVideo",
+    }
+    for node_id, class_type in expected_classes.items():
+        node = workflow.get(node_id)
+        if not isinstance(node, dict) or node.get("class_type") != class_type:
+            actual = node.get("class_type") if isinstance(node, dict) else None
+            raise ValueError(
+                f"H3 production workflow node {node_id} must be {class_type}, got {actual}"
+            )
 
-    幂等：124/126 的 model 仍直连 127 时才改线；已接其他补丁节点（如手工加的
-    HyperStep/SolAttn）时不覆盖，尊重模板现状。
-    """
-    if NODE_UNET not in workflow:
-        return workflow
+    expected_inputs = {
+        (NODE_UNET, "unet_name"): PRUNED_UNET_NAME,
+        (NODE_SAGE, "model"): [NODE_UNET, 0],
+        (NODE_BLOCKCACHE, "model"): [NODE_SAGE, 0],
+        (NODE_BLOCKCACHE, "residual_diff_threshold"): BLOCKCACHE_THRESHOLD,
+        (NODE_BLOCKCACHE, "start_percent"): 0.08,
+        (NODE_BLOCKCACHE, "end_percent"): 0.95,
+        (NODE_BLOCKCACHE, "max_consecutive_hits"): 2,
+        (NODE_BLOCKCACHE, "cache_device"): "cpu",
+        (NODE_BLOCKCACHE, "metric_stride"): 8,
+        (NODE_BLOCKCACHE, "verbose"): False,
+        (NODE_SCHEDULER, "model"): [NODE_BLOCKCACHE, 0],
+        (NODE_SCHEDULER, "scheduler"): "simple",
+        (NODE_SCHEDULER, "steps"): H3_PRODUCTION_STEPS,
+        (NODE_GUIDER, "model"): [NODE_BLOCKCACHE, 0],
+        (NODE_KSAMPLER_SELECT, "sampler_name"): "res_multistep",
+        (NODE_SAMPLER, "guider"): [NODE_GUIDER, 0],
+        (NODE_SAMPLER, "sampler"): [NODE_KSAMPLER_SELECT, 0],
+        (NODE_SAMPLER, "sigmas"): [NODE_SCHEDULER, 0],
+        (NODE_VIDEO_DECODE, "samples"): [NODE_SAMPLER, 0],
+        (NODE_AUDIO_DECODE, "samples"): [NODE_SAMPLER, 0],
+        (NODE_FLASHVSR, "frames"): [NODE_VIDEO_DECODE, 0],
+        (NODE_FLASHVSR, "model"): FLASHVSR_MODEL,
+        (NODE_FLASHVSR, "mode"): FLASHVSR_MODE,
+        (NODE_FLASHVSR, "scale"): FLASHVSR_SCALE,
+        (NODE_FLASHVSR, "tiled_vae"): True,
+        (NODE_FLASHVSR, "tiled_dit"): True,
+        (NODE_FLASHVSR, "unload_dit"): False,
+        (NODE_FLASHVSR, "seed"): 0,
+        (NODE_CREATE_VIDEO, "images"): [NODE_FLASHVSR, 0],
+        (NODE_CREATE_VIDEO, "audio"): [NODE_AUDIO_DECODE, 0],
+    }
+    for (node_id, input_name), expected in expected_inputs.items():
+        actual = workflow[node_id].get("inputs", {}).get(input_name)
+        if actual != expected:
+            raise ValueError(
+                f"H3 production workflow node {node_id}.{input_name} must be {expected!r}, got {actual!r}"
+            )
+
+
+def _apply_production_workflow(workflow: dict[str, Any]) -> dict[str, Any]:
+    """把模板规范化为 5090 上验证过的唯一生产链路。"""
+    required_base_nodes = (
+        NODE_UNET,
+        NODE_SCHEDULER,
+        NODE_GUIDER,
+        NODE_KSAMPLER_SELECT,
+        NODE_SAMPLER,
+        NODE_VIDEO_DECODE,
+        NODE_AUDIO_DECODE,
+        NODE_CREATE_VIDEO,
+    )
+    missing = [node_id for node_id in required_base_nodes if node_id not in workflow]
+    if missing:
+        raise ValueError(f"H3 workflow template missing required nodes: {', '.join(missing)}")
+
+    workflow[NODE_UNET].setdefault("inputs", {})["unet_name"] = PRUNED_UNET_NAME
+    workflow[NODE_SAGE] = {
+        "class_type": SAGE_CLASS,
+        "inputs": {"model": [NODE_UNET, 0]},
+    }
     workflow[NODE_BLOCKCACHE] = {
         "class_type": BLOCKCACHE_CLASS,
         "inputs": {
-            "model": [NODE_UNET, 0],
-            "residual_diff_threshold": _blockcache_threshold(),
+            "model": [NODE_SAGE, 0],
+            "residual_diff_threshold": BLOCKCACHE_THRESHOLD,
             "start_percent": 0.08,
             "end_percent": 0.95,
             "max_consecutive_hits": 2,
@@ -284,84 +415,32 @@ def _apply_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
             "verbose": False,
         },
     }
-    for nid in (NODE_SCHEDULER, NODE_GUIDER):
-        node = workflow.get(nid)
-        if isinstance(node, dict) and node.get("inputs", {}).get("model") == [NODE_UNET, 0]:
-            node["inputs"]["model"] = [NODE_BLOCKCACHE, 0]
-    return workflow
-
-
-def strip_blockcache(workflow: dict[str, Any]) -> dict[str, Any]:
-    """移除 BlockCache 节点并把 124/126 接回 127（远程无此插件时降级用）。"""
-    node = workflow.pop(NODE_BLOCKCACHE, None)
-    if node is None:
-        return workflow
-    for nid in (NODE_SCHEDULER, NODE_GUIDER):
-        target = workflow.get(nid)
-        if isinstance(target, dict) and target.get("inputs", {}).get("model") == [NODE_BLOCKCACHE, 0]:
-            target["inputs"]["model"] = [NODE_UNET, 0]
-    return workflow
-
-
-def _turbo_enabled() -> bool:
-    """turbo LoRA 默认开（对齐 5090 lora-ref 工作流），H3_TURBO=off 退回 20 步链路。"""
-    return os.environ.get("H3_TURBO", "on").strip().lower() not in ("0", "off", "false", "no")
-
-
-def _apply_turbo(workflow: dict[str, Any]) -> dict[str, Any]:
-    """把 20 步链路替换为 turbo 4 步链路：全量模型 + turbo LoRA + 双时钟采样器。
-
-    127 换全量非裁剪模型（裁剪版无法完整应用 turbo LoRA）→ 203 LoRA(Bypass) →
-    204 DualClock(替代 123 KSamplerSelect + 124 BasicScheduler 的组合)，
-    126 guider 与 125 sampler 改从 204 取 model/sampler/sigmas。
-    """
-    if NODE_UNET not in workflow or NODE_H3 not in workflow:
-        return workflow
-    workflow[NODE_UNET]["inputs"]["unet_name"] = TURBO_UNET_NAME
-    workflow[NODE_LORA_TURBO] = {
-        "class_type": TURBO_LORA_CLASS,
+    workflow[NODE_SCHEDULER]["inputs"]["model"] = [NODE_BLOCKCACHE, 0]
+    workflow[NODE_SCHEDULER]["inputs"]["scheduler"] = "simple"
+    workflow[NODE_SCHEDULER]["inputs"]["steps"] = H3_PRODUCTION_STEPS
+    workflow[NODE_GUIDER]["inputs"]["model"] = [NODE_BLOCKCACHE, 0]
+    workflow[NODE_KSAMPLER_SELECT]["inputs"]["sampler_name"] = "res_multistep"
+    workflow[NODE_SAMPLER]["inputs"]["guider"] = [NODE_GUIDER, 0]
+    workflow[NODE_SAMPLER]["inputs"]["sampler"] = [NODE_KSAMPLER_SELECT, 0]
+    workflow[NODE_SAMPLER]["inputs"]["sigmas"] = [NODE_SCHEDULER, 0]
+    workflow[NODE_VIDEO_DECODE]["inputs"]["samples"] = [NODE_SAMPLER, 0]
+    workflow[NODE_AUDIO_DECODE]["inputs"]["samples"] = [NODE_SAMPLER, 0]
+    workflow[NODE_FLASHVSR] = {
+        "class_type": FLASHVSR_CLASS,
         "inputs": {
-            "lora_name": TURBO_LORA_NAME,
-            "strength_model": 1.0,
-            "model": [NODE_UNET, 0],
+            "frames": [NODE_VIDEO_DECODE, 0],
+            "model": FLASHVSR_MODEL,
+            "mode": FLASHVSR_MODE,
+            "scale": FLASHVSR_SCALE,
+            "tiled_vae": True,
+            "tiled_dit": True,
+            "unload_dit": False,
+            "seed": 0,
         },
     }
-    workflow[NODE_DUALCLOCK] = {
-        "class_type": DUALCLOCK_CLASS,
-        "inputs": {
-            "model": [NODE_LORA_TURBO, 0],
-            "av_latent": [NODE_H3, 1],
-            "steps": TURBO_STEPS,
-            "shift_video": TURBO_SHIFT_VIDEO,
-            "shift_audio": TURBO_SHIFT_AUDIO,
-        },
-    }
-    guider = workflow.get(NODE_GUIDER)
-    if isinstance(guider, dict):
-        guider["inputs"]["model"] = [NODE_DUALCLOCK, 0]
-    sampler = workflow.get(NODE_SAMPLER)
-    if isinstance(sampler, dict):
-        sampler["inputs"]["sampler"] = [NODE_DUALCLOCK, 1]
-        sampler["inputs"]["sigmas"] = [NODE_DUALCLOCK, 2]
-    return workflow
-
-
-def strip_turbo(workflow: dict[str, Any]) -> dict[str, Any]:
-    """移除 turbo 节点并把链路接回 20 步原样（远程无插件/无全量模型时降级用）。"""
-    had = workflow.pop(NODE_LORA_TURBO, None) is not None
-    had = (workflow.pop(NODE_DUALCLOCK, None) is not None) or had
-    if not had:
-        return workflow
-    unet = workflow.get(NODE_UNET)
-    if isinstance(unet, dict) and unet.get("inputs", {}).get("unet_name") == TURBO_UNET_NAME:
-        unet["inputs"]["unet_name"] = PRUNED_UNET_NAME
-    guider = workflow.get(NODE_GUIDER)
-    if isinstance(guider, dict):
-        guider["inputs"]["model"] = [NODE_UNET, 0]
-    sampler = workflow.get(NODE_SAMPLER)
-    if isinstance(sampler, dict):
-        sampler["inputs"]["sampler"] = [NODE_KSAMPLER_SELECT, 0]
-        sampler["inputs"]["sigmas"] = [NODE_SCHEDULER, 0]
+    workflow[NODE_CREATE_VIDEO]["inputs"]["images"] = [NODE_FLASHVSR, 0]
+    workflow[NODE_CREATE_VIDEO]["inputs"]["audio"] = [NODE_AUDIO_DECODE, 0]
+    _validate_production_workflow(workflow)
     return workflow
 
 
@@ -377,7 +456,7 @@ def _apply_common_overrides(
     seed: int | None,
     filename_prefix: str | None,
 ) -> dict[str, Any]:
-    """覆盖运行时可调字段：140 file、136 prompt/尺寸、124 steps、129 seed、92 prefix。"""
+    """覆盖运行时字段，并验证 124 steps 仍是固定生产值。"""
     workflow[NODE_LOAD_VIDEO]["inputs"]["file"] = video_file
     h3_inputs = workflow[NODE_H3]["inputs"]
     if prompt:
@@ -385,15 +464,11 @@ def _apply_common_overrides(
     h3_inputs["width"] = int(width)
     h3_inputs["height"] = int(height)
     h3_inputs["length"] = int(length)
-    workflow[NODE_SCHEDULER]["inputs"]["steps"] = int(steps)
+    workflow[NODE_SCHEDULER]["inputs"]["steps"] = _require_production_steps(steps)
     workflow[NODE_NOISE]["inputs"]["noise_seed"] = int(seed) if seed is not None else _random_seed()
     if filename_prefix:
         workflow[NODE_SAVE_VIDEO]["inputs"]["filename_prefix"] = filename_prefix
-    if _turbo_enabled():
-        _apply_turbo(workflow)  # turbo 与 BlockCache 互斥，4 步下缓存无意义
-    elif _blockcache_enabled():
-        _apply_blockcache(workflow)
-    return workflow
+    return _apply_production_workflow(workflow)
 
 
 def build_white_mask_workflow(
@@ -403,7 +478,7 @@ def build_white_mask_workflow(
     width: int = 480,
     height: int = 864,
     length: int = 124,
-    steps: int = 20,
+    steps: int = H3_PRODUCTION_STEPS,
     seed: int | None = None,
     filename_prefix: str | None = None,
 ) -> dict[str, Any]:
@@ -430,7 +505,7 @@ def build_charswap_workflow(
     width: int = 480,
     height: int = 864,
     length: int = 124,
-    steps: int = 20,
+    steps: int = H3_PRODUCTION_STEPS,
     seed: int | None = None,
     filename_prefix: str | None = None,
 ) -> dict[str, Any]:
@@ -489,17 +564,17 @@ class MiniMaxH3Client:
         return class_type in self._remote_classes
 
     def _ensure_workflow_compat(self, workflow: dict[str, Any], log: Callable[[str], None]) -> dict[str, Any]:
-        """远程缺插件/模型时降级：turbo → BlockCache → 无缓存，避免整单校验失败。"""
-        if NODE_DUALCLOCK in workflow and not (
-            self._remote_has_node(DUALCLOCK_CLASS) and self._remote_has_node(TURBO_LORA_CLASS)
-        ):
-            log("> H3 加速: 远程未装 turbo 双时钟插件，本次降级为 BlockCache 20 步运行")
-            strip_turbo(workflow)
-            if _blockcache_enabled():
-                _apply_blockcache(workflow)
-        if NODE_BLOCKCACHE in workflow and not self._remote_has_node(BLOCKCACHE_CLASS):
-            log("> H3 加速: 远程未安装 BlockCache 插件，本次降级为无缓存运行")
-            strip_blockcache(workflow)
+        """确认远程具备固定生产链路；缺节点时禁止静默降级。"""
+        _validate_production_workflow(workflow)
+        required_classes = (SAGE_CLASS, BLOCKCACHE_CLASS, FLASHVSR_CLASS)
+        missing = [class_type for class_type in required_classes if not self._remote_has_node(class_type)]
+        if missing:
+            raise RuntimeError(
+                "H3 production workflow unavailable: remote ComfyUI "
+                f"{self.base_url} is missing required node classes: {', '.join(missing)}. "
+                "The fixed pruned-INT8/Sage/BlockCache/FlashVSR route has no fallback."
+            )
+        log("> H3 生产节点检查: SageAttention / BlockCache / FlashVSR 均可用")
         return workflow
 
     def run_white_mask(
@@ -507,10 +582,10 @@ class MiniMaxH3Client:
         clip_path: str | Path,
         *,
         prompt: str | None = None,
-        width: int = 480,
-        height: int = 864,
+        width: int = 0,
+        height: int = 0,
         length: int | None = None,
-        steps: int = 20,
+        steps: int = H3_PRODUCTION_STEPS,
         out_dir: str | Path,
         seed: int | None = None,
         out_name: str = "whitemask.mp4",
@@ -518,18 +593,22 @@ class MiniMaxH3Client:
         background_replace: bool = False,
         background_path: str | Path | None = "",
         log: Callable[[str], None] | None = None,
+        on_submitted: Callable[[str, str], None] | None = None,
     ) -> Path:
         """参考视频 → 彩色人偶白膜视频，返回本地产物路径。
 
+        width 或 height 非正数时按源视频宽高比自动推导约 0.4MP 的基础尺寸。
         length 为 None 时按源片时长自动对齐到 H3 的 17k+5 帧网格（发送前完成）。
         audio_path 给定时（如外语配音）替换参考视频音轨，H3 会按该音轨驱动口型。
         background_replace=True 时把 prompt 中的保留版背景句替换为替换版背景句；
         background_path 目前仅透传记录，不接 Comfy 节点（节点能力未确认）。
         """
         logger = log or (lambda _message: None)
+        steps = _require_production_steps(steps)
         clip = Path(clip_path)
         if not clip.is_file():
             raise FileNotFoundError(f"h3 clip not found: {clip}")
+        width, height = _resolve_h3_run_size(clip, width, height, logger)
         if background_replace:
             from spvideo.white_mask_contract import background_block
 
@@ -559,12 +638,16 @@ class MiniMaxH3Client:
             seed=seed,
             filename_prefix=f"h3_whitemask_{uuid.uuid4().hex[:8]}",
         )
-        if NODE_DUALCLOCK in workflow:
-            logger(f"> H3 加速: turbo {TURBO_STEPS} 步 + 双时钟采样 (LoRA {TURBO_LORA_NAME})")
-        elif NODE_BLOCKCACHE in workflow:
-            logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
+        logger(
+            f"> H3 生产链路: pruned INT8 -> SageAttention -> BlockCache "
+            f"threshold={BLOCKCACHE_THRESHOLD} -> {steps} steps -> FlashVSR 2x"
+        )
         self._ensure_workflow_compat(workflow, logger)
-        prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
+        prompt_id, history = self._comfy.run_workflow(
+            workflow,
+            log=logger,
+            on_submitted=on_submitted,
+        )
         return self._download_result(prompt_id, history, Path(out_dir), out_name)
 
     def run_charswap(
@@ -573,25 +656,29 @@ class MiniMaxH3Client:
         char_image_paths: list[str | Path],
         *,
         prompt: str | None = None,
-        width: int = 480,
-        height: int = 864,
+        width: int = 0,
+        height: int = 0,
         length: int | None = None,
-        steps: int = 20,
+        steps: int = H3_PRODUCTION_STEPS,
         out_dir: str | Path,
         seed: int | None = None,
         out_name: str = "charswap.mp4",
         audio_path: str | Path | None = None,
         log: Callable[[str], None] | None = None,
+        on_submitted: Callable[[str, str], None] | None = None,
     ) -> Path:
         """白膜视频 + 1~3 张人物参考图 → 换人结果视频，返回本地产物路径。
 
+        width 或 height 非正数时按白膜视频宽高比自动推导约 0.4MP 的基础尺寸。
         length 为 None 时按白膜视频时长自动对齐到 H3 的 17k+5 帧网格（发送前完成）。
         audio_path 给定时（如外语配音）替换白膜视频音轨，H3 会按该音轨驱动口型。
         """
         logger = log or (lambda _message: None)
+        steps = _require_production_steps(steps)
         mask_video = Path(mask_video_path)
         if not mask_video.is_file():
             raise FileNotFoundError(f"h3 mask video not found: {mask_video}")
+        width, height = _resolve_h3_run_size(mask_video, width, height, logger)
         images = [Path(p) for p in char_image_paths]
         if not 1 <= len(images) <= MAX_CHAR_IMAGES:
             raise ValueError(f"char_image_paths count must be 1..{MAX_CHAR_IMAGES}, got {len(images)}")
@@ -618,12 +705,28 @@ class MiniMaxH3Client:
             seed=seed,
             filename_prefix=f"h3_charswap_{uuid.uuid4().hex[:8]}",
         )
-        if NODE_DUALCLOCK in workflow:
-            logger(f"> H3 加速: turbo {TURBO_STEPS} 步 + 双时钟采样 (LoRA {TURBO_LORA_NAME})")
-        elif NODE_BLOCKCACHE in workflow:
-            logger(f"> H3 加速: BlockCache threshold={_blockcache_threshold()}")
+        logger(
+            f"> H3 生产链路: pruned INT8 -> SageAttention -> BlockCache "
+            f"threshold={BLOCKCACHE_THRESHOLD} -> {steps} steps -> FlashVSR 2x"
+        )
         self._ensure_workflow_compat(workflow, logger)
-        prompt_id, history = self._comfy.run_workflow(workflow, log=logger)
+        prompt_id, history = self._comfy.run_workflow(
+            workflow,
+            log=logger,
+            on_submitted=on_submitted,
+        )
+        return self._download_result(prompt_id, history, Path(out_dir), out_name)
+
+    def resume_result(
+        self,
+        prompt_id: str,
+        *,
+        out_dir: str | Path,
+        out_name: str,
+        log: Callable[[str], None] | None = None,
+    ) -> Path:
+        """继续等待已提交的远程任务，并下载固定节点 92 的视频产物。"""
+        history = self._comfy.resume_workflow(prompt_id, log=log)
         return self._download_result(prompt_id, history, Path(out_dir), out_name)
 
     def _download_result(
