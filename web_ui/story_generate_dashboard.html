@@ -2169,6 +2169,29 @@
       white-space: nowrap;
     }
 
+    .asset-card-name.is-editable {
+      cursor: pointer;
+      border-bottom: 1px dashed transparent;
+    }
+
+    .asset-card-name.is-editable:hover {
+      color: #9fd4ff;
+      border-bottom-color: rgba(159, 212, 255, 0.55);
+    }
+
+    .asset-card-name-input {
+      min-width: 0;
+      flex: 1;
+      background: #0d1114;
+      border: 1px solid #3a5a78;
+      border-radius: 6px;
+      color: #f3f7f9;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 2px 8px;
+      outline: none;
+    }
+
     .asset-card-subtitle {
       margin-left: auto;
       color: #7f929c;
@@ -9727,7 +9750,7 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand">SP 分镜重生工作台</div>
+      <div class="brand">灵动・转绘</div>
       <div class="mode-pill">单一工作流 · 分镜重生</div>
     </header>
 
@@ -10323,9 +10346,9 @@
       </section>
 
       <div class="assistant-resizer" id="assistantResizer" role="separator" aria-orientation="vertical" aria-label="调整助手宽度" tabindex="0"></div>
-      <aside class="assistant-panel" aria-label="SP 助手">
+      <aside class="assistant-panel" aria-label="灵动AI-agent">
         <div class="assistant-head">
-          <span>SP 助手</span>
+          <span>灵动AI-agent</span>
           <span class="mode-pill">路线状态</span>
         </div>
         <div class="assistant-body">
@@ -13137,32 +13160,18 @@
           openAssetEditor(button.dataset.editAsset || "");
         });
       });
+      board.querySelectorAll("[data-rename-asset]").forEach((nameEl) => {
+        nameEl.addEventListener("click", (event) => {
+          event.stopPropagation();
+          startAssetNameInlineEdit(nameEl);
+        });
+      });
       board.querySelectorAll("[data-delete-asset]").forEach((button) => {
         button.addEventListener("click", (event) => {
           event.stopPropagation();
           deleteCurrentStoryAsset(button.dataset.deleteAsset || "");
         });
       });
-      board.querySelectorAll("[data-anchor-role]").forEach((button) => {
-        button.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          const cardRoleId = button.closest("[data-asset-card]")?.dataset.assetCard || "";
-          const roleId = button.dataset.anchorRole || cardRoleId;
-          openAssetRoleAnchor(roleId);
-        });
-      });
-      if (!board.dataset.anchorCaptureBound) {
-        board.dataset.anchorCaptureBound = "1";
-        board.addEventListener("pointerdown", (event) => {
-          const button = event.target.closest?.("[data-anchor-role]");
-          if (!button || !board.contains(button)) return;
-          event.preventDefault();
-          event.stopPropagation();
-          const cardRoleId = button.closest("[data-asset-card]")?.dataset.assetCard || "";
-          openAssetRoleAnchor(button.dataset.anchorRole || cardRoleId);
-        }, true);
-      }
       updateRoleTrackButtons();
       const totalLabel = $("#assetTotalLabel");
       if (totalLabel) totalLabel.textContent = `${storyAssets.length} \u4e2a\u8d44\u4ea7`;
@@ -13300,18 +13309,71 @@
       addLogs(lines);
     }
 
-    function openAssetRoleAnchor(roleId) {
-      const role = findStoryAsset(roleId);
-      if (!role || role.kind !== "role") {
-        setStoryStatus(["x 没有找到要标注的角色", "> 请刷新页面后重新点击角色卡片上的锚点。"], "bad");
+    function startAssetNameInlineEdit(nameEl) {
+      if (!nameEl || nameEl.dataset.editing === "1") return;
+      const id = String(nameEl.dataset.renameAsset || "").trim();
+      const asset = findStoryAsset(id);
+      if (!asset) return;
+      const projectDir = $("#projectDirInput")?.value.trim() || "";
+      if (!projectDir) {
+        setStoryStatus(["x 改名失败", "> 当前项目目录为空。"], "bad");
         return;
       }
-      try {
-        setStoryStatus(["> 打开身份定位", `> ${role.name || role.id}`], "good");
-        openRoleVideoAnchorEditor(role.id);
-      } catch (error) {
-        setStoryStatus(["x 身份定位窗口打开失败", "> " + (error.message || error)], "bad");
-      }
+      nameEl.dataset.editing = "1";
+      const oldName = String(asset.name || asset.tag || "").trim();
+      const input = document.createElement("input");
+      input.className = "asset-card-name-input";
+      input.value = oldName;
+      input.maxLength = 40;
+      input.placeholder = "输入新名字";
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+      let settled = false;
+      const finish = async (shouldSave) => {
+        if (settled) return;
+        settled = true;
+        const newName = String(input.value || "").trim();
+        if (!shouldSave || !newName || newName === oldName) {
+          renderStoryAssets();
+          return;
+        }
+        input.disabled = true;
+        const updates = { name: newName };
+        if (asset.kind === "role") updates.tag = newName;
+        try {
+          const response = await fetch(storyboardApiUrl("/api/storyboard-assets/update-asset"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              project_dir: projectDir,
+              asset_id: id,
+              lightweight: true,
+              updates,
+            }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data.error) throw new Error(data.error || `HTTP ${response.status}`);
+          asset.name = newName;
+          if (asset.kind === "role") asset.tag = newName;
+          setStoryStatus([`> 已改名: ${oldName || id} → ${newName}`], "good");
+          addLogs([`> 资产改名: ${oldName || id} → ${newName}`]);
+        } catch (error) {
+          setStoryStatus(["x 改名失败", "> " + (error.message || error)], "bad");
+        }
+        renderStoryAssets();
+      };
+      input.addEventListener("click", (event) => event.stopPropagation());
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          finish(false);
+        }
+      });
+      input.addEventListener("blur", () => finish(true));
     }
 
     function renderAssetCard(asset) {
@@ -13319,18 +13381,13 @@
       const name = asset?.name || id || "asset";
       const kind = assetKindLabel(asset?.kind || "asset");
       const trackPreview = asset?.kind === "role" ? assetTrackPreviewHtml(asset) : "";
-      const actionRail = asset?.kind === "role"
-        ? `<div class="asset-action-rail">
-            <button class="tiny-btn" type="button" data-anchor-role="${escapeHtml(id)}">定位</button>
-            <button class="tiny-btn" type="button" data-delete-asset="${escapeHtml(id)}">删除</button>
-          </div>`
-        : `<div class="asset-action-rail">
+      const actionRail = `<div class="asset-action-rail">
             <button class="tiny-btn" type="button" data-delete-asset="${escapeHtml(id)}">删除</button>
           </div>`;
       return `
         <article class="asset-card" data-asset-card="${escapeHtml(id)}">
           <div class="asset-card-head">
-            <span class="asset-card-name">${escapeHtml(name)}</span>
+            <span class="asset-card-name is-editable" data-rename-asset="${escapeHtml(id)}" title="点击改名">${escapeHtml(name)}</span>
             <span class="asset-card-subtitle">${escapeHtml(kind)}</span>
           </div>
           <div class="asset-card-main">
@@ -24671,34 +24728,6 @@
       const outputTitle = String(state.outputLabel || "").trim() || (isSingleCompare ? "生成结果" : "彩色蒙版");
       const headTitle = isSingleCompare ? `${sourceTitle} / ${outputTitle} 对比` : "子镜头控制预览";
       const headCount = isSingleCompare ? "对比预览" : `${readyCount}/${subclips.length} 已生成`;
-      const roleIndices = subclipActiveRoleIndices(state, clip, (state.refImages || []).length);
-      const anchorMode = !isSingleCompare && clip.identity_anchor_mode === true;
-      const markerHtml = roleIndices.map((roleIndex) => {
-        const point = subclipIdentityPoint(clip, roleIndex);
-        if (!point) return "";
-        return `
-          <div class="seedance-subclip-marker" data-subclip-anchor-marker="${roleIndex}" data-x="${point[0]}" data-y="${point[1]}" style="--c:${escapeHtml(subclipRoleColor(roleIndex))}">
-            ${escapeHtml(subclipRoleLabel(state, roleIndex))}
-          </div>
-        `;
-      }).join("");
-      const pendingPoint = Array.isArray(clip.pending_identity_point) ? clip.pending_identity_point : null;
-      const pendingPopoverHtml = anchorMode && pendingPoint ? `
-        <div class="seedance-subclip-anchor-popover" data-subclip-anchor-popover data-x="${pendingPoint[0]}" data-y="${pendingPoint[1]}">
-          <strong>选这个人是谁</strong>
-          ${roleIndices.map((roleIndex) => `
-            <button class="tiny-btn" type="button" data-save-subclip-anchor-role="${roleIndex}">
-              ${escapeHtml(subclipRoleLabel(state, roleIndex))}
-            </button>
-          `).join("")}
-        </div>
-      ` : "";
-      const roleAnchorSummary = roleIndices.length
-        ? roleIndices.map((roleIndex) => {
-          const hasPoint = !!subclipIdentityPoint(clip, roleIndex);
-          return `<span class="seedance-subclip-anchor-hint">${escapeHtml(subclipRoleLabel(state, roleIndex))}${hasPoint ? " 已定位" : " 未定位"}</span>`;
-        }).join("")
-        : `<span class="seedance-subclip-anchor-hint">暂无角色参考图</span>`;
       const referencePickerHtml = isShotCutReview ? "" : subshotReferencePickerHtml(state, clip);
       const pathInfoHtml = isShotCutReview ? "" : `
         <div class="seedance-subclip-path" title="${escapeHtml(path)}">视频: ${escapeHtml(path || "-")}</div>
@@ -24727,8 +24756,7 @@
         ${isShotCutReview ? "" : `<div class="seedance-subclip-compare">
           <div class="seedance-subclip-pane">
             <div class="seedance-subclip-pane-title">${escapeHtml(sourceTitle)}</div>
-            <div class="seedance-subclip-player${anchorMode ? " is-anchoring" : ""}" data-subclip-source-player>
-              ${path ? markerHtml + pendingPopoverHtml : ""}
+            <div class="seedance-subclip-player" data-subclip-source-player>
               ${path ? `<video controls muted playsinline src="${escapeHtml(mediaSrc(path, previewStart, previewEnd))}"></video>` : `<div class="seedance-subclip-empty">暂无子镜头</div>`}
             </div>
             ${referencePickerHtml}
@@ -24742,14 +24770,10 @@
         </div>`}
         ${isSingleCompare ? "" : (isShotCutReview ? `<div class="seedance-subclip-controls shot-cut-actions">
           <button class="tiny-btn primary" type="button" data-save-shot-cuts>确认保存切段</button>
-          <span class="seedance-subclip-note">当前 ${state.subclips.length} 段；这里只确认镜头边界；身份定位保存后再做。</span>
+          <span class="seedance-subclip-note">当前 ${state.subclips.length} 段；这里只确认镜头边界。</span>
         </div>` : `<div class="seedance-subclip-controls">
           <button class="tiny-btn" type="button" data-use-current-subclip>使用当前子镜头</button>
         </div>`)}
-        ${isSingleCompare || isShotCutReview ? "" : `<div class="seedance-subclip-controls">
-          <button class="tiny-btn ${anchorMode ? "active" : ""}" type="button" data-toggle-subclip-identity>身份定位</button>
-          ${roleAnchorSummary}
-        </div>`}
         ${pathInfoHtml}
       `;
       root.querySelectorAll("[data-select-subclip]").forEach((button) => {
@@ -24787,100 +24811,6 @@
           clip.preview_current_time = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
         });
       }
-      root.querySelector("[data-toggle-subclip-identity]")?.addEventListener("click", () => {
-        if (!roleIndices.length) {
-          setSeedanceSubmitStatus(["x 当前片段没有可绑定的角色参考图"], "bad");
-          return;
-        }
-        if (sourceVideo) {
-          const rawTime = Number(sourceVideo.currentTime || 0);
-          clip.preview_current_time = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
-        }
-        clip.identity_anchor_mode = !clip.identity_anchor_mode;
-        delete clip.pending_identity_point;
-        renderSeedanceReferenceSubclips();
-        setSeedanceSubmitStatus(
-          clip.identity_anchor_mode
-            ? ["> 身份定位已开启", "> 暂停到要标的帧，在左侧视频里点人物，再选角色名。"]
-            : ["> 身份定位已关闭"],
-          clip.identity_anchor_mode ? "warn" : "good",
-        );
-      });
-      sourcePlayer?.addEventListener("click", (event) => {
-        if (!clip.identity_anchor_mode || !sourceVideo) return;
-        if (event.target.closest?.(".seedance-subclip-marker, .seedance-subclip-anchor-popover")) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const point = pointFromSubclipVideoClick(event, sourceVideo);
-        const rawTime = Number(sourceVideo.currentTime || 0);
-        const clipTime = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
-        sourceVideo.pause();
-        clip.preview_current_time = clipTime;
-        clip.pending_identity_point = point;
-        clip.pending_identity_clip_time = clipTime;
-        clip.pending_identity_time = Number(clip.start || 0) + clipTime;
-        renderSeedanceReferenceSubclips();
-      });
-      root.querySelectorAll("[data-save-subclip-anchor-role]").forEach((button) => {
-        button.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          const roleIndex = Number(button.dataset.saveSubclipAnchorRole);
-          const point = Array.isArray(clip.pending_identity_point) ? clip.pending_identity_point : null;
-          if (!point || !Number.isFinite(roleIndex)) return;
-          const savedTime = Number(clip.pending_identity_time || clip.start || 0);
-          setSeedanceSubclipIdentityPoint(roleIndex, point, {
-            silent: true,
-            clipTime: Number(clip.pending_identity_clip_time),
-            absoluteTime: savedTime,
-          });
-          delete clip.pending_identity_point;
-          setSeedanceSubmitStatus([
-            "> 身份定位已保存",
-            `> ${subclipRoleLabel(state, roleIndex)} @ ${formatNum(savedTime)}s`,
-          ], "good");
-          renderSeedanceReferenceSubclips();
-        });
-      });
-      root.querySelectorAll("[data-subclip-anchor-marker]").forEach((marker) => {
-        let dragging = false;
-        const roleIndex = Number(marker.dataset.subclipAnchorMarker);
-        marker.addEventListener("pointerdown", (event) => {
-          if (!sourceVideo || !Number.isFinite(roleIndex)) return;
-          dragging = true;
-          marker.classList.add("dragging");
-          event.preventDefault();
-          event.stopPropagation();
-          try {
-            marker.setPointerCapture(event.pointerId);
-          } catch (_) {}
-        });
-        marker.addEventListener("pointermove", (event) => {
-          if (!dragging || !sourceVideo) return;
-          event.preventDefault();
-          const point = pointFromSubclipVideoClick(event, sourceVideo);
-          marker.dataset.x = String(point[0]);
-          marker.dataset.y = String(point[1]);
-          const rawTime = Number(sourceVideo.currentTime || clip.preview_current_time || 0);
-          const clipTime = isVirtualSubclip && Number.isFinite(mediaStart) ? Math.max(0, rawTime - mediaStart) : rawTime;
-          setSeedanceSubclipIdentityPoint(roleIndex, point, {
-            silent: true,
-            clipTime,
-            absoluteTime: Number(clip.start || 0) + clipTime,
-          });
-          updateSeedanceSubclipMarkerPositions();
-        });
-        const stopDragging = (event) => {
-          if (!dragging) return;
-          dragging = false;
-          marker.classList.remove("dragging");
-          event?.preventDefault?.();
-          event?.stopPropagation?.();
-          setSeedanceSubmitStatus(["> 身份点已调整", `> ${subclipRoleLabel(state, roleIndex)}`], "good");
-        };
-        marker.addEventListener("pointerup", stopDragging);
-        marker.addEventListener("pointercancel", stopDragging);
-      });
       updateSeedanceSubclipMarkerPositions();
       if (root.id === "storyboardShotSubclips") updateStoryboardSubclipPreview();
     }

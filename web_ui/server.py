@@ -15079,12 +15079,60 @@ def _build_storyboard_assets_v2(
             round(max(0.0, min(1.0, (bbox[1] + bbox[3]) / 2.0)), 6),
         ]
 
+    manifest_role_fallback: dict[str, tuple[str, str]] = {}
+    manifest_source = (understanding or {}).get("asset_manifest") if isinstance(understanding, dict) else None
+    if isinstance(manifest_source, dict):
+        for entry in manifest_source.get("results") or []:
+            if not isinstance(entry, dict):
+                continue
+            if str(entry.get("kind") or "").strip().lower() != "role":
+                continue
+            identity_key = str(entry.get("identity") or entry.get("group_id") or "").strip()
+            if not identity_key or identity_key in manifest_role_fallback:
+                continue
+            manifest_role_fallback[identity_key] = (
+                str(entry.get("matched_role") or "").strip(),
+                str(entry.get("name") or "").strip(),
+            )
+
+    role_timeline_keys: set[str] = set()
+    if isinstance(understanding, dict):
+        for entry in understanding.get("role_timeline") or []:
+            if not isinstance(entry, dict):
+                continue
+            for key in ("identity", "visual_label", "role_name"):
+                value = str(entry.get(key) or "").strip()
+                if value:
+                    role_timeline_keys.add(value)
+
+    def character_is_unverified_low_confidence(character: dict[str, Any]) -> bool:
+        if not role_timeline_keys:
+            return False
+        try:
+            confidence = float(character.get("confidence"))
+        except (TypeError, ValueError):
+            return False
+        if confidence >= 0.6:
+            return False
+        keys = {
+            str(character.get(key) or "").strip()
+            for key in ("identity", "visual_label", "role_name")
+        }
+        keys.discard("")
+        return not (keys & role_timeline_keys)
+
     role_specs: list[dict[str, Any]] = []
     for index, character in enumerate(story_characters, 1):
+        if character_is_unverified_low_confidence(character):
+            continue
+        identity_hint = str(character.get("identity") or character.get("visual_label") or "").strip()
+        matched_role, manifest_name = manifest_role_fallback.get(identity_hint, ("", ""))
         candidate_names = [
             str(character.get("role_name") or "").strip(),
-            str(character.get("visual_label") or "").strip(),
+            matched_role,
+            manifest_name,
             *[str(value or "").strip() for value in (character.get("role_candidates") or [])],
+            str(character.get("visual_label") or "").strip(),
         ]
         name = next((value for value in candidate_names if value), f"角色{index}")
         bbox = character_first_bbox(character)
