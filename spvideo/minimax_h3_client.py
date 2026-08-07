@@ -515,17 +515,35 @@ class MiniMaxH3Client:
         seed: int | None = None,
         out_name: str = "whitemask.mp4",
         audio_path: str | Path | None = None,
+        background_replace: bool = False,
+        background_path: str | Path | None = "",
         log: Callable[[str], None] | None = None,
     ) -> Path:
         """参考视频 → 彩色人偶白膜视频，返回本地产物路径。
 
         length 为 None 时按源片时长自动对齐到 H3 的 17k+5 帧网格（发送前完成）。
         audio_path 给定时（如外语配音）替换参考视频音轨，H3 会按该音轨驱动口型。
+        background_replace=True 时把 prompt 中的保留版背景句替换为替换版背景句；
+        background_path 目前仅透传记录，不接 Comfy 节点（节点能力未确认）。
         """
         logger = log or (lambda _message: None)
         clip = Path(clip_path)
         if not clip.is_file():
             raise FileNotFoundError(f"h3 clip not found: {clip}")
+        if background_replace:
+            from spvideo.white_mask_contract import background_block
+
+            keep_block = background_block(False)
+            replace_block = background_block(True)
+            if prompt and keep_block in prompt:
+                prompt = prompt.replace(keep_block, replace_block)
+            elif prompt:
+                prompt = prompt + replace_block
+            else:
+                prompt = replace_block
+            logger("> H3 背景: 已启用背景替换，prompt 背景句切换为替换版")
+            if background_path:
+                logger(f"> H3 背景: background_path 仅记录透传（未接 Comfy 节点）: {background_path}")
         normalized, aligned_length = normalize_reference_video(
             clip, Path(out_dir) / "h3_norm", length=length, audio_path=audio_path, log=logger
         )

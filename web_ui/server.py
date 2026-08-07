@@ -1516,6 +1516,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 roster_text = str(payload.get("roster_text") or "").strip() or None
                 scene_context = str(payload.get("scene_context") or "").strip() or None
                 prompt_format = str(payload.get("prompt_format") or "").strip() or "sp_v4"
+                background_replace = bool(payload.get("background_replace"))
                 job_id = uuid.uuid4().hex[:8]
                 job = {
                     "id": job_id,
@@ -1533,7 +1534,7 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 _write_storyboard_job_snapshot(job)
                 thread = threading.Thread(
                     target=_run_h3_reverse_prompt_job,
-                    args=(job_id, str(clip), roster_text, prompt_format, scene_context),
+                    args=(job_id, str(clip), roster_text, prompt_format, scene_context, background_replace),
                     daemon=True,
                 )
                 thread.start()
@@ -1561,10 +1562,31 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 out_dir = base_dir / "04_AI输出成片" / "h3_jobs" / job_id
                 out_dir.mkdir(parents=True, exist_ok=True)
                 prompt = str(payload.get("prompt") or "").strip() or None
+                background_replace = bool(payload.get("background_replace"))
+                background_path = str(payload.get("background_path") or "").strip()
+                # 7000 字符硬校验（spvideo.white_mask_contract.validate_final_prompt）
+                if prompt:
+                    try:
+                        from spvideo.white_mask_contract import validate_final_prompt
+                    except ImportError:
+                        logging.warning("white_mask_contract 尚未就绪，跳过 prompt 长度硬校验")
+                    else:
+                        try:
+                            validate_final_prompt(prompt)
+                        except ValueError as exc:
+                            raise ValueError(
+                                f"最终提示词超过长度上限（当前 {len(prompt)} 字符）: {exc}"
+                            ) from exc
                 width = int(payload.get("width") or 480)
                 height = int(payload.get("height") or 864)
                 length_raw = payload.get("length")
                 length = int(length_raw) if length_raw not in (None, "", "auto", 0, "0") else None
+                if length is not None:
+                    seconds = length / 24.0
+                    if seconds < 4.0 or seconds > 15.0:
+                        logging.warning(
+                            "H3 白膜 length=%s 帧（%.2f 秒）超出 4-15 秒建议区间", length, seconds
+                        )
                 steps = int(payload.get("steps") or 20)
                 seed = payload.get("seed")
                 seed = int(seed) if seed not in (None, "") else None
@@ -1596,7 +1618,8 @@ class SplitterHandler(BaseHTTPRequestHandler):
                 _write_storyboard_job_snapshot(job)
                 thread = threading.Thread(
                     target=_run_h3_white_mask_job,
-                    args=(job_id, str(clip), prompt, width, height, length, steps, seed, str(out_dir), audio_path),
+                    args=(job_id, str(clip), prompt, width, height, length, steps, seed, str(out_dir), audio_path,
+                          background_replace, background_path),
                     daemon=True,
                 )
                 thread.start()
@@ -2716,6 +2739,9 @@ class SplitterHandler(BaseHTTPRequestHandler):
             self.send_response(206)
             self.send_header("Content-Type", content_type)
             self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
             self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
             self.send_header("Content-Length", str(length))
             self.end_headers()
@@ -2727,6 +2753,9 @@ class SplitterHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.send_header("Content-Length", str(file_size))
         self.end_headers()
         with path.open("rb") as file:
@@ -10976,6 +11005,7 @@ def _run_h3_reverse_prompt_job(
     roster_text: str | None,
     prompt_format: str = "sp_v4",
     scene_context: str | None = None,
+    background_replace: bool = False,
 ) -> None:
     """后台反推单个片段的 H3 白膜提示词（结果进 .h3_reverse_cache，可重复读取）。"""
     def add_log(message: str) -> None:
@@ -11008,7 +11038,8 @@ def _run_h3_reverse_prompt_job(
             add_log("> 未找到 understanding 缓存，本次反推无剧情背景")
         output = reverse_prompt_for_clip(clip_path, roster_text=roster_text,
                                         scene_context=context,
-                                        prompt_format=prompt_format, log=add_log)
+                                        prompt_format=prompt_format,
+                                        background_replace=background_replace, log=add_log)
         finish("done", result={
             "clip_path": clip_path,
             "prompt": output["prompt"],
@@ -11031,6 +11062,8 @@ def _run_h3_white_mask_job(
     seed: int | None,
     out_dir: str,
     audio_path: str | None = None,
+    background_replace: bool = False,
+    background_path: str = "",
 ) -> None:
     def add_log(message: str) -> None:
         with JOBS_LOCK:
@@ -11068,6 +11101,8 @@ def _run_h3_white_mask_job(
             out_dir=Path(out_dir),
             out_name="whitemask.mp4",
             audio_path=audio_path,
+            background_replace=background_replace,
+            background_path=background_path,
             log=add_log,
         )
         result = {
@@ -16592,6 +16627,71 @@ def _restore_generation_package_source(root: Path, package_id: str, segments: li
     return {}
 
 
+def _read_storyboard_job_snapshot_file(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _restore_generation_package_h3_jobs(
+    root: Path,
+    package_id: str,
+    segments: list[dict[str, Any]],
+    restored: dict[str, Any],
+) -> dict[str, Any]:
+    source_path = str(restored.get("packageSourcePath") or restored.get("sourcePath") or "").strip()
+    source_key = _generation_package_resolved_path_key(source_path)
+    if source_key and not restored.get("whiteMaskPath"):
+        for snapshot_path in sorted(
+            STORYBOARD_MODE2_JOB_ROOT.glob("*.json"),
+            key=lambda item: item.stat().st_mtime if item.exists() else 0,
+            reverse=True,
+        ):
+            job = _read_storyboard_job_snapshot_file(snapshot_path)
+            if str(job.get("type") or "") != "mode2_h3_white_mask":
+                continue
+            if str(job.get("project_dir") or "").strip() and _generation_package_resolved_path_key(job.get("project_dir")) != _generation_package_resolved_path_key(root):
+                continue
+            if _generation_package_resolved_path_key(job.get("clip_path")) != source_key:
+                continue
+            job_id = str(job.get("id") or snapshot_path.stem).strip()
+            if not job_id:
+                continue
+            return {
+                "status": "mask_running",
+                "h3Jobs": {
+                    "role": "mask",
+                    "merged": True,
+                    "autoGenerateResult": False,
+                    "startedAt": _mode2_float(job.get("created_at"), snapshot_path.stat().st_mtime) * 1000,
+                    "entries": [{
+                        "jobId": job_id,
+                        "shotId": f"{package_id}（整包）",
+                        "merged": True,
+                        "mergedShots": [
+                            {
+                                "shot_id": str(item.get("shot_id") or "").strip(),
+                                "duration": _mode2_float(item.get("duration"), 0.0),
+                            }
+                            for item in segments
+                        ],
+                        "sourcePath": source_path,
+                        "duration": _generation_package_timeline_duration(segments),
+                        "status": "running",
+                        "outputPath": "",
+                        "error": "",
+                        "logsTail": [str(line) for line in (job.get("logs") if isinstance(job.get("logs"), list) else [])[-3:]],
+                    }],
+                },
+                "lastTone": "warn",
+                "lastMessage": f"已从服务端快照恢复 MiniMax H3 白膜轮询\njob:{job_id}",
+                "errorMessage": "",
+            }
+    return {}
+
+
 def _generation_package_role_fields(output_role: str) -> tuple[str, str, str]:
     if output_role == "mask":
         return "whiteMaskPath", "maskSegments", "maskSplitManifest"
@@ -16960,12 +17060,14 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     restored.update(_restore_generation_package_source(root, package_id, segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "mask", segments, state))
     restored.update(_restore_generation_package_role(root, package_id, "result", segments, state))
+    restored.update(_restore_generation_package_h3_jobs(root, package_id, segments, restored))
     for key in (
         "maskTaskId",
         "maskJobId",
         "maskPollContext",
         "resultTaskId",
         "resultPollContext",
+        "h3Jobs",
         "pendingAutoResult",
         "lastMessage",
         "lastTone",
@@ -16977,10 +17079,22 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
     state_status = str(state.get("status") or "").strip()
     mask_task_id = str(restored.get("maskTaskId") or restored.get("maskJobId") or "").strip()
     result_task_id = str(restored.get("resultTaskId") or "").strip()
+    h3_jobs = restored.get("h3Jobs") if isinstance(restored.get("h3Jobs"), dict) else {}
+    h3_role = str(h3_jobs.get("role") or "").strip()
+    h3_running = any(
+        isinstance(entry, dict)
+        and str(entry.get("status") or "") == "running"
+        and str(entry.get("jobId") or "").strip()
+        for entry in (h3_jobs.get("entries") if isinstance(h3_jobs.get("entries"), list) else [])
+    )
     if restored.get("resultPath"):
         restored["status"] = "result_done"
     elif restored.get("whiteMaskPath"):
         restored["status"] = "mask_done"
+    elif h3_running and h3_role == "result":
+        restored["status"] = "result_running"
+    elif h3_running and h3_role == "mask":
+        restored["status"] = "mask_running"
     elif state_status == "result_running" and result_task_id:
         restored["status"] = "result_running"
     elif state_status == "mask_running" and mask_task_id:
@@ -16996,6 +17110,7 @@ def _restore_generation_package_state(payload: dict[str, Any]) -> dict[str, Any]
         or restored.get("maskTaskId")
         or restored.get("maskJobId")
         or restored.get("resultTaskId")
+        or restored.get("h3Jobs")
     )
     if restored["restored"]:
         if restored["status"] == "failed":

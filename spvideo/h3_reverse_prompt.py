@@ -29,12 +29,20 @@ from typing import Any, Callable
 
 import requests
 
+from spvideo.white_mask_contract import (
+    audio_block,
+    background_block,
+    face_retention_block,
+    subject_block,
+    validate_final_prompt,
+)
+
 SP_ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_PATH = SP_ROOT / ".dub_config" / "settings.json"
 CACHE_ROOT = SP_ROOT / ".h3_reverse_cache"
 # 反推规则版本：规则改动后必须 bump，避免旧缓存把已废弃的结论带回来。
-PROMPT_CACHE_VERSION = "v6_scene_context_20260806"
-PROMPT_FORMATS = {"sp_v4", "official_v1"}
+PROMPT_CACHE_VERSION = "v7_contract_20260807"
+PROMPT_FORMATS = {"sp_v4", "official_v1", "official_v2"}
 DEFAULT_PROMPT_FORMAT = "sp_v4"
 
 DEFAULT_FAST_MODEL = "kimi-k2.5"
@@ -42,9 +50,14 @@ DEFAULT_REVIEW_MODEL = "qwen3-vl-30b-a3b-instruct"
 
 FRAME_COUNT = 6  # 每段抽帧数（与夜班管线一致）
 
-FIXED_HEADER = """视频 1 是构图、动作、口型、运镜与光影的唯一参考。
 
-风格合约：所有人物替换为彩色树脂关节人偶素体（BJD 娃娃素体）：光头无发、身体带球形关节、极简人偶面部；衣服消融进身体，通体同色光滑哑光树脂。每位人偶分配下文指定的哑光纯色，同一人物与其镜中倒影（如有镜子）严格同色。场景的空间结构与关键道具完整保留——若画面中存在镜子则含镜框与镜中倒影，墙面、房间布局、光源方向全部不变，仅将背景与物体材质替换为哑光浅色，保留原片的明暗对比与光影方向。
+def fixed_header(background_replace: bool = False) -> str:
+    """固定风格合约头：素体与背景句统一引用白膜合约单一事实源（white_mask_contract）。"""
+    return f"""视频 1 是构图、动作、口型、运镜与光影的唯一参考。
+
+风格合约：{subject_block()}
+
+背景合约：{background_block(background_replace)}
 
 画面文字：全程不出现任何文字、字母、符号、字幕与水印；即使参考视频中有烧录字幕，也必须在画面中完全去除，不得复刻、不得残留任何类似文字的图形。"""
 
@@ -81,11 +94,11 @@ def _load_api_config() -> tuple[str, str]:
     return base_url, api_key
 
 
-def clip_fingerprint(clip_path: str | Path) -> str:
-    """按路径+大小+修改时间+反推规则版本算指纹，变了就重新反推。"""
+def clip_fingerprint(clip_path: str | Path, fast_model: str = DEFAULT_FAST_MODEL) -> str:
+    """按路径+大小+修改时间+事实层模型+反推规则版本算指纹，变了就重新反推。"""
     clip = Path(clip_path).resolve()
     stat = clip.stat()
-    raw = f"{clip}|{stat.st_size}|{int(stat.st_mtime)}|{PROMPT_CACHE_VERSION}"
+    raw = f"{clip}|{stat.st_size}|{int(stat.st_mtime)}|{fast_model}|{PROMPT_CACHE_VERSION}"
     return hashlib.md5(raw.encode("utf-8")).hexdigest()[:16]
 
 
@@ -96,14 +109,16 @@ def _normalize_prompt_format(prompt_format: str | None) -> str:
     return fmt
 
 
-def cache_path_for(clip_path: str | Path, prompt_format: str | None = None) -> Path:
+def cache_path_for(clip_path: str | Path, prompt_format: str | None = None,
+                   fast_model: str = DEFAULT_FAST_MODEL) -> Path:
     fmt = _normalize_prompt_format(prompt_format)
-    return CACHE_ROOT / f"{clip_fingerprint(clip_path)}_{fmt}.json"
+    return CACHE_ROOT / f"{clip_fingerprint(clip_path, fast_model)}_{fmt}.json"
 
 
-def read_cached_prompt(clip_path: str | Path, prompt_format: str | None = None) -> str | None:
+def read_cached_prompt(clip_path: str | Path, prompt_format: str | None = None,
+                       fast_model: str = DEFAULT_FAST_MODEL) -> str | None:
     """不改变文件的前提下，读取已缓存的最终提示词（供 GET 查询用）。"""
-    path = cache_path_for(clip_path, prompt_format)
+    path = cache_path_for(clip_path, prompt_format, fast_model)
     if not path.is_file():
         return None
     try:
@@ -182,7 +197,7 @@ class _ReverseSession:
         self.prompt_format = _normalize_prompt_format(prompt_format)
         self.log = log
         self.base_url, self.api_key = _load_api_config()
-        self.cache_path = cache_path_for(clip, self.prompt_format)
+        self.cache_path = cache_path_for(clip, self.prompt_format, self.fast_model)
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         self.cache: dict[str, Any] = {}
         if self.cache_path.is_file():
@@ -234,8 +249,55 @@ class _ReverseSession:
         return str(data["choices"][0]["message"]["content"])
 
 
-def _build_assemble_prompt(md_text: str, video_duration: float, color_rule: str, prompt_format: str) -> str:
-    """Pass D 组装提示词。sp_v4 为当前稳定版；official_v1 套 MiniMax H3 Ref2VA 六字段壳。"""
+def _build_assemble_prompt(md_text: str, video_duration: float, color_rule: str, prompt_format: str,
+                           background_replace: bool = False) -> str:
+    """Pass D 组装提示词。sp_v4 为当前稳定版；official_v1/official_v2 套 MiniMax H3 Ref2VA 六字段壳。
+
+    背景句、表情句、音频句统一引用白膜合约单一事实源（white_mask_contract）；
+    official_v2 为英文六段正文，体现同一裁决的英文表述。
+    """
+    bg_contract = background_block(background_replace)
+    face_contract = face_retention_block()
+    audio_contract = audio_block()
+    if prompt_format == "official_v2":
+        if background_replace:
+            bg_rule_en = ("The background is replaced by the uploaded background image: the people and their "
+                          "mirror reflections still become dolls of their assigned colors; the scene structure, "
+                          "props, and mirror positions follow the uploaded background image, and the dolls' "
+                          "lighting and shadows harmonize with the new background.")
+        else:
+            bg_rule_en = ("The background, scene props, furniture, mirrors, and the reflections in the mirrors "
+                          "are fully preserved exactly as in the reference video — never blanked out, altered, "
+                          "or simplified; only the people are replaced by dolls, and the human reflections in "
+                          "mirrors become dolls of the corresponding colors.")
+        return f"""You are a video-generation prompt engineer. Below is the reverse-engineering analysis of a {video_duration}-second reference video, plus a style-conversion requirement. Combine them into one final MiniMax H3 Ref2VA prompt. Write the entire output in English; keep official field names, labels, markers, and tags in their fixed English form.
+
+[Reverse-engineering analysis]
+{md_text}
+
+[Style-conversion requirement — must be reflected]
+- Convert every person in the video into a colored resin ball-jointed doll blank body (like a BJD blank body): clothes fully dissolve into the body; one uniform smooth matte resin color per person; bald head, no hair, no eyelashes, but the eyebrow shape is preserved; spherical body joints; minimal doll face; do not copy the original face shape, facial features, or skin tone. Assign each person a fixed solid color{color_rule}; the same person (including any mirror reflection) keeps exactly the same color for the whole video, and different dolls must use clearly distinct colors.
+- Background: {bg_rule_en}
+- Expression, gaze, and motion retention: eyelid openness, gaze direction, eyebrow shape, mouth corners, and mouth openness match the reference video beat by beat; posture and motion rhythm fully follow the original footage; never summarize an expression with any emotion-conclusion word.
+- Audio: the soundtrack is copied from the reference video exactly (language, voice, speaking rate, and emotion all unchanged) — no re-dubbing, no added music; the dolls' lip shapes align with the video audio beat by beat.
+- Negative: absolutely no real skin texture, no hair strands, no eyelashes, no fabric texture; no text, subtitles, or watermarks anywhere in the frame.
+
+[Output format — output exactly these six fields in this order, field names in English, one blank line between fields]
+subject_definitions:
+Define <Video 1> as the only reference video; define <Audio 1> as the reference video's original soundtrack; define each doll as <Subject N> with its assigned matte solid color{color_rule}, its position, and any mirror/reflection relationship, stating that a reflection is the same person and does not count toward the headcount; state that no text, subtitles, or watermarks appear in the frame.
+summary:
+Begin with a square-bracketed combination of applicable task types chosen only from: keyframe completion, reference generation, video editing, video continuation, audio reuse, audio reference — e.g. [video editing, audio reuse]. Then one short paragraph explaining that this segment replaces the reference video's people with colored resin ball-jointed doll blank bodies and reuses the original audio.
+retention_analysis:
+One line per tracked label. Visual relationships use only fully_preserved / partially_preserved / attribute_transfer / weak_reference; audio relationships for <Audio 1> use only fully_copy / partially_copy / reference. Cover at least: composition, real headcount, positions, poses, occlusion, mirror/reflection, eyelids/gaze/eyebrow shape/mouth corners/mouth openness, <Audio 1> (use fully_copy — the soundtrack is copied exactly), and lighting.
+detailed_description:
+First one or two sentences establishing the resin doll style and the background rule, then describe playback order starting from [Shot 1]; [Shot 1] carries no At timestamp. By default write only one continuous [Shot 1], using beat ranges like "0.2-1.2s" from the analysis timeline inside it; only add [Shot N] At MM:SS.mmm when the analysis shows clear cut evidence, with strictly increasing timestamps below {video_duration:.2f} seconds. Each beat covers motion, pose, gaze, eyelid openness, eyebrow shape/mouth corners, mouth state, hand contact, and mirror sync; only observable part states, no emotion-conclusion words; omit anything the analysis marked as uncertain.
+overall_soundscape:
+State only that the dialogue and all original sound are copied from <Audio 1> exactly as in the reference video; you may add one sentence that ambience and action sounds follow the reference video; do not repeat or quote any dialogue text.
+non_diegetic_music:
+Write N/A when no audience-only music is wanted.
+
+Output the six fields directly — no Markdown fences, no explanation, no proofreading notes."""
+
     if prompt_format == "official_v1":
         return f"""你是视频生成提示词工程师。下面是对一段{video_duration}秒参考视频的反推结果，以及一个"风格转换"需求。请把二者合成为发给 MiniMax H3 Ref2VA 的中文提示词，描述性文字用简体中文，官方字段名、标签、标记保持英文。
 
@@ -244,11 +306,11 @@ def _build_assemble_prompt(md_text: str, video_duration: float, color_rule: str,
 
 【风格转换需求（必须体现）】
 - 所有人物替换为彩色树脂关节人偶素体（BJD 娃娃素体）：光头无发、身体带球形关节、极简人偶面部；衣服消融进身体，通体同色光滑哑光树脂。不同人物不同颜色，同一人物（含其镜中倒影）严格同色。
-- 场景空间结构完整保留（含镜子与镜中倒影），仅将背景与物体材质替换为哑光浅色，保留原片明暗对比与光影方向。
+- 背景：{bg_contract}
 - 严格按参考视频的构图、人物数量、位置、姿态、遮挡关系与运镜演变，时间轴不变；默认整段只是一个连续镜头，优先运镜，不要发明切镜。
-- 口型与参考音频对齐，眼神与面部表情只按可观察部件保留：眼睑开合程度、视线方向、眉形、嘴角、嘴部开合逐拍一致；禁止把表情概括成任何情绪结论词。
+- 表情与口型：{face_contract}人偶口型与视频声音逐拍对齐。
 - 档案里的发型/发色/服装质地只用于身份比对，不得写进最终提示词；服装一律表述为消融进身体的同色哑光树脂。禁止出现头发、头发丝、睫毛、真实皮肤纹理、布料质感等与树脂素体冲突的源片质感词。
-- 音频：完整保留参考视频原声，不重新配音，不加配乐；禁止引述台词文字内容。全程不出现任何文字、字幕、水印。
+- 音频：{audio_contract}禁止引述台词文字内容。全程不出现任何文字、字幕、水印。
 
 【输出格式要求：严格输出且只输出以下六个字段，按此顺序，字段名英文，字段之间空一行】
 subject_definitions:
@@ -258,7 +320,7 @@ summary:
 retention_analysis:
 每个被跟踪标签一行，关系只用 fully_preserved / partially_preserved / attribute_transfer / weak_reference；至少覆盖构图、真实人数、位置、姿态、遮挡、镜子/倒影、眼睑/视线/眉形/嘴角/嘴部、音频、光影。
 detailed_description:
-先用一两句确立树脂人偶风格与材质替换规则，再从 [Shot 1] 开始按播放顺序写；[Shot 1] 不加 At 时间戳。默认只写 [Shot 1] 一个连续镜头，内部可按反推时间轴写"0.2-1.2s"这类节拍；只有反推结果里有明确切镜证据时才增加 [Shot N] At MM:SS.mmm，且时间戳严格递增、小于 {video_duration:.2f} 秒。每拍写人物动作、姿态、视线、眼睑开合、眉形/嘴角、嘴部状态、手部接触、镜中同步；只允许写可见部件状态，禁止情绪结论词；反推中标记"不确定"的内容直接省略。
+先用一两句确立树脂人偶风格与背景规则，再从 [Shot 1] 开始按播放顺序写；[Shot 1] 不加 At 时间戳。默认只写 [Shot 1] 一个连续镜头，内部可按反推时间轴写"0.2-1.2s"这类节拍；只有反推结果里有明确切镜证据时才增加 [Shot N] At MM:SS.mmm，且时间戳严格递增、小于 {video_duration:.2f} 秒。每拍写人物动作、姿态、视线、眼睑开合、眉形/嘴角、嘴部状态、手部接触、镜中同步；只允许写可见部件状态，禁止情绪结论词；反推中标记"不确定"的内容直接省略。
 overall_soundscape:
 只写"台词与参考音频完全一致"，可加一句环境声/动作声保持参考视频；不要重复或引述任何台词文字。
 non_diegetic_music:
@@ -273,10 +335,10 @@ non_diegetic_music:
 
 【风格转换需求（必须原样体现的核心要求）】
 - 所有人物替换为彩色树脂关节人偶素体（BJD 娃娃素体）：光头无发、身体带球形关节、极简人偶面部；衣服消融进身体，通体同色光滑哑光树脂。不同人物不同颜色，同一人物（含其镜中倒影）严格同色。
-- 场景空间结构完整保留（含镜子与镜中倒影），仅将背景与物体材质替换为哑光浅色，保留原片明暗对比与光影方向。
+- 背景：{bg_contract}
 - 严格按参考视频的构图、人物数量、位置、姿态、遮挡关系与运镜演变，时间轴不变。
-- 口型与参考音频对齐，眼神与面部表情必须按可观察特征保留：眼睑开合程度、视线方向、眉形、嘴角、嘴部开合逐拍一致；禁止把表情概括成任何情绪结论词。
-- 音频：完整保留参考视频原声（语言、声线、语速、情绪均不变），不重新配音，不加配乐。音频区块只允许写"台词与参考音频完全一致"，禁止在提示词里引述台词文字内容（画面中的字幕文字可能与原声语言不一致，引述会误导配音）。
+- 表情与口型：{face_contract}人偶口型与视频声音逐拍对齐。
+- 音频：{audio_contract}音频区块只允许写"台词与参考音频完全一致"，禁止在提示词里引述台词文字内容（画面中的字幕文字可能与原声语言不一致，引述会误导配音）。
 - 全程不出现任何文字、字幕、水印。
 
 【输出格式要求】
@@ -295,9 +357,13 @@ def reverse_prompt_for_clip(
     fast_model: str = DEFAULT_FAST_MODEL,
     review_model: str = DEFAULT_REVIEW_MODEL,
     prompt_format: str = DEFAULT_PROMPT_FORMAT,
+    background_replace: bool = False,
     log: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
-    """对单个片段反推 H3 白膜提示词。返回 {prompt, draft, arch, camera, cost, cached}。"""
+    """对单个片段反推 H3 白膜提示词。返回 {prompt, draft, arch, camera, cost, cached}。
+
+    background_replace=True 时背景句切换为"上传背景图替换"合约文案（默认 False 完整保留原背景）。
+    """
     logger = log or (lambda _m: None)
     clip = Path(clip_path).resolve()
     if not clip.is_file():
@@ -313,14 +379,15 @@ def reverse_prompt_for_clip(
         logger("> 反推: 已注入全片剧情背景（消歧用）")
     if s.cache.get("final_prompt"):
         logger("> 反推: 命中缓存，直接复用")
-        return {**s.cache.get("result_meta", {}), "prompt": s.cache["final_prompt"], "cached": True}
+        cached_prompt = validate_final_prompt(s.cache["final_prompt"])
+        return {**s.cache.get("result_meta", {}), "prompt": cached_prompt, "cached": True}
 
     from spvideo import ffmpeg_tools
 
     meta = ffmpeg_tools.probe_video(clip)
     duration = float(meta.duration or 0)
     times = _frame_times(duration)
-    frames = _extract_frames(clip, times, CACHE_ROOT / f"frames_{clip_fingerprint(clip)}", logger)
+    frames = _extract_frames(clip, times, CACHE_ROOT / f"frames_{clip_fingerprint(clip, s.fast_model)}", logger)
     video_duration = round(duration, 1)
     roster = (roster_text or "").strip() or None
     t_start = time.time()
@@ -462,7 +529,8 @@ def reverse_prompt_for_clip(
             color_rule = f"（固定配色，禁止更改或交换，严格按名册配色执行：\n{color_lines}\n称呼必须使用名册角色名）" if color_lines else "（使用名册角色名，配色对比强烈且每人不同）"
         else:
             color_rule = "（你指定对比强烈的哑光纯色，每位人物不同色）"
-        assemble_prompt = _build_assemble_prompt(chr(10).join(md), video_duration, color_rule, s.prompt_format)
+        assemble_prompt = _build_assemble_prompt(chr(10).join(md), video_duration, color_rule, s.prompt_format,
+                                                 background_replace=background_replace)
         draft = s.chat([{"role": "user", "content": [{"type": "text", "text": assemble_prompt}]}],
                        s.fast_model, "D", max_tokens=3000, temperature=0.2)
         s.cache["draft"] = draft
@@ -493,7 +561,7 @@ def reverse_prompt_for_clip(
 输出：修正后的提示词全文（格式与草稿一致），不要输出校对过程或任何解释。"""
         final_prompt = s.chat([{"role": "user", "content": s.frames_content(frames, times) + [{"type": "text", "text": review_prompt}]}],
                               s.review_model, "E", max_tokens=3000, temperature=0.1)
-        markers = ("subject_definitions:",) if s.prompt_format == "official_v1" else ("构图与人物", "构图与场景")
+        markers = ("subject_definitions:",) if s.prompt_format.startswith("official") else ("构图与人物", "构图与场景")
         for marker in markers:
             idx = final_prompt.find(marker)
             if idx > 0:
@@ -502,11 +570,12 @@ def reverse_prompt_for_clip(
         s.cache[review_key] = final_prompt
         s.save_cache()
 
-    # ---------- 固定风格合约头（sp_v4 程序化焊死；official_v1 已进入六字段壳） ----------
-    if s.prompt_format == "official_v1":
+    # ---------- 固定风格合约头（sp_v4 程序化焊死；official_v1/v2 已进入六字段壳） ----------
+    if s.prompt_format.startswith("official"):
         final_with_header = final_prompt.strip()
     else:
-        final_with_header = FIXED_HEADER + "\n\n" + final_prompt
+        final_with_header = fixed_header(background_replace) + "\n\n" + final_prompt
+    final_with_header = validate_final_prompt(final_with_header)
     s.cache["final_prompt"] = final_with_header
     cost = {
         "calls": len(s.call_log),

@@ -87,7 +87,7 @@
     "class_type": "BasicScheduler",
     "inputs": {
       "model": [
-        "127",
+        "201",
         0
       ],
       "scheduler": "simple",
@@ -99,7 +99,7 @@
     "class_type": "BasicGuider",
     "inputs": {
       "model": [
-        "127",
+        "201",
         0
       ],
       "conditioning": [
@@ -180,9 +180,25 @@
         "130",
         0
       ],
-      "filename_prefix": "h3_whitemask_v4",
+      "filename_prefix": "h3_whitemask_solattn",
       "format": "auto",
       "codec": "auto"
+    }
+  },
+  "201": {
+    "class_type": "SolAttnMiniMaxH3Patcher",
+    "inputs": {
+      "model": [
+        "127",
+        0
+      ],
+      "enabled": true,
+      "tau": 1.0,
+      "thresh_type": "diag",
+      "exact_mode": "exact_kv",
+      "dense_steps": 0,
+      "step_off": 0.0,
+      "sink_tokens": 0
     }
   }
 }

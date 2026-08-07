@@ -295,6 +295,20 @@ class GeminiClient:
         prop_timeline = [dict(item) for item in data.get("prop_timeline", []) if isinstance(item, dict)]
         spatial_map = data.get("spatial_map") if isinstance(data.get("spatial_map"), dict) else {}
         production_notes = data.get("production_notes") if isinstance(data.get("production_notes"), dict) else {}
+        characters: list[dict[str, Any]] = []
+        for raw_character in data.get("characters") or []:
+            if not isinstance(raw_character, dict):
+                continue
+            character = dict(raw_character)
+            for key, value in character.items():
+                if value is None:
+                    character[key] = ""
+                elif not isinstance(value, (str, list, dict)):
+                    character[key] = str(value)
+            for key in ("identity", "visual_label", "role_name"):
+                if key not in character:
+                    character[key] = ""
+            characters.append(character)
         locations = [dict(item) for item in data.get("locations", []) if isinstance(item, dict)] if isinstance(data.get("locations"), list) else []
         risks = [dict(item) for item in data.get("risks", []) if isinstance(item, dict)] if isinstance(data.get("risks"), list) else []
         raw_manifest = data.get("asset_manifest")
@@ -360,6 +374,7 @@ class GeminiClient:
         return {
             "analysis_schema_version": 3,
             "story_summary": str(data.get("story_summary") or "").strip(),
+            "characters": characters,
             "scenes": scenes,
             "role_timeline": role_timeline,
             "prop_timeline": prop_timeline,

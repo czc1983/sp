@@ -10574,9 +10574,9 @@
     let storyReferenceStrategy = STORY_REFERENCE_STRATEGIES[0].value;
     let storyGenerationRoute = (() => {
       try {
-        return normalizeStoryGenerationRoute(localStorage.getItem(STORY_GENERATION_ROUTE_KEY) || "seedance");
+        return normalizeStoryGenerationRoute(localStorage.getItem(STORY_GENERATION_ROUTE_KEY) || "minimax_h3");
       } catch (_) {
-        return "seedance";
+        return "minimax_h3";
       }
     })();
     let storyProjectConfig = {
@@ -20579,6 +20579,7 @@
         if (fromIndex >= 0 && toIndex >= 0) {
           [nextIds[fromIndex], nextIds[toIndex]] = [nextIds[toIndex], nextIds[fromIndex]];
           pack.shotIds = composeSortedShotIds(nextIds);
+          invalidateGenerationPackRuntimeSource(pack.id);
           composePlan.selectedPackId = pack.id;
           composeConfirmedPlan = null;
           saveComposePlanDraft();
@@ -20608,6 +20609,7 @@
       else if (afterIndex >= 0) nextIds.splice(afterIndex + 1, 0, item.id);
       else nextIds.push(item.id);
       pack.shotIds = composeSortedShotIds(nextIds);
+      invalidateGenerationPackRuntimeSource(pack.id);
       composePlan.selectedPackId = pack.id;
       composeConfirmedPlan = null;
       saveComposePlanDraft();
@@ -20629,6 +20631,7 @@
       const before = (pack.shotIds || []).length;
       pack.shotIds = (pack.shotIds || []).filter((id) => id !== item.id);
       if (before === pack.shotIds.length) return;
+      invalidateGenerationPackRuntimeSource(pack.id);
       composePlan.selectedPackId = pack.id;
       composeConfirmedPlan = null;
       saveComposePlanDraft();
@@ -20784,6 +20787,16 @@
       }
     }
 
+    function generationRuntimeHasRunningH3Job(runtime = {}, role = "") {
+      const jobs = runtime?.h3Jobs && typeof runtime.h3Jobs === "object" ? runtime.h3Jobs : null;
+      if (!jobs) return false;
+      const expectedRole = String(role || "").trim();
+      if (expectedRole && String(jobs.role || "") !== expectedRole) return false;
+      return (Array.isArray(jobs.entries) ? jobs.entries : []).some((entry) => {
+        return String(entry?.status || "") === "running" && String(entry?.jobId || "").trim();
+      });
+    }
+
     function normalizeGenerationRuntimeForStorage(runtime = {}) {
       const keys = [
         "status",
@@ -20833,9 +20846,11 @@
       const status = String(next.status || "");
       const hasMaskTask = Boolean(String(next.maskTaskId || next.maskJobId || "").trim());
       const hasResultTask = Boolean(String(next.resultTaskId || "").trim());
+      const hasH3MaskTask = generationRuntimeHasRunningH3Job(next, "mask");
+      const hasH3ResultTask = generationRuntimeHasRunningH3Job(next, "result");
       const missingRunningTask =
-        (status === "mask_running" && !hasMaskTask)
-        || (status === "result_running" && !hasResultTask)
+        (status === "mask_running" && !hasMaskTask && !hasH3MaskTask)
+        || (status === "result_running" && !hasResultTask && !hasH3ResultTask)
         || status === "scail2_running";
       if (missingRunningTask) {
         next.status = String(next.resultPath || "").trim()
@@ -20858,6 +20873,7 @@
         || (Array.isArray(runtime.resultSegments) && runtime.resultSegments.length)
         || (Array.isArray(runtime.maskRuns) && runtime.maskRuns.length)
         || (Array.isArray(runtime.resultRuns) && runtime.resultRuns.length)
+        || generationRuntimeHasRunningH3Job(runtime)
         || !["", "idle"].includes(String(runtime.status || "idle"))
       );
     }
@@ -20868,12 +20884,8 @@
       if (!generationRuntimeHasStoredValue(runtime)) return false;
       const outputPath = String(runtime.resultPath || runtime.whiteMaskPath || runtime.maskPath || "").trim();
       if (outputPath) return true;
-      const packageSegments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
-      const shotCount = generationPackShots(pack).length;
-      if (packageSegments.length && shotCount && packageSegments.length === shotCount) return true;
-      const runtimeDuration = Number(runtime.packageDuration || 0);
-      const packDuration = Number(composePackDuration(pack) || pack.duration || 0);
-      return runtimeDuration > 0 && packDuration > 0 && Math.abs(runtimeDuration - packDuration) < 0.25;
+      // 签名不一致时不再按段数/时长巧合恢复整包源记录：旧合成必须作废重合成，杜绝旧画面
+      return false;
     }
 
     function saveGenerationRuntimeDraft(options = {}) {
@@ -20886,6 +20898,19 @@
         const id = String(pack.id || "").trim();
         if (!id) return;
         const runtime = normalizeGenerationRuntimeForStorage(generationWorkbench.packageRuntime[id] || {});
+        // 卡包内容已变但 runtime 还是旧整包源：保存前剥掉源字段，防止旧合成被盖上新签名继续播放/复用
+        if (
+          String(runtime.packageSourcePath || runtime.sourcePath || "").trim()
+          && String(runtime.planSignature || "") !== generationPackSignature(pack)
+          && !generationRuntimeSourceSegmentsMatchPack(runtime, pack)
+        ) {
+          delete runtime.sourcePath;
+          delete runtime.packageSourcePath;
+          delete runtime.packageSegments;
+          delete runtime.packageDuration;
+          delete runtime.packageSourceVersion;
+          delete runtime.sourcePreviewFailed;
+        }
         runtime.planSignature = generationPackSignature(pack);
         runtime.packageIdentityId = generationPackIdentityId(pack);
         if (String(runtime.whiteMaskPath || runtime.maskPath || "").trim()) runtime.maskPackageIdentityId = runtime.packageIdentityId;
@@ -21090,11 +21115,42 @@
       try { localStorage.setItem(GENERATION_SCAIL2_UPLOAD_AUDIO_KEY, enabled ? "1" : "0"); } catch (_) {}
     }
 
+    // 旧 runtime 的整包源必须与当前卡包逐段一致才可信：
+    // 卡包架改过卡（含顺序）之后，旧合成一律作废重合成，杜绝播放旧画面。
+    function generationRuntimeSourceSegmentsMatchPack(runtime = {}, pack = {}) {
+      const segments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
+      const shots = generationPackShotPayload(pack);
+      if (!segments.length || !shots.length || segments.length !== shots.length) return false;
+      return segments.every((segment, index) => {
+        const shot = shots[index] || {};
+        return String(segment?.shot_id || "").trim() === String(shot.shot_id || "").trim()
+          && normalizeLocalPathKey(segment?.video_path || "") === normalizeLocalPathKey(shot.video_path || "");
+      });
+    }
+
+    // 改卡包时立即作废旧整包源，避免旧合成被后续保存盖上新签名继续播放
+    function invalidateGenerationPackRuntimeSource(packId) {
+      const id = String(packId || "").trim();
+      if (!id || !generationWorkbench.packageRuntime?.[id]) return;
+      const runtime = generationWorkbench.packageRuntime[id];
+      delete runtime.sourcePath;
+      delete runtime.packageSourcePath;
+      delete runtime.packageSegments;
+      delete runtime.packageDuration;
+      delete runtime.packageSourceVersion;
+      delete runtime.sourcePreviewFailed;
+      saveGenerationRuntimeDraft();
+    }
+
     function generationPackSourceInfo(pack = {}) {
       const runtime = generationRuntimeForPack(pack.id);
       const shots = generationPackShots(pack);
       const runtimePath = String(runtime.packageSourcePath || "").trim();
-      if (runtimePath && (generationRuntimeMatchesPack(runtime, pack) || (shots.length <= 1 && generationRuntimeCanRestoreForPack(runtime, pack)))) {
+      if (
+        runtimePath
+        && generationRuntimeSourceSegmentsMatchPack(runtime, pack)
+        && (generationRuntimeMatchesPack(runtime, pack) || (shots.length <= 1 && generationRuntimeCanRestoreForPack(runtime, pack)))
+      ) {
         return { path: runtimePath, time: 0.1, shotId: shots.length > 1 ? `整包 ${shots.length} 段` : "" };
       }
       if (shots.length > 1) {
@@ -21438,7 +21494,7 @@
       const base = generationEffectivePromptText(pack, "result");
       const h3Rules = [
         "【H3 白膜换人规则】输入参考视频是彩色人偶白膜，只用于锁定镜头顺序、数量、时长、景别、机位、构图、人物站位、动作节奏、表情起伏、人物距离、前后遮挡和人物颜色对应关系。",
-        "【背景保留】背景、场景道具、家具、镜子及其镜中倒影必须完整保留参考视频中的原样，不得抹白、不得简化、不得替换；镜中的人影倒影必须同步替换成对应的真人。",
+        "【背景保留】背景、场景道具、家具、镜子及其镜中倒影必须完整保留原样，不得抹白、不得改变、不得简化，只有人物被替换成人偶，镜中的人影倒影同步变成对应颜色的人偶。",
         "【身份来源】人物外观（脸型、五官、发型、年龄、身材、服装颜色和款式）只来自人物参考图，参考图中的背景、家具和构图一律忽略。",
         "【一致性】每名人物全片外观保持一致，表情、视线方向、口型开合与白膜人偶完全一致；镜中倒影与本人外观一致。",
       ].join("\n");
@@ -21446,7 +21502,7 @@
     }
 
     function generationPackApiWhiteMaskPrompt(pack = {}) {
-      return "把参考视频转换成3D动画制作中的基础彩色人偶视频：所有人物变成光滑哑光的彩色树脂人偶，光头无头发，整个头部（头顶、后脑、太阳穴到眉弓）是一体浇注成型的连续光滑蛋壳曲面，没有发线、没有头套缝、没有头盔式分层，任何角度都看不到一圈接缝，参考人物的头发和发际线轮廓不得映射到人偶头上、直接忽略，身穿与身体同色的紧身连体打底衣（舞蹈练功服样式），打底衣与身体同为光滑哑光树脂材质、同一纯色，无衣领、无口袋、无拉链、无图案、无任何服装装饰细节，就像身体的第二层皮肤，全身光滑无皮肤纹理，仅保留清晰关节。面部是简化的玩偶脸：只有简洁的3D卡通眼睛和嘴巴，没有眉毛、没有鼻孔等真人五官细节，不复制原人物的脸型、五官特征和肤色，与原人物完全不相似。每位人物分配一种固定纯色（第1人红色、第2人蓝色、第3人黄色，以此类推），同一人物全片颜色不变。背景、场景道具、家具、镜子及其镜中倒影必须完整保留原样，不得抹白、不得改变、不得简化，只有人物被替换成人偶，镜中的人影倒影也同步变成对应颜色的人偶。参考视频和锚点帧只用于锁定站位、动作、节奏卡点、运动轨迹和镜头构图，其中的真人面部特征、发型和服装一律忽略，不得继承。情绪与节奏跟随原片：眼神方向、睁眼闭眼、喜怒类型与原片一致（愤怒不能变成高兴，垂眼不能变成睁眼），但只用玩偶的简化五官来表达。人物的口型开合与参考视频音轨中的外语配音节奏对应，不要模仿原画面的中文口型。画面中绝对不要出现任何文字、字幕、水印、标题或标牌文字，原视频中的中文字幕必须完全去除。";
+      return "把视频里的人物全部转换成彩色树脂关节人偶素体：衣服完全消融进身体，通体同色光滑哑光树脂材质，像BJD娃娃素体；光头，没有头发和睫毛，但保留眉形；身体带球形关节，极简人偶面部；不复制原人物的脸型、五官特征和肤色。每位人物分配一种固定纯色（第1人红色、第2人蓝色、第3人黄色，以此类推），同一人物全片颜色不变，不同人偶颜色要有明显区别。背景、场景道具、家具、镜子及其镜中倒影必须完整保留原样，不得抹白、不得改变、不得简化，只有人物被替换成人偶，镜中的人影倒影同步变成对应颜色的人偶。表情、眼神与动作只按可观察部件保留：眼睑开合程度、视线方向、眉形、嘴角、嘴部开合与参考视频逐拍一致，姿态与动作节奏完全跟随原片；禁止用任何情绪结论词概括表情。声音与原视频完全一致：完整保留原视频原声（语言、声线、语速、情绪均不变），不重新配音、不加配乐；人偶口型与视频声音逐拍对齐。绝对不要真实皮肤质感、不要头发丝、不要睫毛、不要布料质感，画面中不要出现任何文字、字幕、水印。";
     }
 
     function generationPackShotPayload(pack = {}) {
@@ -21538,8 +21594,7 @@
       if (
         existingPath
         && generationRuntimeMatchesPack(runtime, pack)
-        && Array.isArray(runtime.packageSegments)
-        && runtime.packageSegments.length === shots.length
+        && generationRuntimeSourceSegmentsMatchPack(runtime, pack)
       ) {
         return {
           output_path: existingPath,
@@ -21586,8 +21641,7 @@
       const runtime = generationRuntimeForPack(pack.id);
       const path = String(runtime.packageSourcePath || "").trim();
       const segments = Array.isArray(runtime.packageSegments) ? runtime.packageSegments : [];
-      const shots = generationPackShotPayload(pack);
-      if (!path || !shots.length || segments.length !== shots.length) return null;
+      if (!path || !generationRuntimeSourceSegmentsMatchPack(runtime, pack)) return null;
       if (!generationRuntimeMatchesPack(runtime, pack)) return null;
       return {
         path,
@@ -21970,6 +22024,9 @@
       const status = String(runtime.status || "");
       const hasMaskTask = Boolean(String(runtime.maskTaskId || runtime.maskJobId || "").trim());
       const hasResultTask = Boolean(String(runtime.resultTaskId || "").trim());
+      const hasH3MaskTask = generationRuntimeHasRunningH3Job(runtime, "mask");
+      const hasH3ResultTask = generationRuntimeHasRunningH3Job(runtime, "result");
+      if (hasH3MaskTask || hasH3ResultTask) return true;
       if (status === "mask_running" && hasMaskTask) return true;
       if (status === "result_running" && hasResultTask) return true;
       if (status && status !== "idle" && status !== "failed") return false;
@@ -22049,8 +22106,10 @@
         "maskSegments",
         "maskSplitManifest",
         "maskTaskId",
+        "maskJobId",
         "maskPollContext",
         "maskRuns",
+        "h3Jobs",
         "resultPath",
         "resultSegments",
         "resultSplitManifest",
@@ -22058,6 +22117,7 @@
         "resultPollContext",
         "resultRuns",
         "pendingAutoResult",
+        "packageSourceVersion",
         "lastMessage",
         "lastTone",
         "errorMessage",
@@ -22065,6 +22125,9 @@
         if (data[key] !== undefined) patch[key] = data[key];
       });
       patchGenerationPackRuntime(id, patch);
+      if (patch.h3Jobs) {
+        resumeGenerationH3Polling(generationPackById(id) || pack);
+      }
       return data;
     }
 
@@ -23409,6 +23472,7 @@
           width: size.width,
           height: size.height,
           prompt,
+          background_replace: false, // TODO(背景图接入后按上传状态切换)
         });
       } catch (error) {
         entry.status = "failed";
